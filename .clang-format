@@ -1,0 +1,82 @@
+---
+BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 100
+
+# Prefer to break and indent on multi-line parameter/argument lists, with
+# parameters/arguments on their own line if cannot fit all on one line.
+AlignAfterOpenBracket: BlockIndent
+BinPackArguments: false
+BinPackParameters: false
+
+# Try to put constructor initializer items on the same line if they fit,
+# otherwise put all on the same line with a break after the colon.
+BreakConstructorInitializers: AfterColon
+PackConstructorInitializers: NextLine
+ConstructorInitializerIndentWidth: 4
+
+InsertTrailingCommas: Wrapped
+
+# Break before braces for functions, on same line for others (e.g. control
+# statements, structs, enums). For control statements, only break before a brace
+# if the condition spans multiple lines.
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterClass: false
+  AfterControlStatement: MultiLine
+  AfterEnum: false
+  AfterFunction: true
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeCatch: false
+  BeforeElse: false
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+
+
+# Align pointer asterisk right, with spaces around qualifiers; e.g.:
+#   const char *foo;
+#   const char *const foo;
+SpaceAroundPointerQualifiers: After
+PointerAlignment: Right
+
+# ...but align reference & left
+ReferenceAlignment: Left
+
+SpaceAfterCStyleCast: true
+KeepEmptyLinesAtTheStartOfBlocks: false
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline # implies "Empty"
+AllowShortBlocksOnASingleLine: Empty
+SpaceBeforeAssignmentOperators: true
+SeparateDefinitionBlocks: Always
+AlignOperands: DontAlign # indent with ContinuationIndentWidth
+ContinuationIndentWidth: 4
+BreakBeforeBinaryOperators: NonAssignment
+EmptyLineBeforeAccessModifier: LogicalBlock
+AccessModifierOffset: -4
+BreakBeforeTernaryOperators: false
+
+SortIncludes: CaseSensitive
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^".*' # Includes that use "
+    Priority: 1
+    CaseSensitive: false
+  - Regex: "^<(config|recap)/.*"
+    Priority: 2
+    CaseSensitive: false
+  - Regex: "^<((backends|serial|gtest|argparse)/|imgui|implot|nfd|IconsFont).*"  # 3rd part includes
+    Priority: 3
+    CaseSensitive: false
+  - Regex: "^<.+\\..*>$" # other <> includes that use .h,.hpp etc. (i.e. non std)
+    Priority: 4
+    CaseSensitive: false
+...
