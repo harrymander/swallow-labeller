@@ -68,7 +68,7 @@ static void draw_plot_cursor(const PlotData& data)
             draw_list->AddLine(ImVec2(xpixel, top), ImVec2(xpixel, bottom), ImColor(128, 128, 128));
             const auto yplot = data.y[std::distance(data.x.begin(), xplot)];
             if (ImGui::BeginTooltip()) {
-                ImGui::Text("%.3f", yplot);
+                ImGui::Text("%g", yplot);
                 ImGui::EndTooltip();
             }
             draw_list->AddCircle(
