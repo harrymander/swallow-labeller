@@ -55,30 +55,35 @@ struct PlotData {
     }
 };
 
+static void draw_plot_cursor(const PlotData& data)
+{
+    const auto mouse = ImPlot::GetPlotMousePos();
+    if (mouse.x > data.x[0]) {
+        const auto xplot = std::lower_bound(data.x.begin(), data.x.end(), mouse.x);
+        if (xplot != data.x.end()) {
+            ImDrawList *draw_list = ImPlot::GetPlotDrawList();
+            const auto xpixel = ImPlot::PlotToPixels(*xplot, 0).x;
+            const auto top = ImPlot::GetPlotPos().y;
+            const auto bottom = top + ImPlot::GetPlotSize().y;
+            draw_list->AddLine(ImVec2(xpixel, top), ImVec2(xpixel, bottom), ImColor(128, 128, 128));
+            const auto yplot = data.y[std::distance(data.x.begin(), xplot)];
+            if (ImGui::BeginTooltip()) {
+                ImGui::Text("%.3f", yplot);
+                ImGui::EndTooltip();
+            }
+            draw_list->AddCircle(
+                ImVec2(xpixel, ImPlot::PlotToPixels(0, yplot).y), 6, ImColor(128, 128, 128), 0, 1
+            );
+        }
+    }
+}
+
 static void draw_plot_contents()
 {
     static PlotData data;
     ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
     if (ImPlot::IsPlotHovered()) {
-        const auto mouse_pos = ImPlot::GetPlotMousePos();
-        const float x = ImPlot::PlotToPixels(mouse_pos).x;
-        ImDrawList *draw_list = ImPlot::GetPlotDrawList();
-        const float top = ImPlot::GetPlotPos().y;
-        const float bottom = top + ImPlot::GetPlotSize().y;
-        draw_list->AddLine(ImVec2(x, top), ImVec2(x, bottom), ImColor(128, 128, 128));
-        if (mouse_pos.x >= data.x[0]) {
-            const auto iter = std::lower_bound(data.x.begin(), data.x.end(), mouse_pos.x);
-            if (iter != data.x.end()) {
-                const auto yp = data.y[std::distance(data.x.begin(), iter)];
-                if (ImGui::BeginTooltip()) {
-                    ImGui::Text("%.3f", yp);
-                    ImGui::EndTooltip();
-                }
-                draw_list->AddCircle(
-                    ImVec2(x, ImPlot::PlotToPixels(0, yp).y), 6, ImColor(128, 128, 128), 0, 1
-                );
-            }
-        }
+        draw_plot_cursor(data);
     }
 }
 
