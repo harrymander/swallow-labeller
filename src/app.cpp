@@ -42,31 +42,23 @@ static void draw_demo_windows()
 }
 
 struct PlotData {
-private:
-    static constexpr std::size_t size_ = 1001;
-    std::array<float, size_> xs;
-    std::array<float, size_> ys;
+    static constexpr std::size_t size = 1001;
+    std::array<float, size> y;
+    std::array<float, size> x;
 
-public:
     PlotData()
     {
-        for (uint16_t i = 0; i < 1001; ++i) {
-            xs[i] = i * 0.001f;
-            ys[i] = 0.25f + 0.25f * sinf(25 * xs[i]) * sinf(5 * xs[i]);
+        for (std::size_t i = 0; i < size; i++) {
+            x[i] = i * 0.001f;
+            y[i] = 0.25f + 0.25f * sinf(25 * x[i]) * sinf(5 * x[i]);
         }
     }
-
-    constexpr std::size_t size() const { return size_; }
-
-    const decltype(xs)& x() const { return xs; }
-
-    const decltype(ys)& y() const { return ys; }
 };
 
 static void draw_plot_contents()
 {
     static PlotData data;
-    ImPlot::PlotLine("Uncertain Data", data.x().data(), data.y().data(), data.size());
+    ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
     if (ImPlot::IsPlotHovered()) {
         const auto mouse_pos = ImPlot::GetPlotMousePos();
         const float x = ImPlot::PlotToPixels(mouse_pos).x;
@@ -74,20 +66,25 @@ static void draw_plot_contents()
         const float top = ImPlot::GetPlotPos().y;
         const float bottom = top + ImPlot::GetPlotSize().y;
         draw_list->AddLine(ImVec2(x, top), ImVec2(x, bottom), ImColor(128, 128, 128));
-        if (ImGui::BeginTooltip()) {
-            const auto ind = std::lower_bound(data.x().begin(), data.x().end(), mouse_pos.x);
-            if (ind != data.x().end()) {
-                const auto i = std::distance(data.x().begin(), ind);
-                ImGui::Text("%.3f, %.3f", *ind, data.y()[i]);
+        if (mouse_pos.x >= data.x[0]) {
+            const auto iter = std::lower_bound(data.x.begin(), data.x.end(), mouse_pos.x);
+            if (iter != data.x.end()) {
+                const auto yp = data.y[std::distance(data.x.begin(), iter)];
+                if (ImGui::BeginTooltip()) {
+                    ImGui::Text("%.3f", yp);
+                    ImGui::EndTooltip();
+                }
+                draw_list->AddCircle(
+                    ImVec2(x, ImPlot::PlotToPixels(0, yp).y), 6, ImColor(128, 128, 128), 0, 1
+                );
             }
-            ImGui::EndTooltip();
         }
     }
 }
 
 static void draw_plot()
 {
-    if (ImPlot::BeginPlot("Shaded Plots")) {
+    if (ImPlot::BeginPlot("Tooltip demo")) {
         draw_plot_contents();
         ImPlot::EndPlot();
     }
