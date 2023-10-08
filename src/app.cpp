@@ -7,6 +7,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 
 namespace app {
 
@@ -77,31 +78,50 @@ static void add_plot_marker(ImDrawList *draw_list, const ImVec2& pos)
     );
 }
 
-static void add_plot_vline(ImDrawList *draw_list, float xp)
+/**
+ * Add text in position (xp, yp), automatically right-aligining text if it would be greater than
+ * xend
+ */
+static void
+add_text_autoalign(ImDrawList *draw_list, const char *text, float xp, float yp, float xend)
 {
-    const auto top = ImPlot::GetPlotPos().y;
-    const auto bottom = top + ImPlot::GetPlotSize().y;
-    draw_list->AddLine(ImVec2(xp, top), ImVec2(xp, bottom), ImColor(128, 128, 128));
+    static constexpr float align_margin = 15;
+    static constexpr float padding = 6;
+    const auto text_size = ImGui::CalcTextSize(text);
+    if (xp + text_size.x + align_margin > xend) {
+        xp -= text_size.x + padding;
+    } else {
+        xp += padding;
+    }
+    draw_list->AddText(ImVec2(xp, yp), ImColor(0xff, 0xff, 0xff), text);
 }
 
-static void draw_plot_cursor(const PlotData& data)
+static void add_plot_vline(ImDrawList *draw_list, const ImVec2& posplot, const ImVec2& pospx)
 {
-    const auto mouse = ImPlot::GetPlotMousePos();
-    if (mouse.x > data.x[0]) {
-        const auto xplot = binary_search_closest(data.x.begin(), data.x.end(), mouse.x);
-        if (xplot != data.x.end()) {
-            ImDrawList *draw_list = ImPlot::GetPlotDrawList();
-            const auto xpixel = ImPlot::PlotToPixels(*xplot, 0).x;
-            add_plot_vline(draw_list, xpixel);
+    const ImVec2 plot_pos = ImPlot::GetPlotPos();
+    const ImVec2 plot_size = ImPlot::GetPlotSize();
+    const ImVec2 top(pospx.x, plot_pos.y);
+    const ImVec2 bottom(pospx.x, top.y + plot_size.y);
+    draw_list->AddLine(top, bottom, ImColor(128, 128, 128));
 
-            const auto yplot = data.y[std::distance(data.x.begin(), xplot)];
-            if (ImGui::BeginTooltip()) {
-                ImGui::Text("%g", yplot);
-                ImGui::EndTooltip();
-            }
-            add_plot_marker(draw_list, ImVec2(xpixel, ImPlot::PlotToPixels(0, yplot).y));
-        }
-    }
+    const float xend = plot_pos.x + plot_size.x;
+    char xtext[20];
+    std::snprintf(xtext, sizeof(xtext), "x=%g", posplot.x);
+    add_text_autoalign(
+        draw_list, xtext, bottom.x, bottom.y - ImGui::GetTextLineHeightWithSpacing(), xend
+    );
+
+    char ytext[20];
+    std::snprintf(ytext, sizeof(ytext), "y=%g", posplot.y);
+    add_text_autoalign(draw_list, ytext, top.x, top.y, xend);
+}
+
+static void draw_plot_cursor(float xplot, float yplot)
+{
+    ImDrawList *draw_list = ImPlot::GetPlotDrawList();
+    const auto pospx = ImPlot::PlotToPixels(xplot, yplot);
+    add_plot_vline(draw_list, ImVec2(xplot, yplot), pospx);
+    add_plot_marker(draw_list, pospx);
 }
 
 static void draw_plot_contents()
@@ -109,13 +129,18 @@ static void draw_plot_contents()
     static PlotData data;
     ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
     if (ImPlot::IsPlotHovered()) {
-        draw_plot_cursor(data);
+        const auto mouse = ImPlot::GetPlotMousePos();
+        if (mouse.x > data.x[0]) {
+            const auto xplot = binary_search_closest(data.x.begin(), data.x.end(), mouse.x);
+            if (xplot != data.x.end())
+                draw_plot_cursor(*xplot, data.y[std::distance(data.x.begin(), xplot)]);
+        }
     }
 }
 
 static void draw_plot()
 {
-    if (ImPlot::BeginPlot("Tooltip demo")) {
+    if (ImPlot::BeginPlot("Tooltip demo", ImVec2(-1, 0), ImPlotFlags_NoMouseText)) {
         draw_plot_contents();
         ImPlot::EndPlot();
     }
