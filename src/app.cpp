@@ -69,7 +69,12 @@ BidirIt binary_search_closest(BidirIt first, BidirIt last, const T& value)
 
 static void add_plot_marker(ImDrawList *draw_list, const ImVec2& pos)
 {
-    draw_list->AddCircle(pos, 6, ImColor(128, 128, 128), 0, 1);
+    constexpr float half_width = 4;
+    draw_list->AddRect(
+        ImVec2(pos.x - half_width, pos.y - half_width),
+        ImVec2(pos.x + half_width, pos.y + half_width),
+        ImColor(128, 128, 128)
+    );
 }
 
 static void draw_plot_cursor(const PlotData& data)
