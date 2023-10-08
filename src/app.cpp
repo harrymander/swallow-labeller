@@ -77,6 +77,13 @@ static void add_plot_marker(ImDrawList *draw_list, const ImVec2& pos)
     );
 }
 
+static void add_plot_vline(ImDrawList *draw_list, float xp)
+{
+    const auto top = ImPlot::GetPlotPos().y;
+    const auto bottom = top + ImPlot::GetPlotSize().y;
+    draw_list->AddLine(ImVec2(xp, top), ImVec2(xp, bottom), ImColor(128, 128, 128));
+}
+
 static void draw_plot_cursor(const PlotData& data)
 {
     const auto mouse = ImPlot::GetPlotMousePos();
@@ -85,9 +92,8 @@ static void draw_plot_cursor(const PlotData& data)
         if (xplot != data.x.end()) {
             ImDrawList *draw_list = ImPlot::GetPlotDrawList();
             const auto xpixel = ImPlot::PlotToPixels(*xplot, 0).x;
-            const auto top = ImPlot::GetPlotPos().y;
-            const auto bottom = top + ImPlot::GetPlotSize().y;
-            draw_list->AddLine(ImVec2(xpixel, top), ImVec2(xpixel, bottom), ImColor(128, 128, 128));
+            add_plot_vline(draw_list, xpixel);
+
             const auto yplot = data.y[std::distance(data.x.begin(), xplot)];
             if (ImGui::BeginTooltip()) {
                 ImGui::Text("%g", yplot);
