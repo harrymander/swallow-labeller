@@ -55,11 +55,23 @@ struct PlotData {
     }
 };
 
+template <class BidirIt, class T>
+BidirIt binary_search_closest(BidirIt first, BidirIt last, const T& value)
+{
+    BidirIt found = std::lower_bound(first, last, value);
+    if (found != last && found != first) {
+        const auto prev = std::prev(found);
+        if (value - *prev < *found - value)
+            found = prev;
+    }
+    return found;
+}
+
 static void draw_plot_cursor(const PlotData& data)
 {
     const auto mouse = ImPlot::GetPlotMousePos();
     if (mouse.x > data.x[0]) {
-        const auto xplot = std::lower_bound(data.x.begin(), data.x.end(), mouse.x);
+        const auto xplot = binary_search_closest(data.x.begin(), data.x.end(), mouse.x);
         if (xplot != data.x.end()) {
             ImDrawList *draw_list = ImPlot::GetPlotDrawList();
             const auto xpixel = ImPlot::PlotToPixels(*xplot, 0).x;
