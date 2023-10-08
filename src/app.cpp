@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <optional>
 
 namespace app {
 
@@ -122,6 +123,28 @@ static void draw_plot_cursor(float xplot, float yplot)
     const auto pospx = ImPlot::PlotToPixels(xplot, yplot);
     add_plot_vline(draw_list, ImVec2(xplot, yplot), pospx);
     add_plot_marker(draw_list, pospx);
+
+    static std::optional<ImPlotRect> rect = std::nullopt;
+    if (ImGui::IsMouseDown(ImGuiMouseButton_Left)
+        && (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl)))
+    {
+        const auto limits = ImPlot::GetPlotLimits();
+        if (!rect.has_value()) {
+            rect = std::make_optional<ImPlotRect>();
+            rect->X.Min = xplot;
+        }
+        rect->X.Max = xplot;
+        rect->Y.Max = limits.Y.Max;
+        rect->Y.Min = limits.Y.Min;
+
+        draw_list->AddRectFilled(
+            ImPlot::PlotToPixels(rect->Min()),
+            ImPlot::PlotToPixels(rect->Max()),
+            ImColor(120, 0, 0, 90)
+        );
+    } else {
+        rect.reset();
+    }
 }
 
 static void draw_plot_contents()
