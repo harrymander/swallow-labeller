@@ -67,6 +67,11 @@ BidirIt binary_search_closest(BidirIt first, BidirIt last, const T& value)
     return found;
 }
 
+static void add_plot_marker(ImDrawList *draw_list, const ImVec2& pos)
+{
+    draw_list->AddCircle(pos, 6, ImColor(128, 128, 128), 0, 1);
+}
+
 static void draw_plot_cursor(const PlotData& data)
 {
     const auto mouse = ImPlot::GetPlotMousePos();
@@ -83,9 +88,7 @@ static void draw_plot_cursor(const PlotData& data)
                 ImGui::Text("%g", yplot);
                 ImGui::EndTooltip();
             }
-            draw_list->AddCircle(
-                ImVec2(xpixel, ImPlot::PlotToPixels(0, yplot).y), 6, ImColor(128, 128, 128), 0, 1
-            );
+            add_plot_marker(draw_list, ImVec2(xpixel, ImPlot::PlotToPixels(0, yplot).y));
         }
     }
 }
