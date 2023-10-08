@@ -94,7 +94,7 @@ add_text_autoalign(ImDrawList *draw_list, const char *text, float xp, float yp, 
     } else {
         xp += padding;
     }
-    draw_list->AddText(ImVec2(xp, yp), ImColor(0xff, 0xff, 0xff), text);
+    draw_list->AddText(ImVec2(xp, yp), ImGui::GetColorU32(ImGuiCol_Text), text);
 }
 
 static void add_plot_vline(ImDrawList *draw_list, const ImVec2& posplot, const ImVec2& pospx)
