@@ -140,7 +140,10 @@ static void draw_plot_contents()
 
 static void draw_plot()
 {
-    if (ImPlot::BeginPlot("Tooltip demo", ImVec2(-1, 0), ImPlotFlags_NoMouseText)) {
+    if (ImPlot::BeginPlot(
+            "Tooltip demo", ImVec2(-1, 0), ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect
+        ))
+    {
         draw_plot_contents();
         ImPlot::EndPlot();
     }
