@@ -179,6 +179,21 @@ public:
         if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
             switch (state) {
                 using enum State;
+            case Hovered:
+                xmouse_dragstart = xmouse;
+                state = DragCreate;
+                break;
+            case DragCreate:
+                if (xmouse > xmouse_dragstart) {
+                    xrange.Min = xmouse_dragstart;
+                    xrange.Max = xmouse;
+                    state = MaxResizing;
+                } else if (xmouse < xmouse_dragstart) {
+                    xrange.Min = xmouse;
+                    xrange.Max = xmouse_dragstart;
+                    state = MinResizing;
+                }
+                break;
             case Dragging:
                 drag(xmouse);
                 break;
@@ -203,6 +218,8 @@ public:
 private:
     enum class State {
         None,
+        Hovered,
+        DragCreate,
         Dragging,
         MinResizing,
         MaxResizing,
@@ -227,7 +244,7 @@ private:
                 xrange_dragstart = xrange;
                 xmouse_dragstart = xmouse;
             } else {
-                state = None;
+                state = Hovered;
             }
         } else {
             state = None;
@@ -245,6 +262,8 @@ private:
         case MaxResizing:
             ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
             break;
+        case Hovered:
+        case DragCreate:
         case None:
             break;
         }
