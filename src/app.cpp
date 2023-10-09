@@ -192,8 +192,6 @@ public:
                 break;
             }
         } else {
-            if (state != State::None)
-                sort_xrange();
             check_mouse(xmouse);
         }
 
@@ -269,14 +267,22 @@ private:
         }
     }
 
-    void min_resize(double xmouse) { xrange.Min = ImPlot::GetPlotLimits().X.Clamp(xmouse); }
-
-    void max_resize(double xmouse) { xrange.Max = ImPlot::GetPlotLimits().X.Clamp(xmouse); }
-
-    void sort_xrange()
+    void min_resize(double xmouse)
     {
-        if (xrange.Min > xrange.Max)
+        xrange.Min = ImPlot::GetPlotLimits().X.Clamp(xmouse);
+        if (xrange.Min > xrange.Max) {
+            state = State::MaxResizing;
             std::swap(xrange.Min, xrange.Max);
+        }
+    }
+
+    void max_resize(double xmouse)
+    {
+        xrange.Max = ImPlot::GetPlotLimits().X.Clamp(xmouse);
+        if (xrange.Min > xrange.Max) {
+            state = State::MinResizing;
+            std::swap(xrange.Min, xrange.Max);
+        }
     }
 };
 
