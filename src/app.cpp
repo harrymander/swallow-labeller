@@ -157,12 +157,6 @@ static void draw_plot_hovered(const PlotData& data)
     }
 }
 
-static void setup_plot(const PlotData& data)
-{
-    ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit);
-    ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, data.x[0], data.x[data.size - 1]);
-}
-
 static inline bool isnear(double a, double b, double eps)
 {
     return std::abs(a - b) <= eps;
@@ -206,23 +200,7 @@ public:
         draw_cursor();
     }
 
-    void sort_xrange()
-    {
-        if (xrange.Min > xrange.Max)
-            std::swap(xrange.Min, xrange.Max);
-    }
-
-    void debug() const
-    {
-        ImGui::Text(
-            "xrange_dragstart = (%g, %g), xmouse_dragstart = %g",
-            xrange_dragstart.Min,
-            xrange_dragstart.Max,
-            xmouse_dragstart
-        );
-    }
-
-    ImPlotRange xrange;
+    void setup_axis_link(ImAxis idx) { ImPlot::SetupAxisLinks(idx, &xrange.Min, &xrange.Max); }
 
 private:
     enum class State {
@@ -232,6 +210,7 @@ private:
         MaxResizing,
     };
 
+    ImPlotRange xrange;
     State state = State::None;
     ImPlotRange xrange_dragstart;
     double xmouse_dragstart = 0;
@@ -293,6 +272,12 @@ private:
     void min_resize(double xmouse) { xrange.Min = ImPlot::GetPlotLimits().X.Clamp(xmouse); }
 
     void max_resize(double xmouse) { xrange.Max = ImPlot::GetPlotLimits().X.Clamp(xmouse); }
+
+    void sort_xrange()
+    {
+        if (xrange.Min > xrange.Max)
+            std::swap(xrange.Min, xrange.Max);
+    }
 };
 
 static void draw_plot()
@@ -304,7 +289,9 @@ static void draw_plot()
             "##mainplot", ImVec2(-1, 0), ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect
         ))
     {
-        setup_plot(data);
+        ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit);
+        ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, data.x[0], data.x[data.size - 1]);
+        range_rect.setup_axis_link(ImAxis_X1);
         ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
         if (ImPlot::IsPlotHovered())
             draw_plot_hovered(data);
@@ -319,9 +306,6 @@ static void draw_plot()
         ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
         ImPlot::EndPlot();
     }
-
-    ImGui::Text("%g %g", range_rect.xrange.Min, range_rect.xrange.Max);
-    range_rect.debug();
 }
 
 static void draw_window_contents()
