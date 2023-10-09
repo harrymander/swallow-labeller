@@ -147,27 +147,33 @@ static void draw_plot_cursor(float xplot, float yplot)
     }
 }
 
-static void draw_plot_contents()
+static void draw_plot_hovered(const PlotData& data)
 {
-    static PlotData data;
-    ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
-    if (ImPlot::IsPlotHovered()) {
-        const auto mouse = ImPlot::GetPlotMousePos();
-        if (mouse.x > data.x[0]) {
-            const auto xplot = binary_search_closest(data.x.begin(), data.x.end(), mouse.x);
-            if (xplot != data.x.end())
-                draw_plot_cursor(*xplot, data.y[std::distance(data.x.begin(), xplot)]);
-        }
+    const auto mouse = ImPlot::GetPlotMousePos();
+    if (mouse.x > data.x[0]) {
+        const auto xplot = binary_search_closest(data.x.begin(), data.x.end(), mouse.x);
+        if (xplot != data.x.end())
+            draw_plot_cursor(*xplot, data.y[std::distance(data.x.begin(), xplot)]);
     }
+}
+
+static void setup_plot(const PlotData& data)
+{
+    ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit);
+    ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, data.x[0], data.x[data.x.size() - 1]);
 }
 
 static void draw_plot()
 {
+    static PlotData data;
     if (ImPlot::BeginPlot(
-            "Tooltip demo", ImVec2(-1, 0), ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect
+            "##mainplot", ImVec2(-1, 0), ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect
         ))
     {
-        draw_plot_contents();
+        setup_plot(data);
+        ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
+        if (ImPlot::IsPlotHovered())
+            draw_plot_hovered(data);
         ImPlot::EndPlot();
     }
 }
