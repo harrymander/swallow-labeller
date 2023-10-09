@@ -163,20 +163,142 @@ static void setup_plot(const PlotData& data)
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, data.x[0], data.x[data.size - 1]);
 }
 
-static void draw_range_rect(ImDrawList *draw_list, const ImPlotRange& xrange)
+static inline bool isnear(double a, double b, double eps)
 {
-    const auto yrange = ImPlot::GetPlotLimits().Y;
-    draw_list->AddRectFilled(
-        ImPlot::PlotToPixels(ImVec2(xrange.Min, yrange.Min)),
-        ImPlot::PlotToPixels(ImVec2(xrange.Max, yrange.Max)),
-        ImColor(128, 128, 128, 100)
-    );
+    return std::abs(a - b) <= eps;
 }
+
+class DragRect {
+public:
+    explicit DragRect(const ImPlotRange xrange = ImPlotRange(0, 0)) : xrange(xrange) {}
+
+    void draw(ImDrawList *draw_list)
+    {
+        const auto yrange = ImPlot::GetPlotLimits().Y;
+        draw_list->AddRectFilled(
+            ImPlot::PlotToPixels(ImVec2(xrange.Min, yrange.Min)),
+            ImPlot::PlotToPixels(ImVec2(xrange.Max, yrange.Max)),
+            ImColor(128, 128, 128, 100)
+        );
+
+        const double xmouse = ImPlot::GetPlotMousePos().x;
+        if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            switch (state) {
+                using enum State;
+            case Dragging:
+                drag(xmouse);
+                break;
+            case MinResizing:
+                min_resize(xmouse);
+                break;
+            case MaxResizing:
+                max_resize(xmouse);
+                break;
+            case None:
+                break;
+            }
+        } else {
+            if (state != State::None)
+                sort_xrange();
+            check_mouse(xmouse);
+        }
+
+        draw_cursor();
+    }
+
+    void sort_xrange()
+    {
+        if (xrange.Min > xrange.Max)
+            std::swap(xrange.Min, xrange.Max);
+    }
+
+    void debug() const
+    {
+        ImGui::Text(
+            "xrange_dragstart = (%g, %g), xmouse_dragstart = %g",
+            xrange_dragstart.Min,
+            xrange_dragstart.Max,
+            xmouse_dragstart
+        );
+    }
+
+    ImPlotRange xrange;
+
+private:
+    enum class State {
+        None,
+        Dragging,
+        MinResizing,
+        MaxResizing,
+    };
+
+    State state = State::None;
+    ImPlotRange xrange_dragstart;
+    double xmouse_dragstart = 0;
+
+    void check_mouse(double xmouse)
+    {
+        using enum State;
+        if (ImPlot::IsPlotHovered()) {
+            const double mouse_near = ImPlot::PixelsToPlot(20, 0).x;
+            if (isnear(xmouse, xrange.Min, mouse_near)) {
+                state = MinResizing;
+            } else if (isnear(xmouse, xrange.Max, mouse_near)) {
+                state = MaxResizing;
+            } else if (xmouse > xrange.Min && xmouse < xrange.Max) {
+                state = Dragging;
+                xrange_dragstart = xrange;
+                xmouse_dragstart = xmouse;
+            } else {
+                state = None;
+            }
+        } else {
+            state = None;
+        }
+    }
+
+    void draw_cursor() const
+    {
+        using enum State;
+        switch (state) {
+        case Dragging:
+            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+            break;
+        case MinResizing:
+        case MaxResizing:
+            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+            break;
+        case None:
+            break;
+        }
+    }
+
+    void drag(double xmouse)
+    {
+        const double dx = xmouse - xmouse_dragstart;
+        const auto xlim = ImPlot::GetPlotLimits().X;
+
+        if (!xlim.Contains(xrange_dragstart.Min + dx)) {
+            xrange.Max = xlim.Min + xrange.Size();
+            xrange.Min = xlim.Min;
+        } else if (!xlim.Contains(xrange_dragstart.Max + dx)) {
+            xrange.Min = xlim.Max - xrange.Size();
+            xrange.Max = xlim.Max;
+        } else {
+            xrange.Min = xrange_dragstart.Min + dx;
+            xrange.Max = xrange_dragstart.Max + dx;
+        }
+    }
+
+    void min_resize(double xmouse) { xrange.Min = ImPlot::GetPlotLimits().X.Clamp(xmouse); }
+
+    void max_resize(double xmouse) { xrange.Max = ImPlot::GetPlotLimits().X.Clamp(xmouse); }
+};
 
 static void draw_plot()
 {
     static PlotData data;
-    static ImPlotRange xrange;
+    static DragRect range_rect(ImPlotRange(data.x[data.size / 4], data.x[data.size * 3 / 4]));
 
     if (ImPlot::BeginPlot(
             "##mainplot", ImVec2(-1, 0), ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect
@@ -186,7 +308,6 @@ static void draw_plot()
         ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
         if (ImPlot::IsPlotHovered())
             draw_plot_hovered(data);
-        xrange = ImPlot::GetPlotLimits().X;
         ImPlot::EndPlot();
     }
 
@@ -194,10 +315,13 @@ static void draw_plot()
         static constexpr ImPlotAxisFlags axis_flags =
             ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_AutoFit;
         ImPlot::SetupAxes(nullptr, nullptr, axis_flags, axis_flags);
-        draw_range_rect(ImPlot::GetPlotDrawList(), xrange);
+        range_rect.draw(ImPlot::GetPlotDrawList());
         ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
         ImPlot::EndPlot();
     }
+
+    ImGui::Text("%g %g", range_rect.xrange.Min, range_rect.xrange.Max);
+    range_rect.debug();
 }
 
 static void draw_window_contents()
