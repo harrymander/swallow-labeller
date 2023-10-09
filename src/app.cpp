@@ -160,12 +160,24 @@ static void draw_plot_hovered(const PlotData& data)
 static void setup_plot(const PlotData& data)
 {
     ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit);
-    ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, data.x[0], data.x[data.x.size() - 1]);
+    ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, data.x[0], data.x[data.size - 1]);
+}
+
+static void draw_range_rect(ImDrawList *draw_list, const ImPlotRange& xrange)
+{
+    const auto yrange = ImPlot::GetPlotLimits().Y;
+    draw_list->AddRectFilled(
+        ImPlot::PlotToPixels(ImVec2(xrange.Min, yrange.Min)),
+        ImPlot::PlotToPixels(ImVec2(xrange.Max, yrange.Max)),
+        ImColor(128, 128, 128, 100)
+    );
 }
 
 static void draw_plot()
 {
     static PlotData data;
+    static ImPlotRange xrange;
+
     if (ImPlot::BeginPlot(
             "##mainplot", ImVec2(-1, 0), ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect
         ))
@@ -174,6 +186,16 @@ static void draw_plot()
         ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
         if (ImPlot::IsPlotHovered())
             draw_plot_hovered(data);
+        xrange = ImPlot::GetPlotLimits().X;
+        ImPlot::EndPlot();
+    }
+
+    if (ImPlot::BeginPlot("##summary", ImVec2(-1, 75), ImPlotFlags_CanvasOnly)) {
+        static constexpr ImPlotAxisFlags axis_flags =
+            ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_AutoFit;
+        ImPlot::SetupAxes(nullptr, nullptr, axis_flags, axis_flags);
+        draw_range_rect(ImPlot::GetPlotDrawList(), xrange);
+        ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
         ImPlot::EndPlot();
     }
 }
