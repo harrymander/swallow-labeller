@@ -2,7 +2,7 @@ include(FetchContent)
 fetchcontent_declare(
     implot
     GIT_REPOSITORY https://github.com/epezent/implot
-    GIT_TAG 33c5a965f55f80057f197257d1d1cdb06523e963
+    GIT_TAG 18c72431f8265e2b0b5378a3a73d8a883b2175ff
 )
 fetchcontent_makeavailable(implot)
 
