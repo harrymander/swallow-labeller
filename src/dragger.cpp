@@ -13,13 +13,13 @@ static inline bool isnear(double a, double b, double eps)
     return std::abs(a - b) <= eps;
 }
 
-void PlotRangeDragger::draw_update(ImPlotRange& range)
+void PlotRangeDragger::draw_update(ImPlotRange& range, PlotRangeDraggerFlags flags)
 {
     const double xmouse = ImPlot::GetPlotMousePos().x;
     if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-        handle_mouse_down(range, xmouse);
+        handle_mouse_down(range, xmouse, flags);
     } else {
-        check_mouse(range, xmouse);
+        handle_mouse_up(range, xmouse, flags);
     }
 
     draw_cursor();
@@ -29,27 +29,31 @@ void PlotRangeDragger::draw_cursor() const
 {
     using enum State;
     switch (state) {
-    case Dragging:
+    case Moving:
         ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
         break;
     case MinResizing:
     case MaxResizing:
         ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
         break;
-    case Hovered:
+    case MouseOutside:
     case DragCreate:
     case None:
         break;
     }
 }
 
-void PlotRangeDragger::handle_mouse_down(ImPlotRange& xrange, double xmouse)
+void PlotRangeDragger::handle_mouse_down(
+    ImPlotRange& xrange, double xmouse, PlotRangeDraggerFlags flags
+)
 {
     switch (state) {
         using enum State;
-    case Hovered:
-        xmouse_dragstart = xmouse;
-        state = DragCreate;
+    case MouseOutside:
+        if (!(flags & NoCreate)) {
+            xmouse_dragstart = xmouse;
+            state = DragCreate;
+        }
         break;
     case DragCreate:
         if (xmouse > xmouse_dragstart) {
@@ -62,8 +66,8 @@ void PlotRangeDragger::handle_mouse_down(ImPlotRange& xrange, double xmouse)
             state = MinResizing;
         }
         break;
-    case Dragging:
-        handle_drag(xrange, xmouse);
+    case Moving:
+        handle_move(xrange, xmouse);
         break;
     case MinResizing:
         min_resize(xrange, xmouse);
@@ -76,21 +80,27 @@ void PlotRangeDragger::handle_mouse_down(ImPlotRange& xrange, double xmouse)
     }
 }
 
-void PlotRangeDragger::check_mouse(const ImPlotRange& range, double xmouse)
+void PlotRangeDragger::handle_mouse_up(
+    const ImPlotRange& range, double xmouse, PlotRangeDraggerFlags flags
+)
 {
     using enum State;
     if (ImPlot::IsPlotHovered()) {
         const double mouse_near = ImPlot::PixelsToPlot(20, 0).x;
         if (isnear(xmouse, range.Min, mouse_near)) {
-            state = MinResizing;
+            state = (flags & NoResize) ? None : MinResizing;
         } else if (isnear(xmouse, range.Max, mouse_near)) {
-            state = MaxResizing;
+            state = (flags & NoResize) ? None : MaxResizing;
         } else if (xmouse > range.Min && xmouse < range.Max) {
-            state = Dragging;
-            xrange_dragstart = range;
-            xmouse_dragstart = xmouse;
+            if (flags & NoMove) {
+                state = None;
+            } else {
+                state = Moving;
+                xrange_dragstart = range;
+                xmouse_dragstart = xmouse;
+            }
         } else {
-            state = Hovered;
+            state = MouseOutside;
         }
     } else {
         state = None;
@@ -115,7 +125,7 @@ void PlotRangeDragger::max_resize(ImPlotRange& xrange, double xmouse)
     }
 }
 
-void PlotRangeDragger::handle_drag(ImPlotRange& xrange, double xmouse)
+void PlotRangeDragger::handle_move(ImPlotRange& xrange, double xmouse)
 {
     const double dx = xmouse - xmouse_dragstart;
     const auto xlim = ImPlot::GetPlotLimits().X;

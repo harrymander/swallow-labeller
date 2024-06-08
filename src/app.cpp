@@ -162,6 +162,13 @@ static void draw_plot()
     static plot::PlotRangeDragger zoom_rect_dragger;
     static ImPlotRange zoom_rect(data.x[data.size / 4], data.x[data.size * 3 / 4]);
 
+    static plot::PlotRangeDraggerFlags dragger_flags = 0;
+    ImGui::CheckboxFlags("No create", &dragger_flags, plot::PlotRangeDragger::NoCreate);
+    ImGui::SameLine();
+    ImGui::CheckboxFlags("No resize", &dragger_flags, plot::PlotRangeDragger::NoResize);
+    ImGui::SameLine();
+    ImGui::CheckboxFlags("No move", &dragger_flags, plot::PlotRangeDragger::NoMove);
+
     if (ImPlot::BeginPlot(
             "##mainplot", ImVec2(-1, 0), ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect
         ))
@@ -180,7 +187,7 @@ static void draw_plot()
             ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_AutoFit;
         ImPlot::SetupAxes(nullptr, nullptr, axis_flags, axis_flags);
         draw_plot_vspan(zoom_rect, {128, 128, 128, 100});
-        zoom_rect_dragger.draw_update(zoom_rect);
+        zoom_rect_dragger.draw_update(zoom_rect, dragger_flags);
         ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
         ImPlot::EndPlot();
     }
