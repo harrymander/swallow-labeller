@@ -10,7 +10,7 @@
 
 namespace plot {
 
-constexpr float DragPxWidth = 20;
+constexpr float DragWidthPx = 20;
 
 static float
 rect_drag_delta(const ImRect& rect, ImGuiID id, bool& clicked, bool& hovered, bool& held)
@@ -23,56 +23,43 @@ rect_drag_delta(const ImRect& rect, ImGuiID id, bool& clicked, bool& hovered, bo
     return 0.;
 }
 
-// static bool resize_xrange_edge(
-//     ImGuiID id,
-//     double *x,
-//     float x_px,
-//     float y_px_min,
-//     float y_px_max,
-//     bool *clicked,
-//     bool *hovered,
-//     bool *held
-// )
-// {
-//     const ImRect rect(x_px - DragPxWidth / 2, y_px_min, x_px + DragPxWidth / 2, y_px_max);
-//     const double delta = rect_drag_delta(rect, id, clicked, hovered, held);
-//     if (delta) {
-//         *x += delta;
-//         return true;
-//     }
-//     return false;
-// }
+static bool
+move_edge(ImGuiID id, float& x, float ymin, float ymax, bool& clicked, bool& hovered, bool& held)
+{
+    const ImRect rect(x - DragWidthPx / 2, ymin, x + DragWidthPx / 2, ymax);
+    const float delta = rect_drag_delta(rect, id, clicked, hovered, held);
+    if (delta) {
+        x += delta;
+        return true;
+    }
+    return false;
+}
 
-// static bool resize_xrange(
-//     ImGuiID id,
-//     double *xmin,
-//     double *xmax,
-//     const ImVec2& px_min,
-//     const ImVec2& px_max,
-//     bool *clicked,
-//     bool *hovered,
-//     bool *held
-// )
-// {
-//     bool modified =
-//         resize_xrange_edge(id + 1, xmin, px_min.x, px_min.y, px_max.y, clicked, hovered, held);
-//     if (resize_xrange_edge(id + 2, xmax, px_max.x, px_min.y, px_max.y, clicked, hovered, held))
-//         modified = true;
+static bool
+resize(ImGuiID& id, ImVec2& px_min, ImVec2& px_max, bool& clicked, bool& hovered, bool& held)
+{
+    bool modified = move_edge(id, px_min.x, px_min.y, px_max.y, clicked, hovered, held);
+    id += 1;
+    if (move_edge(id, px_max.x, px_min.y, px_max.y, clicked, hovered, held)) {
+        modified = true;
+    }
+    return modified;
+}
 
-//     if (*xmin > *xmax) {
-//         std::swap(*xmin, *xmax);
-//     }
-
-//     return modified;
-// }
-
-// Returns delta in plot coordinates x-axis
-static float move_xrange(
-    ImGuiID id, const ImVec2& px_min, const ImVec2& px_max, bool& clicked, bool& hovered, bool& held
+// Returns delta in pixels
+static float move_delta(
+    ImGuiID& id,
+    const ImVec2& px_min,
+    const ImVec2& px_max,
+    bool& clicked,
+    bool& hovered,
+    bool& held
 )
 {
-    const ImRect rect(px_min, px_max);
-    return rect_drag_delta(rect, id, clicked, hovered, held);
+    const ImRect rect(px_min.x + DragWidthPx / 2, px_min.y, px_max.x - DragWidthPx / 2, px_max.y);
+    const float delta = rect_drag_delta(rect, id, clicked, hovered, held);
+    id += 1;
+    return delta;
 }
 
 bool drag_xrange(
@@ -103,10 +90,9 @@ bool drag_xrange(
     bool held = false;
     bool modified = false;
 
-    const ImGuiID id = ImGui::GetCurrentWindow()->GetID(caller_id);
-
+    ImGuiID id = ImGui::GetCurrentWindow()->GetID(caller_id);
     if (!ImHasFlag(flags, DragXRectFlag::NoMove)) {
-        const float xdelta = move_xrange(id, px_min, px_max, clicked, hovered, held);
+        const float xdelta = move_delta(id, px_min, px_max, clicked, hovered, held);
         if ((hovered || held) && cursor) {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
         }
@@ -118,12 +104,12 @@ bool drag_xrange(
         }
     }
 
-    // if (resize) {
-    //     modified = resize_rect(id + 1, xmin, xmax, px_min, px_max, clicked, hovered, held);
-    //     if ((hovered || held) && cursor) {
-    //         ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
-    //     }
-    // }
+    if (!ImHasFlag(flags, DragXRectFlag::NoResize)) {
+        modified = resize(id, px_min, px_max, clicked, hovered, held);
+        if ((hovered || held) && cursor) {
+            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+        }
+    }
 
     std::tie(xmin, xmax) =
         std::minmax(ImPlot::PixelsToPlot(px_min).x, ImPlot::PixelsToPlot(px_max).x);
