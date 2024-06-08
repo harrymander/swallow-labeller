@@ -142,13 +142,23 @@ static void draw_plot()
 
     static bool ctrl_for_create = false;
     static plot::PlotSelectorFlags selector_flags = 0;
+    ImGui::TextUnformatted("Selector options:");
+    ImGui::SameLine();
     ImGui::Checkbox("Ctrl for create", &ctrl_for_create);
     ImGui::SameLine();
-    ImGui::CheckboxFlags("No cursor", &selector_flags, plot::PlotXSelector::NoCursor);
+    ImGui::CheckboxFlags(
+        "No cursor##selector_flags", &selector_flags, plot::PlotXSelector::NoCursor
+    );
 
     bool clicked;
     bool hovered;
     bool held;
+    static plot::DragXRectFlags drag_flags = 0;
+    ImGui::TextUnformatted("Drag xrange options:");
+    ImGui::SameLine();
+    ImGui::CheckboxFlags("No cursor##drag_flags", &drag_flags, plot::DragXRectFlag::NoCursor);
+    ImGui::SameLine();
+    ImGui::CheckboxFlags("No input", &drag_flags, plot::DragXRectFlag::NoInput);
 
     if (ImPlot::BeginPlot(
             "##mainplot",
@@ -165,7 +175,7 @@ static void draw_plot()
             ImGuiMouseButton_Right,
             ctrl_for_create ? ImGuiKey_LeftCtrl : ImGuiKey_None
         );
-        plot::drag_xrange(0, rect, ImColor(255, 0, 0, 80), 0, &clicked, &hovered, &held);
+        plot::drag_xrange(0, rect, ImColor(255, 0, 0, 80), drag_flags, &clicked, &hovered, &held);
         ImPlot::EndPlot();
     }
 
