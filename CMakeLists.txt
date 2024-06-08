@@ -7,7 +7,7 @@ add_subdirectory(vendor)
 add_executable(implot-rects
     src/main.cpp
     src/app.cpp
-    src/dragger.cpp
+    src/selector.cpp
 )
 target_compile_features(implot-rects PRIVATE cxx_std_20)
 target_link_libraries(implot-rects PRIVATE

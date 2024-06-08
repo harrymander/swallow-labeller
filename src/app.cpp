@@ -1,6 +1,7 @@
 #include "app.hpp"
 
-#include "dragger.hpp"
+#include "selector.hpp"
+#include "util.hpp"
 
 #include <imgui.h>
 #include <implot.h>
@@ -66,18 +67,6 @@ struct PlotData {
     }
 };
 
-template <class BidirIt, class T>
-BidirIt binary_search_closest(BidirIt first, BidirIt last, const T& value)
-{
-    BidirIt found = std::lower_bound(first, last, value);
-    if (found != last && found != first) {
-        const auto prev = std::prev(found);
-        if (value - *prev < *found - value)
-            found = prev;
-    }
-    return found;
-}
-
 static void add_plot_marker(ImDrawList *draw_list, const ImVec2& pos)
 {
     constexpr float half_width = 4;
@@ -138,7 +127,7 @@ static void draw_plot_hovered(const PlotData& data)
 {
     const auto mouse = ImPlot::GetPlotMousePos();
     if (mouse.x > data.x[0]) {
-        const auto xplot = binary_search_closest(data.x.begin(), data.x.end(), mouse.x);
+        const auto xplot = util::binary_search_closest(data.x.begin(), data.x.end(), mouse.x);
         if (xplot != data.x.end())
             draw_plot_cursor(*xplot, data.y[std::distance(data.x.begin(), xplot)]);
     }
@@ -160,18 +149,13 @@ static void draw_plot_vspan(const ImPlotRange& xrange, const ImColor& color)
 static void draw_plot()
 {
     static PlotData data(1001);
-    static plot::PlotRangeDragger zoom_rect_dragger;
-    static ImPlotRange zoom_rect(data.x[data.size / 4], data.x[data.size * 3 / 4]);
-
-    static plot::PlotRangeDraggerFlags dragger_flags = 0;
-    ImGui::CheckboxFlags("No create", &dragger_flags, plot::PlotRangeDragger::NoCreate);
-    ImGui::SameLine();
-    ImGui::CheckboxFlags("No resize", &dragger_flags, plot::PlotRangeDragger::NoResize);
-    ImGui::SameLine();
-    ImGui::CheckboxFlags("No move", &dragger_flags, plot::PlotRangeDragger::NoMove);
+    static plot::PlotXSelector selector;
 
     static bool ctrl_for_create = false;
+    static plot::PlotSelectorFlags selector_flags = 0;
     ImGui::Checkbox("Ctrl for create", &ctrl_for_create);
+    ImGui::SameLine();
+    ImGui::CheckboxFlags("No cursor", &selector_flags, plot::PlotXSelector::NoCursor);
 
     if (ImPlot::BeginPlot(
             "##mainplot", ImVec2(-1, 0), ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect
@@ -179,23 +163,24 @@ static void draw_plot()
     {
         ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit);
         ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, data.x[0], data.x[data.size - 1]);
-        ImPlot::SetupAxisLinks(ImAxis_X1, &zoom_rect.Min, &zoom_rect.Max);
         ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
+        selector.draw(
+            plot::PlotXSelector::DefaultColor,
+            selector_flags,
+            ImGuiMouseButton_Right,
+            ctrl_for_create ? ImGuiKey_LeftCtrl : ImGuiKey_None
+        );
         if (ImPlot::IsPlotHovered())
             draw_plot_hovered(data);
         ImPlot::EndPlot();
     }
 
-    if (ImPlot::BeginPlot("##summary", ImVec2(-1, 75), ImPlotFlags_CanvasOnly)) {
-        static constexpr ImPlotAxisFlags axis_flags =
-            ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_AutoFit;
-        ImPlot::SetupAxes(nullptr, nullptr, axis_flags, axis_flags);
-        draw_plot_vspan(zoom_rect, {128, 128, 128, 100});
-        zoom_rect_dragger.draw_update(
-            zoom_rect, dragger_flags, ctrl_for_create ? ImGuiKey_LeftCtrl : ImGuiKey_None
-        );
-        ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
-        ImPlot::EndPlot();
+    ImGui::Text("%s selecting", selector.is_selecting() ? "Is" : "Is not");
+    const auto last_selection = selector.last_selection();
+    if (last_selection) {
+        ImGui::Text("Last selection: (%lf, %lf)", last_selection->Min, last_selection->Max);
+    } else {
+        ImGui::TextUnformatted("Nothing selected yet!");
     }
 }
 
@@ -206,10 +191,10 @@ static void draw_large_data_plot(const PlotData& data)
         ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, data.x[0], data.x[data.size - 1]);
 
         const auto xlimits = ImPlot::GetPlotLimits().X;
-        auto xmin = binary_search_closest(data.x.begin(), data.x.end(), xlimits.Min);
+        auto xmin = util::binary_search_closest(data.x.begin(), data.x.end(), xlimits.Min);
         if (xmin == data.x.end())
             xmin = data.x.begin();
-        auto xmax = binary_search_closest(data.x.begin(), data.x.end(), xlimits.Max);
+        auto xmax = util::binary_search_closest(data.x.begin(), data.x.end(), xlimits.Max);
         const size_t downsample = data.size / 10'000 + 1;
         const auto imin = xmin - data.x.begin();
         ImPlot::PlotStairs(
