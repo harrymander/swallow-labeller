@@ -13,11 +13,18 @@ static inline bool isnear(double a, double b, double eps)
     return std::abs(a - b) <= eps;
 }
 
-void PlotRangeDragger::draw_update(ImPlotRange& range, PlotRangeDraggerFlags flags)
+static inline bool key_down_or_none(ImGuiKey key)
+{
+    return key == ImGuiKey_None || ImGui::IsKeyDown(key);
+}
+
+void PlotRangeDragger::draw_update(
+    ImPlotRange& range, PlotRangeDraggerFlags flags, ImGuiKey create_key
+)
 {
     const double xmouse = ImPlot::GetPlotMousePos().x;
     if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-        handle_mouse_down(range, xmouse, flags);
+        handle_mouse_down(range, xmouse, flags, create_key);
     } else {
         handle_mouse_up(range, xmouse, flags);
     }
@@ -44,13 +51,13 @@ void PlotRangeDragger::draw_cursor() const
 }
 
 void PlotRangeDragger::handle_mouse_down(
-    ImPlotRange& xrange, double xmouse, PlotRangeDraggerFlags flags
+    ImPlotRange& xrange, double xmouse, PlotRangeDraggerFlags flags, ImGuiKey create_key
 )
 {
     switch (state) {
         using enum State;
     case MouseOutside:
-        if (!(flags & NoCreate)) {
+        if (!(flags & NoCreate) && key_down_or_none(create_key)) {
             xmouse_dragstart = xmouse;
             state = DragCreate;
         }

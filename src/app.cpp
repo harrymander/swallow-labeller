@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <future>
 #include <optional>
 #include <sstream>
@@ -169,6 +170,9 @@ static void draw_plot()
     ImGui::SameLine();
     ImGui::CheckboxFlags("No move", &dragger_flags, plot::PlotRangeDragger::NoMove);
 
+    static bool ctrl_for_create = false;
+    ImGui::Checkbox("Ctrl for create", &ctrl_for_create);
+
     if (ImPlot::BeginPlot(
             "##mainplot", ImVec2(-1, 0), ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect
         ))
@@ -187,7 +191,9 @@ static void draw_plot()
             ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_AutoFit;
         ImPlot::SetupAxes(nullptr, nullptr, axis_flags, axis_flags);
         draw_plot_vspan(zoom_rect, {128, 128, 128, 100});
-        zoom_rect_dragger.draw_update(zoom_rect, dragger_flags);
+        zoom_rect_dragger.draw_update(
+            zoom_rect, dragger_flags, ctrl_for_create ? ImGuiKey_LeftCtrl : ImGuiKey_None
+        );
         ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
         ImPlot::EndPlot();
     }
