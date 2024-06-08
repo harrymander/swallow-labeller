@@ -15,8 +15,8 @@ rect_drag_delta(const ImRect& rect, ImGuiID id, bool& clicked, bool& hovered, bo
     ImGui::KeepAliveID(id);
     clicked = ImGui::ButtonBehavior(rect, id, &hovered, &held);
     if (held && ImGui::IsMouseDragging(0)) {
-        const auto mouse_delta = ImGui::GetIO().MouseDelta;
-        return ImPlot::PixelsToPlot(mouse_delta).x;
+        return ImPlot::PixelsToPlot({rect.Min.x + ImGui::GetIO().MouseDelta.x, 0}).x
+            - ImPlot::PixelsToPlot(rect.Min).x;
     }
     return 0.;
 }
