@@ -1,5 +1,6 @@
 #include "app.hpp"
 
+#include "drag-rect.hpp"
 #include "selector.hpp"
 #include "util.hpp"
 
@@ -133,23 +134,11 @@ static void draw_plot_hovered(const PlotData& data)
     }
 }
 
-static void draw_plot_vspan(double xmin, double xmax, const ImColor& color)
-{
-    const auto yrange = ImPlot::GetPlotLimits().Y;
-    ImPlot::GetPlotDrawList()->AddRectFilled(
-        ImPlot::PlotToPixels(xmin, yrange.Min), ImPlot::PlotToPixels(xmax, yrange.Max), color
-    );
-}
-
-static void draw_plot_vspan(const ImPlotRange& xrange, const ImColor& color)
-{
-    draw_plot_vspan(xrange.Min, xrange.Max, color);
-}
-
 static void draw_plot()
 {
     static PlotData data(1001);
     static plot::PlotXSelector selector;
+    static ImPlotRange rect(.45, .6);
 
     static bool ctrl_for_create = false;
     static plot::PlotSelectorFlags selector_flags = 0;
@@ -157,8 +146,14 @@ static void draw_plot()
     ImGui::SameLine();
     ImGui::CheckboxFlags("No cursor", &selector_flags, plot::PlotXSelector::NoCursor);
 
+    bool clicked;
+    bool hovered;
+    bool held;
+
     if (ImPlot::BeginPlot(
-            "##mainplot", ImVec2(-1, 0), ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect
+            "##mainplot",
+            ImVec2(-1, 0),
+            ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus
         ))
     {
         ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit);
@@ -170,8 +165,7 @@ static void draw_plot()
             ImGuiMouseButton_Right,
             ctrl_for_create ? ImGuiKey_LeftCtrl : ImGuiKey_None
         );
-        if (ImPlot::IsPlotHovered())
-            draw_plot_hovered(data);
+        plot::drag_xrange(0, &rect, ImColor(255, 0, 0, 80), 0, &clicked, &hovered, &held);
         ImPlot::EndPlot();
     }
 
@@ -182,6 +176,10 @@ static void draw_plot()
     } else {
         ImGui::TextUnformatted("Nothing selected yet!");
     }
+
+    ImGui::Text("clicked = %d, hovered = %d, held = %d", clicked, hovered, held);
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui::Text("Mouse Position: [%.0f,%.0f]", io.MousePos.x, io.MousePos.y);
 }
 
 static void draw_large_data_plot(const PlotData& data)
@@ -246,14 +244,7 @@ static void draw_window_contents()
 bool draw()
 {
     const auto& io = ImGui::GetIO();
-    ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, io.DisplaySize.y));
-    ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::Begin(
-        "##mainwindow",
-        nullptr,
-        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove
-            | ImGuiWindowFlags_NoResize
-    );
+    ImGui::Begin("##mainwindow", nullptr);
     draw_window_contents();
     ImGui::End();
     return !to_close;
