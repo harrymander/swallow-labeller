@@ -10,7 +10,7 @@
 
 namespace plot {
 
-constexpr float EdgeWidthPx = 20;
+constexpr float EdgeWidthPx = 10;
 constexpr float HalfEdgeWidthPx = EdgeWidthPx / 2;
 
 template <class T> static inline void set_pointer(T *ptr, T value)
@@ -32,20 +32,24 @@ static bool drag_xrange(
     bool& held
 )
 {
-    const auto button_behaviour = [&](float x0, float x1) -> bool {
+    const bool show_cursor = !ImHasFlag(flags, DragXRectFlag::NoCursor);
+    const auto button_behaviour = [&](float x0, float x1, ImGuiMouseCursor cursor) -> bool {
         ImGui::KeepAliveID(id);
         const ImRect bb(x0, limits.Min.y, x1, limits.Max.y);
         clicked = ImGui::ButtonBehavior(bb, id, &hovered, &held);
+        if ((held || hovered) && show_cursor && cursor != ImGuiMouseCursor_None) {
+            ImGui::SetMouseCursor(cursor);
+        }
         id += 1;
         return clicked || hovered || held;
     };
 
+    // No input: just catch button activity on region
     if (ImHasFlag(flags, DragXRectFlag::NoInput)) {
-        button_behaviour(xmin, xmax);
+        button_behaviour(xmin, xmax, ImGuiMouseCursor_None);
         return false;
     }
 
-    const bool show_cursor = !ImHasFlag(flags, DragXRectFlag::NoCursor);
     const auto get_drag_delta = [](bool held) -> float {
         if (held && ImGui::IsMouseDragging(0)) {
             return ImGui::GetIO().MouseDelta.x;
@@ -54,10 +58,7 @@ static bool drag_xrange(
     };
 
     // Movement
-    if (button_behaviour(xmin + HalfEdgeWidthPx, xmax - HalfEdgeWidthPx)) {
-        if ((held || hovered) && show_cursor) {
-            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-        }
+    if (button_behaviour(xmin + HalfEdgeWidthPx, xmax - HalfEdgeWidthPx, ImGuiMouseCursor_Hand)) {
         const float delta = get_drag_delta(held);
         if (delta) {
             xmin += delta;
@@ -72,6 +73,28 @@ static bool drag_xrange(
             return true;
         }
         return false;
+    }
+
+    // Resizing
+    bool modified = false;
+    using MinmaxFunc = const float& (*) (const float&, const float&);
+    const auto resize_edge = [&](float& x, float xlim, MinmaxFunc minmax_func) -> bool {
+        modified = false;
+        if (button_behaviour(x - HalfEdgeWidthPx, x + HalfEdgeWidthPx, ImGuiMouseCursor_ResizeEW)) {
+            const float delta = get_drag_delta(held);
+            if (delta) {
+                modified = true;
+                x = minmax_func(x + delta, xlim);
+            }
+            return true;
+        }
+        return false;
+    };
+    if (resize_edge(xmin, limits.Min.x, std::max)) {
+        return modified;
+    }
+    if (resize_edge(xmax, limits.Max.x, std::min)) {
+        return modified;
     }
 
     return false;
@@ -110,7 +133,9 @@ bool drag_xrange(
     );
     const bool modified = drag_xrange(id, xmin_px, xmax_px, flags, limits, clicked, hovered, held);
     ImPlot::GetPlotDrawList()->AddRectFilled(
-        {xmin_px, limits.Min.y}, {xmax_px, limits.Max.y}, color
+        {std::max(xmin_px, limits.Min.x), limits.Min.y},
+        {std::min(xmax_px, limits.Max.x), limits.Max.y},
+        color
     );
 
     std::tie(xmin, xmax) = std::minmax(
