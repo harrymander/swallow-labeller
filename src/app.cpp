@@ -165,7 +165,7 @@ static void draw_plot()
             ImGuiMouseButton_Right,
             ctrl_for_create ? ImGuiKey_LeftCtrl : ImGuiKey_None
         );
-        plot::drag_xrange(0, &rect, ImColor(255, 0, 0, 80), 0, &clicked, &hovered, &held);
+        plot::drag_xrange(0, rect, ImColor(255, 0, 0, 80), 0, &clicked, &hovered, &held);
         ImPlot::EndPlot();
     }
 

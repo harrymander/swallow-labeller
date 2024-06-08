@@ -5,18 +5,20 @@
 #include "implot.h"
 #include "implot_internal.h"
 
+#include <algorithm>
+#include <tuple>
+
 namespace plot {
 
 constexpr float DragPxWidth = 20;
 
-static double
+static float
 rect_drag_delta(const ImRect& rect, ImGuiID id, bool& clicked, bool& hovered, bool& held)
 {
     ImGui::KeepAliveID(id);
     clicked = ImGui::ButtonBehavior(rect, id, &hovered, &held);
     if (held && ImGui::IsMouseDragging(0)) {
-        return ImPlot::PixelsToPlot({rect.Min.x + ImGui::GetIO().MouseDelta.x, 0}).x
-            - ImPlot::PixelsToPlot(rect.Min).x;
+        return ImGui::GetIO().MouseDelta.x;
     }
     return 0.;
 }
@@ -65,7 +67,7 @@ rect_drag_delta(const ImRect& rect, ImGuiID id, bool& clicked, bool& hovered, bo
 // }
 
 // Returns delta in plot coordinates x-axis
-static double move_xrange(
+static float move_xrange(
     ImGuiID id, const ImVec2& px_min, const ImVec2& px_max, bool& clicked, bool& hovered, bool& held
 )
 {
@@ -73,18 +75,10 @@ static double move_xrange(
     return rect_drag_delta(rect, id, clicked, hovered, held);
 }
 
-static void draw_plot_vspan(double xmin, double xmax, const ImColor& color)
-{
-    const auto yrange = ImPlot::GetPlotLimits().Y;
-    ImPlot::GetPlotDrawList()->AddRectFilled(
-        ImPlot::PlotToPixels(xmin, yrange.Min), ImPlot::PlotToPixels(xmax, yrange.Max), color
-    );
-}
-
 bool drag_xrange(
     int caller_id,
-    double *xmin,
-    double *xmax,
+    double& xmin,
+    double& xmax,
     const ImColor& color,
     plot::DragXRectFlags flags,
     bool *out_clicked,
@@ -92,19 +86,17 @@ bool drag_xrange(
     bool *out_held
 )
 {
+    const ImPlotPlot *current_plot = ImPlot::GetCurrentPlot();
     IM_ASSERT_USER_ERROR(
-        ImPlot::GetCurrentPlot() != nullptr,
-        "drag_xrect needs to be called between BeginPlot and EndPlot"
+        current_plot != nullptr, "drag_xrect needs to be called between BeginPlot and EndPlot"
     );
     ImGui::PushID("#PLOT_DRAG_XRANGE");
     ImPlot::SetupLock();
 
-    const auto yrange = ImPlot::GetPlotLimits().Y;
-    const ImVec2 px_min = ImPlot::PlotToPixels(*xmin, yrange.Max);
-    const ImVec2 px_max = ImPlot::PlotToPixels(*xmax, yrange.Min);
+    const auto plot_limits = ImPlot::GetPlotLimits();
+    ImVec2 px_min = ImPlot::PlotToPixels(xmin, plot_limits.Y.Max);
+    ImVec2 px_max = ImPlot::PlotToPixels(xmax, plot_limits.Y.Min);
 
-    bool move = !ImHasFlag(flags, DragXRectFlag::NoMove);
-    bool resize = !ImHasFlag(flags, DragXRectFlag::NoResize);
     const bool cursor = !ImHasFlag(flags, DragXRectFlag::NoCursor);
     bool clicked = false;
     bool hovered = false;
@@ -113,15 +105,15 @@ bool drag_xrange(
 
     const ImGuiID id = ImGui::GetCurrentWindow()->GetID(caller_id);
 
-    if (move) {
-        const double xdelta = move_xrange(id, px_min, px_max, clicked, hovered, held);
+    if (!ImHasFlag(flags, DragXRectFlag::NoMove)) {
+        const float xdelta = move_xrange(id, px_min, px_max, clicked, hovered, held);
         if ((hovered || held) && cursor) {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
         }
 
         if (xdelta) {
-            *xmin += xdelta;
-            *xmax += xdelta;
+            px_min.x += xdelta;
+            px_max.x += xdelta;
             modified = true;
         }
     }
@@ -133,9 +125,22 @@ bool drag_xrange(
     //     }
     // }
 
-    draw_plot_vspan(*xmin, *xmax, color);
+    std::tie(xmin, xmax) =
+        std::minmax(ImPlot::PixelsToPlot(px_min).x, ImPlot::PixelsToPlot(px_max).x);
+    const auto& xconstraint = current_plot->XAxis(0).ConstraintRange;
+    if (xmin < xconstraint.Min) {
+        xmax = xmax + xconstraint.Min - xmin;
+        xmin = xconstraint.Min;
+    } else if (xmax > xconstraint.Max) {
+        xmin = xmin - xmax + xconstraint.Max;
+        xmax = xconstraint.Max;
+    }
+    ImPlot::GetPlotDrawList()->AddRectFilled(
+        ImPlot::PlotToPixels(std::max(xmin, plot_limits.X.Min), plot_limits.Y.Max),
+        ImPlot::PlotToPixels(std::min(xmax, plot_limits.X.Max), plot_limits.Y.Min),
+        color
+    );
 
-    ImGui::PopID();
     if (out_clicked) {
         *out_clicked = clicked;
     }
@@ -145,12 +150,14 @@ bool drag_xrange(
     if (out_held) {
         *out_held = held;
     }
+
+    ImGui::PopID();
     return modified;
 }
 
 bool drag_xrange(
     int id,
-    ImPlotRange *xrange,
+    ImPlotRange& xrange,
     const ImColor& color,
     plot::DragXRectFlags flag,
     bool *out_clicked,
@@ -158,7 +165,7 @@ bool drag_xrange(
     bool *held
 )
 {
-    return drag_xrange(id, &xrange->Min, &xrange->Max, color, flag, out_clicked, out_hovered, held);
+    return drag_xrange(id, xrange.Min, xrange.Max, color, flag, out_clicked, out_hovered, held);
 }
 
 }; // namespace plot

@@ -23,8 +23,8 @@ enum DragXRectFlag {
 
 bool drag_xrange(
     int id,
-    double *xmin,
-    double *xmax,
+    double& xmin,
+    double& xmax,
     const ImColor& color,
     plot::DragXRectFlags flags = 0,
     bool *clicked = nullptr,
@@ -34,7 +34,7 @@ bool drag_xrange(
 
 bool drag_xrange(
     int id,
-    ImPlotRange *xrange,
+    ImPlotRange& xrange,
     const ImColor& color,
     plot::DragXRectFlags flags = 0,
     bool *clicked = nullptr,
