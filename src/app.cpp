@@ -187,7 +187,14 @@ static void draw_plot()
         ImGui::TextUnformatted("Nothing selected yet!");
     }
 
-    ImGui::Text("clicked = %d, hovered = %d, held = %d", clicked, hovered, held);
+    ImGui::Text(
+        "Region: [%lf, %lf], clicked = %d, hovered = %d, held = %d",
+        rect.Min,
+        rect.Max,
+        clicked,
+        hovered,
+        held
+    );
     ImGuiIO& io = ImGui::GetIO();
     ImGui::Text("Mouse Position: [%.0f,%.0f]", io.MousePos.x, io.MousePos.y);
 }
