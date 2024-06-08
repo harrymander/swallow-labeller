@@ -12,13 +12,8 @@ enum DragXRectFlag {
     // Disable cursors on move and resize
     NoCursor = 1 << 0,
 
-    // Disable moving
-    NoMove = 1 << 1,
-
-    // Disable resize
-    NoResize = 1 << 2,
-
-    NoInteraction = NoMove | NoResize,
+    // Disable moving/resizing
+    NoInput = 1 << 1,
 };
 
 bool drag_xrange(

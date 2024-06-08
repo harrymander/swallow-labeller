@@ -6,61 +6,10 @@
 #include "implot_internal.h"
 
 #include <algorithm>
-#include <tuple>
 
 namespace plot {
 
-constexpr float DragWidthPx = 20;
-
-static float
-rect_drag_delta(const ImRect& rect, ImGuiID id, bool& clicked, bool& hovered, bool& held)
-{
-    ImGui::KeepAliveID(id);
-    clicked = ImGui::ButtonBehavior(rect, id, &hovered, &held);
-    if (held && ImGui::IsMouseDragging(0)) {
-        return ImGui::GetIO().MouseDelta.x;
-    }
-    return 0.;
-}
-
-static bool
-move_edge(ImGuiID id, float& x, float ymin, float ymax, bool& clicked, bool& hovered, bool& held)
-{
-    const ImRect rect(x - DragWidthPx / 2, ymin, x + DragWidthPx / 2, ymax);
-    const float delta = rect_drag_delta(rect, id, clicked, hovered, held);
-    if (delta) {
-        x += delta;
-        return true;
-    }
-    return false;
-}
-
-static bool
-resize(ImGuiID& id, ImVec2& px_min, ImVec2& px_max, bool& clicked, bool& hovered, bool& held)
-{
-    bool modified = move_edge(id, px_min.x, px_min.y, px_max.y, clicked, hovered, held);
-    id += 1;
-    if (move_edge(id, px_max.x, px_min.y, px_max.y, clicked, hovered, held)) {
-        modified = true;
-    }
-    return modified;
-}
-
-// Returns delta in pixels
-static float move_delta(
-    ImGuiID& id,
-    const ImVec2& px_min,
-    const ImVec2& px_max,
-    bool& clicked,
-    bool& hovered,
-    bool& held
-)
-{
-    const ImRect rect(px_min.x + DragWidthPx / 2, px_min.y, px_max.x - DragWidthPx / 2, px_max.y);
-    const float delta = rect_drag_delta(rect, id, clicked, hovered, held);
-    id += 1;
-    return delta;
-}
+constexpr float EdgeWidth = 20;
 
 bool drag_xrange(
     int caller_id,
@@ -84,43 +33,70 @@ bool drag_xrange(
     ImVec2 px_min = ImPlot::PlotToPixels(xmin, plot_limits.Y.Max);
     ImVec2 px_max = ImPlot::PlotToPixels(xmax, plot_limits.Y.Min);
 
-    const bool cursor = !ImHasFlag(flags, DragXRectFlag::NoCursor);
     bool clicked = false;
     bool hovered = false;
     bool held = false;
     bool modified = false;
-
     ImGuiID id = ImGui::GetCurrentWindow()->GetID(caller_id);
-    if (!ImHasFlag(flags, DragXRectFlag::NoMove)) {
-        const float xdelta = move_delta(id, px_min, px_max, clicked, hovered, held);
-        if ((hovered || held) && cursor) {
-            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-        }
 
-        if (xdelta) {
-            px_min.x += xdelta;
-            px_max.x += xdelta;
-            modified = true;
+    auto button_behaviour = [&](const ImRect& rect) {
+        ImGui::KeepAliveID(id);
+        clicked = ImGui::ButtonBehavior(rect, id, &hovered, &held);
+        id += 1;
+    };
+
+    const bool show_cursor = !ImHasFlag(flags, DragXRectFlag::NoCursor);
+    if (!ImHasFlag(flags, DragXRectFlag::NoInput)) {
+        auto move_rect = [&](const ImRect& rect) -> float {
+            button_behaviour(rect);
+            if (held && ImGui::IsMouseDragging(0)) {
+                return ImGui::GetIO().MouseDelta.x;
+            }
+            return 0.;
+        };
+
+        auto move_edge = [&](const ImVec2& edge) -> float {
+            const float ret =
+                move_rect({edge.x - EdgeWidth / 2, px_min.y, edge.x + EdgeWidth / 2, px_max.y});
+            if ((held || hovered) && show_cursor) {
+                ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+            }
+            return ret;
+        };
+
+        const ImPlotRange& constraint = current_plot->XAxis(0).ConstraintRange;
+        modified = true;
+        float delta =
+            move_rect({px_min.x + EdgeWidth / 2, px_min.y, px_max.x - EdgeWidth / 2, px_max.y});
+        if (delta) {
+            if ((held || hovered) && show_cursor) {
+                ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+            }
+
+            px_min.x += delta;
+            px_max.x += delta;
+            xmin = ImPlot::PixelsToPlot(px_min).x;
+            xmax = ImPlot::PixelsToPlot(px_max).x;
+            if (xmin < constraint.Min) {
+                xmax = constraint.Min + (xmax - xmin);
+                xmin = constraint.Min;
+            } else if (xmax > constraint.Max) {
+                xmin = constraint.Max - (xmax - xmin);
+                xmax = constraint.Max;
+            }
+        } else if ((delta = move_edge(px_min))) {
+            px_min.x += delta;
+            xmin = std::max(constraint.Min, ImPlot::PixelsToPlot(px_min).x);
+        } else if ((delta = move_edge(px_max))) {
+            px_max.x += delta;
+            xmax = std::min(constraint.Max, ImPlot::PixelsToPlot(px_max).x);
+        } else {
+            modified = false;
         }
+    } else {
+        button_behaviour({px_min, px_max});
     }
 
-    if (!ImHasFlag(flags, DragXRectFlag::NoResize)) {
-        modified = resize(id, px_min, px_max, clicked, hovered, held);
-        if ((hovered || held) && cursor) {
-            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
-        }
-    }
-
-    std::tie(xmin, xmax) =
-        std::minmax(ImPlot::PixelsToPlot(px_min).x, ImPlot::PixelsToPlot(px_max).x);
-    const auto& xconstraint = current_plot->XAxis(0).ConstraintRange;
-    if (xmin < xconstraint.Min) {
-        xmax = xmax + xconstraint.Min - xmin;
-        xmin = xconstraint.Min;
-    } else if (xmax > xconstraint.Max) {
-        xmin = xmin - xmax + xconstraint.Max;
-        xmax = xconstraint.Max;
-    }
     ImPlot::GetPlotDrawList()->AddRectFilled(
         ImPlot::PlotToPixels(std::max(xmin, plot_limits.X.Min), plot_limits.Y.Max),
         ImPlot::PlotToPixels(std::min(xmax, plot_limits.X.Max), plot_limits.Y.Min),
