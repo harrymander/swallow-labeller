@@ -1,5 +1,7 @@
 #include "app.hpp"
 
+#include "dragger.hpp"
+
 #include <imgui.h>
 #include <implot.h>
 
@@ -129,28 +131,6 @@ static void draw_plot_cursor(float xplot, float yplot)
     const auto pospx = ImPlot::PlotToPixels(xplot, yplot);
     add_plot_vline(draw_list, ImVec2(xplot, yplot), pospx);
     add_plot_marker(draw_list, pospx);
-
-    static std::optional<ImPlotRect> rect = std::nullopt;
-    if ((ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl))
-        && ImGui::IsMouseDown(ImGuiMouseButton_Left))
-    {
-        const auto limits = ImPlot::GetPlotLimits();
-        if (!rect.has_value()) {
-            rect = std::make_optional<ImPlotRect>();
-            rect->X.Min = xplot;
-        }
-        rect->X.Max = xplot;
-        rect->Y.Max = limits.Y.Max;
-        rect->Y.Min = limits.Y.Min;
-
-        draw_list->AddRectFilled(
-            ImPlot::PlotToPixels(rect->Min()),
-            ImPlot::PlotToPixels(rect->Max()),
-            ImColor(120, 0, 0, 90)
-        );
-    } else {
-        rect.reset();
-    }
 }
 
 static void draw_plot_hovered(const PlotData& data)
@@ -163,158 +143,24 @@ static void draw_plot_hovered(const PlotData& data)
     }
 }
 
-static inline bool isnear(double a, double b, double eps)
+static void draw_plot_vspan(double xmin, double xmax, const ImColor& color)
 {
-    return std::abs(a - b) <= eps;
+    const auto yrange = ImPlot::GetPlotLimits().Y;
+    ImPlot::GetPlotDrawList()->AddRectFilled(
+        ImPlot::PlotToPixels(xmin, yrange.Min), ImPlot::PlotToPixels(xmax, yrange.Max), color
+    );
 }
 
-class DragRect {
-public:
-    explicit DragRect(const ImPlotRange xrange = ImPlotRange(0, 0)) : xrange(xrange) {}
-
-    void draw(ImDrawList *draw_list)
-    {
-        const auto yrange = ImPlot::GetPlotLimits().Y;
-        draw_list->AddRectFilled(
-            ImPlot::PlotToPixels(ImVec2(xrange.Min, yrange.Min)),
-            ImPlot::PlotToPixels(ImVec2(xrange.Max, yrange.Max)),
-            ImColor(128, 128, 128, 100)
-        );
-
-        const double xmouse = ImPlot::GetPlotMousePos().x;
-        if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-            switch (state) {
-                using enum State;
-            case Hovered:
-                xmouse_dragstart = xmouse;
-                state = DragCreate;
-                break;
-            case DragCreate:
-                if (xmouse > xmouse_dragstart) {
-                    xrange.Min = xmouse_dragstart;
-                    xrange.Max = xmouse;
-                    state = MaxResizing;
-                } else if (xmouse < xmouse_dragstart) {
-                    xrange.Min = xmouse;
-                    xrange.Max = xmouse_dragstart;
-                    state = MinResizing;
-                }
-                break;
-            case Dragging:
-                drag(xmouse);
-                break;
-            case MinResizing:
-                min_resize(xmouse);
-                break;
-            case MaxResizing:
-                max_resize(xmouse);
-                break;
-            case None:
-                break;
-            }
-        } else {
-            check_mouse(xmouse);
-        }
-
-        draw_cursor();
-    }
-
-    void setup_axis_link(ImAxis idx) { ImPlot::SetupAxisLinks(idx, &xrange.Min, &xrange.Max); }
-
-private:
-    enum class State {
-        None,
-        Hovered,
-        DragCreate,
-        Dragging,
-        MinResizing,
-        MaxResizing,
-    };
-
-    ImPlotRange xrange;
-    State state = State::None;
-    ImPlotRange xrange_dragstart;
-    double xmouse_dragstart = 0;
-
-    void check_mouse(double xmouse)
-    {
-        using enum State;
-        if (ImPlot::IsPlotHovered()) {
-            const double mouse_near = ImPlot::PixelsToPlot(20, 0).x;
-            if (isnear(xmouse, xrange.Min, mouse_near)) {
-                state = MinResizing;
-            } else if (isnear(xmouse, xrange.Max, mouse_near)) {
-                state = MaxResizing;
-            } else if (xmouse > xrange.Min && xmouse < xrange.Max) {
-                state = Dragging;
-                xrange_dragstart = xrange;
-                xmouse_dragstart = xmouse;
-            } else {
-                state = Hovered;
-            }
-        } else {
-            state = None;
-        }
-    }
-
-    void draw_cursor() const
-    {
-        using enum State;
-        switch (state) {
-        case Dragging:
-            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            break;
-        case MinResizing:
-        case MaxResizing:
-            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
-            break;
-        case Hovered:
-        case DragCreate:
-        case None:
-            break;
-        }
-    }
-
-    void drag(double xmouse)
-    {
-        const double dx = xmouse - xmouse_dragstart;
-        const auto xlim = ImPlot::GetPlotLimits().X;
-
-        if (!xlim.Contains(xrange_dragstart.Min + dx)) {
-            xrange.Max = xlim.Min + xrange.Size();
-            xrange.Min = xlim.Min;
-        } else if (!xlim.Contains(xrange_dragstart.Max + dx)) {
-            xrange.Min = xlim.Max - xrange.Size();
-            xrange.Max = xlim.Max;
-        } else {
-            xrange.Min = xrange_dragstart.Min + dx;
-            xrange.Max = xrange_dragstart.Max + dx;
-        }
-    }
-
-    void min_resize(double xmouse)
-    {
-        xrange.Min = ImPlot::GetPlotLimits().X.Clamp(xmouse);
-        if (xrange.Min > xrange.Max) {
-            state = State::MaxResizing;
-            std::swap(xrange.Min, xrange.Max);
-        }
-    }
-
-    void max_resize(double xmouse)
-    {
-        xrange.Max = ImPlot::GetPlotLimits().X.Clamp(xmouse);
-        if (xrange.Min > xrange.Max) {
-            state = State::MinResizing;
-            std::swap(xrange.Min, xrange.Max);
-        }
-    }
-};
+static void draw_plot_vspan(const ImPlotRange& xrange, const ImColor& color)
+{
+    draw_plot_vspan(xrange.Min, xrange.Max, color);
+}
 
 static void draw_plot()
 {
     static PlotData data(1001);
-    static DragRect range_rect(ImPlotRange(data.x[data.size / 4], data.x[data.size * 3 / 4]));
+    static plot::PlotRangeDragger zoom_rect_dragger;
+    static ImPlotRange zoom_rect(data.x[data.size / 4], data.x[data.size * 3 / 4]);
 
     if (ImPlot::BeginPlot(
             "##mainplot", ImVec2(-1, 0), ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect
@@ -322,7 +168,7 @@ static void draw_plot()
     {
         ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit);
         ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, data.x[0], data.x[data.size - 1]);
-        range_rect.setup_axis_link(ImAxis_X1);
+        ImPlot::SetupAxisLinks(ImAxis_X1, &zoom_rect.Min, &zoom_rect.Max);
         ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
         if (ImPlot::IsPlotHovered())
             draw_plot_hovered(data);
@@ -333,7 +179,8 @@ static void draw_plot()
         static constexpr ImPlotAxisFlags axis_flags =
             ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_AutoFit;
         ImPlot::SetupAxes(nullptr, nullptr, axis_flags, axis_flags);
-        range_rect.draw(ImPlot::GetPlotDrawList());
+        draw_plot_vspan(zoom_rect, {128, 128, 128, 100});
+        zoom_rect_dragger.draw_update(zoom_rect);
         ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
         ImPlot::EndPlot();
     }

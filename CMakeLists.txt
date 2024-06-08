@@ -4,7 +4,11 @@ project(implot-rects LANGUAGES CXX VERSION 0.1.0)
 
 add_subdirectory(vendor)
 
-add_executable(implot-rects src/main.cpp src/app.cpp)
+add_executable(implot-rects
+    src/main.cpp
+    src/app.cpp
+    src/dragger.cpp
+)
 target_compile_features(implot-rects PRIVATE cxx_std_20)
 target_link_libraries(implot-rects PRIVATE
     imgui::demo
