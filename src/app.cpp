@@ -8,6 +8,7 @@
 #include <implot.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -134,11 +135,42 @@ static void draw_plot_hovered(const PlotData& data)
     }
 }
 
+struct DragXRange {
+    DragXRange(double xmin, double xmax, const ImColor& color) : range(xmin, xmax), color(color) {}
+
+    bool draw(int id)
+    {
+        return plot::drag_xrange(id, range, color, flags, &clicked, &hovered, &held);
+    }
+
+    void draw_info_text() const
+    {
+        ImGui::Text(
+            "[%lf, %lf], clicked = %s, hovered = %s, held = %s",
+            range.Min,
+            range.Max,
+            bool_string(clicked),
+            bool_string(hovered),
+            bool_string(held)
+        );
+    }
+
+    ImPlotRange range;
+    ImColor color;
+    plot::DragXRectFlags flags = 0;
+
+    bool clicked = false;
+    bool hovered = false;
+    bool held = false;
+
+private:
+    static inline const char *bool_string(bool val) { return val ? "true" : "false"; }
+};
+
 static void draw_plot()
 {
     static PlotData data(1001);
     static plot::PlotXSelector selector;
-    static ImPlotRange rect(.45, .6);
 
     static bool ctrl_for_create = false;
     static plot::PlotSelectorFlags selector_flags = 0;
@@ -150,15 +182,18 @@ static void draw_plot()
         "No cursor##selector_flags", &selector_flags, plot::PlotXSelector::NoCursor
     );
 
-    bool clicked;
-    bool hovered;
-    bool held;
     static plot::DragXRectFlags drag_flags = 0;
     ImGui::TextUnformatted("Drag xrange options:");
     ImGui::SameLine();
     ImGui::CheckboxFlags("No cursor##drag_flags", &drag_flags, plot::DragXRectFlag::NoCursor);
     ImGui::SameLine();
     ImGui::CheckboxFlags("No input", &drag_flags, plot::DragXRectFlag::NoInput);
+
+    static std::array<DragXRange, 3> drag_ranges = {
+        DragXRange(.45, .6, ImColor(255, 0, 0, 60)),
+        DragXRange(.7, .8, ImColor(0, 255, 0, 60)),
+        DragXRange(.1, .2, ImColor(0, 0, 255, 60)),
+    };
 
     if (ImPlot::BeginPlot(
             "##mainplot",
@@ -175,7 +210,9 @@ static void draw_plot()
             ImGuiMouseButton_Right,
             ctrl_for_create ? ImGuiKey_LeftCtrl : ImGuiKey_None
         );
-        plot::drag_xrange(0, rect, ImColor(255, 0, 0, 80), drag_flags, &clicked, &hovered, &held);
+        for (unsigned int i = 0; i < drag_ranges.size(); i++) {
+            drag_ranges[i].draw(i);
+        }
         ImPlot::EndPlot();
     }
 
@@ -187,14 +224,11 @@ static void draw_plot()
         ImGui::TextUnformatted("Nothing selected yet!");
     }
 
-    ImGui::Text(
-        "Region: [%lf, %lf], clicked = %d, hovered = %d, held = %d",
-        rect.Min,
-        rect.Max,
-        clicked,
-        hovered,
-        held
-    );
+    for (auto& range : drag_ranges) {
+        range.flags = drag_flags;
+        range.draw_info_text();
+    }
+
     ImGuiIO& io = ImGui::GetIO();
     ImGui::Text("Mouse Position: [%.0f,%.0f]", io.MousePos.x, io.MousePos.y);
 }
