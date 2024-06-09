@@ -20,11 +20,17 @@ template <class T> static inline void set_pointer(T *ptr, T value)
     }
 }
 
+template <class Comparable>
+static inline std::pair<Comparable *, Comparable *> minmax_pointers(Comparable *v1, Comparable *v2)
+{
+    return (*v1 < *v2) ? std::make_pair(v1, v2) : std::make_pair(v2, v1);
+}
+
 // Coordinates in pixels
 static bool drag_xrange(
     ImGuiID id,
-    float& xmin,
-    float& xmax,
+    float& x0,
+    float& x1,
     plot::DragXRectFlags flags,
     const ImRect& limits,
     bool& clicked,
@@ -46,7 +52,7 @@ static bool drag_xrange(
 
     // No input: just catch button activity on region
     if (ImHasFlag(flags, DragXRectFlag::NoInput)) {
-        button_behaviour(xmin, xmax, ImGuiMouseCursor_None);
+        button_behaviour(x0, x1, ImGuiMouseCursor_None);
         return false;
     }
 
@@ -58,17 +64,20 @@ static bool drag_xrange(
     };
 
     // Movement
-    if (button_behaviour(xmin + HalfEdgeWidthPx, xmax - HalfEdgeWidthPx, ImGuiMouseCursor_Hand)) {
+    float *xmin;
+    float *xmax;
+    std::tie(xmin, xmax) = minmax_pointers(&x0, &x1);
+    if (button_behaviour(*xmin + HalfEdgeWidthPx, *xmax - HalfEdgeWidthPx, ImGuiMouseCursor_Hand)) {
         const float delta = get_drag_delta(held);
         if (delta) {
-            xmin += delta;
-            xmax += delta;
-            if (xmin < limits.Min.x) {
-                xmax = limits.Min.x + (xmax - xmin);
-                xmin = limits.Min.x;
-            } else if (xmax > limits.Max.x) {
-                xmin = limits.Max.x - (xmax - xmin);
-                xmax = limits.Max.x;
+            *xmin += delta;
+            *xmax += delta;
+            if (*xmin < limits.Min.x) {
+                *xmax = limits.Min.x + (*xmax - *xmin);
+                *xmin = limits.Min.x;
+            } else if (*xmax > limits.Max.x) {
+                *xmin = limits.Max.x - (*xmax - *xmin);
+                *xmax = limits.Max.x;
             }
             return true;
         }
@@ -76,25 +85,17 @@ static bool drag_xrange(
     }
 
     // Resizing
-    bool modified = false;
-    using MinmaxFunc = const float& (*) (const float&, const float&);
-    const auto resize_edge = [&](float& x, float xlim, MinmaxFunc minmax_func) -> bool {
-        modified = false;
+    float *edges[] = {&x0, &x1};
+    for (int i = 0; i < 2; i++) {
+        float& x = *edges[i];
         if (button_behaviour(x - HalfEdgeWidthPx, x + HalfEdgeWidthPx, ImGuiMouseCursor_ResizeEW)) {
             const float delta = get_drag_delta(held);
             if (delta) {
-                modified = true;
-                x = minmax_func(x + delta, xlim);
+                x = std::clamp(x + delta, limits.Min.x, limits.Max.x);
+                return true;
             }
-            return true;
+            return false;
         }
-        return false;
-    };
-    if (resize_edge(xmin, limits.Min.x, std::max)) {
-        return modified;
-    }
-    if (resize_edge(xmax, limits.Max.x, std::min)) {
-        return modified;
     }
 
     return false;
@@ -105,15 +106,19 @@ static ImVec2 operator+(const ImVec2& lhs, const ImVec2& rhs)
     return ImVec2(lhs.x + rhs.x, lhs.y + rhs.y);
 }
 
-static void draw_plot_vspan(float xmin, float xmax, const ImColor& color)
+static void draw_plot_vspan(float x0, float x1, const ImColor& color)
 {
     const ImVec2 top_left = ImPlot::GetPlotPos();
     const ImVec2 bottom_right = top_left + ImPlot::GetPlotSize();
-    ImPlot::GetPlotDrawList()->AddRectFilled(
-        {std::max(xmin, top_left.x), top_left.y},
-        {std::min(xmax, bottom_right.x), bottom_right.y},
-        color
-    );
+    const auto [xmin, xmax] = std::minmax(x0, x1);
+    const auto [lo, hi] = std::minmax(top_left.x, bottom_right.x);
+    if (x0 != x1) {
+        ImPlot::GetPlotDrawList()->AddRectFilled(
+            {std::clamp(xmin, lo, hi), top_left.y},
+            {std::clamp(xmax, lo, hi), bottom_right.y},
+            color
+        );
+    }
 }
 
 bool drag_xrange(
@@ -157,12 +162,12 @@ bool drag_xrange(
         held
     );
 
-    if (xmin_px > xmax_px) {
-        std::swap(xmin_px, xmax_px);
-    }
     draw_plot_vspan(xmin_px, xmax_px, color);
     xmin = current_plot->XAxis(0).PixelsToPlot(xmin_px);
     xmax = current_plot->XAxis(0).PixelsToPlot(xmax_px);
+    if (!held && xmin > xmax) {
+        std::swap(xmin, xmax);
+    }
 
     set_pointer(out_clicked, clicked);
     set_pointer(out_hovered, hovered);
