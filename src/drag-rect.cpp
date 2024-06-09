@@ -100,6 +100,22 @@ static bool drag_xrange(
     return false;
 }
 
+static ImVec2 operator+(const ImVec2& lhs, const ImVec2& rhs)
+{
+    return ImVec2(lhs.x + rhs.x, lhs.y + rhs.y);
+}
+
+static void draw_plot_vspan(float xmin, float xmax, const ImColor& color)
+{
+    const ImVec2 top_left = ImPlot::GetPlotPos();
+    const ImVec2 bottom_right = top_left + ImPlot::GetPlotSize();
+    ImPlot::GetPlotDrawList()->AddRectFilled(
+        {std::max(xmin, top_left.x), top_left.y},
+        {std::min(xmax, bottom_right.x), bottom_right.y},
+        color
+    );
+}
+
 bool drag_xrange(
     int caller_id,
     double& xmin,
@@ -125,22 +141,28 @@ bool drag_xrange(
     float xmax_px = current_plot->XAxis(0).PlotToPixels(xmax);
     ImGuiID id = ImGui::GetCurrentWindow()->GetID(caller_id);
 
-    const ImPlotRange& yrange = ImPlot::GetPlotLimits().Y;
+    const ImPlotRect plot_limits = ImPlot::GetPlotLimits();
     const ImPlotRange& xconstraint = current_plot->XAxis(0).ConstraintRange;
-    const ImRect limits(
-        ImPlot::PlotToPixels(xconstraint.Min, yrange.Max),
-        ImPlot::PlotToPixels(xconstraint.Max, yrange.Min)
-    );
-    const bool modified = drag_xrange(id, xmin_px, xmax_px, flags, limits, clicked, hovered, held);
-    ImPlot::GetPlotDrawList()->AddRectFilled(
-        {std::max(xmin_px, limits.Min.x), limits.Min.y},
-        {std::min(xmax_px, limits.Max.x), limits.Max.y},
-        color
+    const bool modified = drag_xrange(
+        id,
+        xmin_px,
+        xmax_px,
+        flags,
+        ImRect(
+            ImPlot::PlotToPixels(xconstraint.Min, plot_limits.Y.Max),
+            ImPlot::PlotToPixels(xconstraint.Max, plot_limits.Y.Min)
+        ),
+        clicked,
+        hovered,
+        held
     );
 
-    std::tie(xmin, xmax) = std::minmax(
-        current_plot->XAxis(0).PixelsToPlot(xmin_px), current_plot->XAxis(0).PixelsToPlot(xmax_px)
-    );
+    if (xmin_px > xmax_px) {
+        std::swap(xmin_px, xmax_px);
+    }
+    draw_plot_vspan(xmin_px, xmax_px, color);
+    xmin = current_plot->XAxis(0).PixelsToPlot(xmin_px);
+    xmax = current_plot->XAxis(0).PixelsToPlot(xmax_px);
 
     set_pointer(out_clicked, clicked);
     set_pointer(out_hovered, hovered);
