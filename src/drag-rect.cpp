@@ -116,11 +116,10 @@ static void draw_plot_vspan(float x0, float x1, const ImColor& color)
     const ImVec2 top_left = ImPlot::GetPlotPos();
     const ImVec2 bottom_right = top_left + ImPlot::GetPlotSize();
     const auto [xmin, xmax] = std::minmax(x0, x1);
-    const auto [lo, hi] = std::minmax(top_left.x, bottom_right.x);
     if (x0 != x1) {
         ImPlot::GetPlotDrawList()->AddRectFilled(
-            {std::clamp(xmin, lo, hi), top_left.y},
-            {std::clamp(xmax, lo, hi), bottom_right.y},
+            {std::clamp(xmin, top_left.x, bottom_right.x), top_left.y},
+            {std::clamp(xmax, top_left.x, bottom_right.x), bottom_right.y},
             color
         );
     }
