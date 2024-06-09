@@ -196,6 +196,7 @@ static void draw_plot()
         DragXRange(.7, .8, ImColor(0, 255, 0, 60)),
         DragXRange(.1, .2, ImColor(0, 0, 255, 60)),
     };
+    static ImPlotRange summary_range(data.x[data.size / 4], data.x[data.size * 3 / 4]);
 
     if (ImPlot::BeginPlot(
             "##mainplot",
@@ -205,6 +206,7 @@ static void draw_plot()
     {
         ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit);
         ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, data.x[0], data.x[data.size - 1]);
+        ImPlot::SetupAxisLinks(ImAxis_X1, &summary_range.Min, &summary_range.Max);
         ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
         selector.draw(
             plot::PlotXSelector::DefaultColor,
@@ -217,6 +219,16 @@ static void draw_plot()
         }
         ImPlot::EndPlot();
     }
+
+    if (ImPlot::BeginPlot("##summary", ImVec2(-1, 75), ImPlotFlags_CanvasOnly)) {
+        constexpr ImPlotAxisFlags ax_flags =
+            ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_AutoFit;
+        ImPlot::SetupAxes(nullptr, nullptr, ax_flags, ax_flags);
+        plot::drag_xrange(0, summary_range, ImColor(128, 128, 128, 60));
+        ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
+        ImPlot::EndPlot();
+    }
+    ImGui::Text("Summary range: [%f, %f]", summary_range.Min, summary_range.Max);
 
     ImGui::Text("%s selecting", selector.is_selecting() ? "Is" : "Is not");
     const auto last_selection = selector.last_selection();
