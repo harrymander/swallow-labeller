@@ -162,7 +162,10 @@ bool drag_xrange(
         held
     );
 
+    ImPlot::PushPlotClipRect();
     draw_plot_vspan(xmin_px, xmax_px, color);
+    ImPlot::PopPlotClipRect();
+
     xmin = current_plot->XAxis(0).PixelsToPlot(xmin_px);
     xmax = current_plot->XAxis(0).PixelsToPlot(xmax_px);
     if (!held && xmin > xmax) {
