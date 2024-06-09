@@ -324,7 +324,14 @@ static void draw_window_contents()
 bool draw()
 {
     const auto& io = ImGui::GetIO();
-    ImGui::Begin("##mainwindow", nullptr);
+    ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, io.DisplaySize.y));
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::Begin(
+        "##mainwindow",
+        nullptr,
+        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove
+            | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus
+    );
     draw_window_contents();
     ImGui::End();
     return !to_close;
