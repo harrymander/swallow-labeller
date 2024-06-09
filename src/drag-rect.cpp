@@ -6,6 +6,7 @@
 #include "implot_internal.h"
 
 #include <algorithm>
+#include <cmath>
 #include <tuple>
 
 namespace plot {
@@ -23,7 +24,7 @@ template <class T> static inline void set_pointer(T *ptr, T value)
 template <class Comparable>
 static inline std::pair<Comparable *, Comparable *> minmax_pointers(Comparable *v1, Comparable *v2)
 {
-    return (*v1 < *v2) ? std::make_pair(v1, v2) : std::make_pair(v2, v1);
+    return (*v1 <= *v2) ? std::make_pair(v1, v2) : std::make_pair(v2, v1);
 }
 
 // Coordinates in pixels
@@ -152,14 +153,18 @@ bool drag_xrange(
 
     const ImPlotRect plot_limits = ImPlot::GetPlotLimits();
     const ImPlotRange& xconstraint = current_plot->XAxis(0).ConstraintRange;
+    const ImPlotRange xlimit(
+        std::isinf(xconstraint.Min) ? plot_limits.X.Min : xconstraint.Min,
+        std::isinf(xconstraint.Max) ? plot_limits.X.Max : xconstraint.Max
+    );
     const bool modified = drag_xrange(
         id,
         xmin_px,
         xmax_px,
         flags,
         ImRect(
-            ImPlot::PlotToPixels(xconstraint.Min, plot_limits.Y.Max),
-            ImPlot::PlotToPixels(xconstraint.Max, plot_limits.Y.Min)
+            ImPlot::PlotToPixels(xlimit.Min, plot_limits.Y.Max),
+            ImPlot::PlotToPixels(xlimit.Max, plot_limits.Y.Min)
         ),
         clicked,
         hovered,
