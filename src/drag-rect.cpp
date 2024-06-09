@@ -4,6 +4,7 @@
 #include "imgui_internal.h"
 #include "implot.h"
 #include "implot_internal.h"
+#include "util.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -19,12 +20,6 @@ template <class T> static inline void set_pointer(T *ptr, T value)
     if (ptr != nullptr) {
         *ptr = value;
     }
-}
-
-template <class Comparable>
-static inline std::pair<Comparable *, Comparable *> minmax_pointers(Comparable *v1, Comparable *v2)
-{
-    return (*v1 <= *v2) ? std::make_pair(v1, v2) : std::make_pair(v2, v1);
 }
 
 // Coordinates in pixels
@@ -72,7 +67,7 @@ static bool drag_xrange(
     // Movement
     float *xmin;
     float *xmax;
-    std::tie(xmin, xmax) = minmax_pointers(&x0, &x1);
+    std::tie(xmin, xmax) = util::minmax_pointers(&x0, &x1);
     if (button_behaviour(*xmin + HalfEdgeWidthPx, *xmax - HalfEdgeWidthPx, ImGuiMouseCursor_Hand)) {
         const float delta = get_drag_delta(held);
         if (delta) {
