@@ -138,10 +138,9 @@ static void draw_plot_hovered(const PlotData& data)
 struct DragXRange {
     DragXRange(double xmin, double xmax, const ImColor& color) : range(xmin, xmax), color(color) {}
 
-    bool draw(int id)
-    {
-        return plot::drag_xrange(id, range, color, flags, &clicked, &hovered, &held);
-    }
+    bool draw(int id) { return draw_with_flag(id, flags); }
+
+    bool draw_no_input(int id) { return draw_with_flag(id, flags | plot::DragXRectFlag::NoInput); }
 
     void draw_info_text() const
     {
@@ -165,6 +164,11 @@ struct DragXRange {
 
 private:
     static inline const char *bool_string(bool val) { return val ? "true" : "false"; }
+
+    bool draw_with_flag(int id, plot::DragXRectFlags flags)
+    {
+        return plot::drag_xrange(id, range, color, flags, &clicked, &hovered, &held);
+    }
 };
 
 static void draw_plot()
@@ -230,7 +234,12 @@ static void draw_plot()
         constexpr ImPlotAxisFlags ax_flags =
             ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_AutoFit;
         ImPlot::SetupAxes(nullptr, nullptr, ax_flags, ax_flags);
+
+        for (int i = 0; i < drag_ranges.size(); i++) {
+            drag_ranges[i].draw_no_input(i + 1);
+        }
         plot::drag_xrange(0, summary_range, ImColor(128, 128, 128, 60));
+
         ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
         ImPlot::EndPlot();
     }
