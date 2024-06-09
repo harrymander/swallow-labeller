@@ -171,6 +171,14 @@ private:
     }
 };
 
+static void setup_axis_links(ImAxis axis, double *v1, double *v2)
+{
+    double *vmin;
+    double *vmax;
+    std::tie(vmin, vmax) = util::minmax_pointers(v1, v2);
+    ImPlot::SetupAxisLinks(axis, vmin, vmax);
+}
+
 static void draw_plot()
 {
     static PlotData data(1001);
@@ -210,13 +218,7 @@ static void draw_plot()
     {
         ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit);
         ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, data.x[0], data.x[data.size - 1]);
-
-        double *range_min;
-        double *range_max;
-        std::tie(range_min, range_max) =
-            util::minmax_pointers(&summary_range.Min, &summary_range.Max);
-        ImPlot::SetupAxisLinks(ImAxis_X1, range_min, range_max);
-
+        setup_axis_links(ImAxis_X1, &summary_range.Min, &summary_range.Max);
         ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
         selector.draw(
             plot::PlotXSelector::DefaultColor,
