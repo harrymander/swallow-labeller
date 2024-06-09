@@ -9,11 +9,15 @@ namespace plot {
 typedef unsigned int DragXRectFlags;
 
 enum DragXRectFlag {
-    // Disable cursors on move and resize
+    // Disable cursors on hover
     NoCursor = 1 << 0,
 
-    // Disable moving/resizing
-    NoInput = 1 << 1,
+    // Disable moving/resizing, will still show cursor and report click, hold, or hovered
+    NoMove = 1 << 1,
+
+    // Disable all input but still show rectangle. Will not show cursor or report click, hold, or
+    // hovered
+    NoInput = 1 << 2,
 };
 
 /**

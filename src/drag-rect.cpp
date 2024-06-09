@@ -43,16 +43,21 @@ static bool drag_xrange(
         ImGui::KeepAliveID(id);
         const ImRect bb(x0, limits.Min.y, x1, limits.Max.y);
         clicked = ImGui::ButtonBehavior(bb, id, &hovered, &held);
-        if ((held || hovered) && show_cursor && cursor != ImGuiMouseCursor_None) {
+        if ((held || hovered) && show_cursor) {
             ImGui::SetMouseCursor(cursor);
         }
         id += 1;
         return clicked || hovered || held;
     };
 
-    // No input: just catch button activity on region
+    // No input
     if (ImHasFlag(flags, DragXRectFlag::NoInput)) {
-        button_behaviour(x0, x1, ImGuiMouseCursor_None);
+        return false;
+    }
+
+    // No movement: just catch mouse activity
+    if (ImHasFlag(flags, DragXRectFlag::NoMove)) {
+        button_behaviour(x0, x1, ImGuiMouseCursor_Hand);
         return false;
     }
 

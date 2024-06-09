@@ -187,6 +187,8 @@ static void draw_plot()
     ImGui::SameLine();
     ImGui::CheckboxFlags("No cursor##drag_flags", &drag_flags, plot::DragXRectFlag::NoCursor);
     ImGui::SameLine();
+    ImGui::CheckboxFlags("No move", &drag_flags, plot::DragXRectFlag::NoMove);
+    ImGui::SameLine();
     ImGui::CheckboxFlags("No input", &drag_flags, plot::DragXRectFlag::NoInput);
 
     static std::array<DragXRange, 3> drag_ranges = {
