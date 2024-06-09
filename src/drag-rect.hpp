@@ -16,10 +16,25 @@ enum DragXRectFlag {
     NoInput = 1 << 1,
 };
 
+/**
+ * Draggable region that vertically spans axis.
+ *
+ * Must be called between PlotBegin/End.
+ *
+ * @param id ID of the region, must be unique within a PlotBegin/End.
+ * @param xrange Reference to the range to drag. If the region is being resized, xrange.Min may be
+ *     greater than xrange.Max; the ordering will be fixed when the region is released.
+ * @param color Color of the region.
+ * @param flags Flags to customize the behavior.
+ * @param clicked Pointer to store if the region was clicked.
+ * @param hovered Pointer to store if the region is hovered.
+ * @param held Pointer to store if the region is held.
+ *
+ * @returns true if the region was modified
+ */
 bool drag_xrange(
     int id,
-    double& xmin,
-    double& xmax,
+    ImPlotRange& xrange,
     const ImColor& color,
     plot::DragXRectFlags flags = 0,
     bool *clicked = nullptr,
@@ -29,7 +44,8 @@ bool drag_xrange(
 
 bool drag_xrange(
     int id,
-    ImPlotRange& xrange,
+    double& xmin,
+    double& xmax,
     const ImColor& color,
     plot::DragXRectFlags flags = 0,
     bool *clicked = nullptr,
