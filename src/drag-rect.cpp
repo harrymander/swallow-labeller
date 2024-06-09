@@ -46,11 +46,6 @@ static bool drag_xrange(
         return clicked || hovered || held;
     };
 
-    // No input
-    if (ImHasFlag(flags, DragXRectFlag::NoInput)) {
-        return false;
-    }
-
     // No movement: just catch mouse activity
     if (ImHasFlag(flags, DragXRectFlag::NoMove)) {
         button_behaviour(x0, x1, ImGuiMouseCursor_Hand);
@@ -144,39 +139,43 @@ bool drag_xrange(
     bool held = false;
     float xmin_px = current_plot->XAxis(0).PlotToPixels(xmin);
     float xmax_px = current_plot->XAxis(0).PlotToPixels(xmax);
-    ImGuiID id = ImGui::GetCurrentWindow()->GetID(caller_id);
 
-    const ImPlotRect plot_limits = ImPlot::GetPlotLimits();
-    const ImPlotRange& xconstraint = current_plot->XAxis(0).ConstraintRange;
-    const ImPlotRange xlimit(
-        std::isinf(xconstraint.Min) ? plot_limits.X.Min : xconstraint.Min,
-        std::isinf(xconstraint.Max) ? plot_limits.X.Max : xconstraint.Max
-    );
-    const bool modified = drag_xrange(
-        id,
-        xmin_px,
-        xmax_px,
-        flags,
-        ImRect(
-            ImPlot::PlotToPixels(xlimit.Min, plot_limits.Y.Max),
-            ImPlot::PlotToPixels(xlimit.Max, plot_limits.Y.Min)
-        ),
-        clicked,
-        hovered,
-        held
-    );
+    bool modified = false;
+    if (!ImHasFlag(flags, DragXRectFlag::NoInput)) {
+        ImGuiID id = ImGui::GetCurrentWindow()->GetID(caller_id);
+        const ImPlotRect plot_limits = ImPlot::GetPlotLimits();
+        const ImPlotRange& xconstraint = current_plot->XAxis(0).ConstraintRange;
+        const ImPlotRange xlimit(
+            std::isinf(xconstraint.Min) ? plot_limits.X.Min : xconstraint.Min,
+            std::isinf(xconstraint.Max) ? plot_limits.X.Max : xconstraint.Max
+        );
+
+        modified = drag_xrange(
+            id,
+            xmin_px,
+            xmax_px,
+            flags,
+            ImRect(
+                ImPlot::PlotToPixels(xlimit.Min, plot_limits.Y.Max),
+                ImPlot::PlotToPixels(xlimit.Max, plot_limits.Y.Min)
+            ),
+            clicked,
+            hovered,
+            held
+        );
+
+        if (modified) {
+            xmin = current_plot->XAxis(0).PixelsToPlot(xmin_px);
+            xmax = current_plot->XAxis(0).PixelsToPlot(xmax_px);
+        }
+        if (!held && xmin > xmax) {
+            std::swap(xmin, xmax);
+        }
+    }
 
     ImPlot::PushPlotClipRect();
     draw_plot_vspan(xmin_px, xmax_px, color);
     ImPlot::PopPlotClipRect();
-
-    if (modified) {
-        xmin = current_plot->XAxis(0).PixelsToPlot(xmin_px);
-        xmax = current_plot->XAxis(0).PixelsToPlot(xmax_px);
-    }
-    if (!held && xmin > xmax) {
-        std::swap(xmin, xmax);
-    }
 
     set_pointer(out_clicked, clicked);
     set_pointer(out_hovered, hovered);
