@@ -1,6 +1,6 @@
 #include "app.hpp"
 
-#include "drag-rect.hpp"
+#include "drag-range.hpp"
 #include "selector.hpp"
 #include "util.hpp"
 
@@ -140,7 +140,7 @@ struct DragXRange {
 
     bool draw(int id) { return draw_with_flag(id, flags); }
 
-    bool draw_no_input(int id) { return draw_with_flag(id, flags | plot::DragXRectFlag::NoInput); }
+    bool draw_no_input(int id) { return draw_with_flag(id, flags | plot::DragXRangeFlag::NoInput); }
 
     void draw_info_text() const
     {
@@ -156,7 +156,7 @@ struct DragXRange {
 
     ImPlotRange range;
     ImColor color;
-    plot::DragXRectFlags flags = 0;
+    plot::DragXRangeFlags flags = 0;
 
     bool clicked = false;
     bool hovered = false;
@@ -165,7 +165,7 @@ struct DragXRange {
 private:
     static inline const char *bool_string(bool val) { return val ? "true" : "false"; }
 
-    bool draw_with_flag(int id, plot::DragXRectFlags flags)
+    bool draw_with_flag(int id, plot::DragXRangeFlags flags)
     {
         return plot::drag_xrange(id, range, color, flags, &clicked, &hovered, &held);
     }
@@ -194,14 +194,14 @@ static void draw_plot()
         "No cursor##selector_flags", &selector_flags, plot::PlotXSelector::NoCursor
     );
 
-    static plot::DragXRectFlags drag_flags = 0;
+    static plot::DragXRangeFlags drag_flags = 0;
     ImGui::TextUnformatted("Drag xrange options:");
     ImGui::SameLine();
-    ImGui::CheckboxFlags("No cursor##drag_flags", &drag_flags, plot::DragXRectFlag::NoCursor);
+    ImGui::CheckboxFlags("No cursor##drag_flags", &drag_flags, plot::DragXRangeFlag::NoCursor);
     ImGui::SameLine();
-    ImGui::CheckboxFlags("No move", &drag_flags, plot::DragXRectFlag::NoMove);
+    ImGui::CheckboxFlags("No move", &drag_flags, plot::DragXRangeFlag::NoMove);
     ImGui::SameLine();
-    ImGui::CheckboxFlags("No input", &drag_flags, plot::DragXRectFlag::NoInput);
+    ImGui::CheckboxFlags("No input", &drag_flags, plot::DragXRangeFlag::NoInput);
 
     static std::array<DragXRange, 3> drag_ranges = {
         DragXRange(.45, .6, ImColor(255, 0, 0, 60)),

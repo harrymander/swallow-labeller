@@ -5,10 +5,10 @@ project(implot-rects LANGUAGES CXX VERSION 0.1.0)
 add_subdirectory(vendor)
 
 add_executable(implot-rects
-    src/main.cpp
     src/app.cpp
+    src/drag-range.cpp
+    src/main.cpp
     src/selector.cpp
-    src/drag-rect.cpp
 )
 target_compile_features(implot-rects PRIVATE cxx_std_20)
 target_link_libraries(implot-rects PRIVATE

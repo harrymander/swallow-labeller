@@ -1,4 +1,4 @@
-#include "drag-rect.hpp"
+#include "drag-range.hpp"
 
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -27,14 +27,14 @@ static bool drag_xrange(
     ImGuiID id,
     float& x0,
     float& x1,
-    plot::DragXRectFlags flags,
+    plot::DragXRangeFlags flags,
     const ImRect& limits,
     bool& clicked,
     bool& hovered,
     bool& held
 )
 {
-    const bool show_cursor = !ImHasFlag(flags, DragXRectFlag::NoCursor);
+    const bool show_cursor = !ImHasFlag(flags, DragXRangeFlag::NoCursor);
     const auto button_behaviour = [&](float x0, float x1, ImGuiMouseCursor cursor) -> bool {
         ImGui::KeepAliveID(id);
         const ImRect bb(x0, limits.Min.y, x1, limits.Max.y);
@@ -47,7 +47,7 @@ static bool drag_xrange(
     };
 
     // No movement: just catch mouse activity
-    if (ImHasFlag(flags, DragXRectFlag::NoMove)) {
+    if (ImHasFlag(flags, DragXRangeFlag::NoMove)) {
         button_behaviour(x0, x1, ImGuiMouseCursor_Hand);
         return false;
     }
@@ -121,7 +121,7 @@ bool drag_xrange(
     double& xmin,
     double& xmax,
     const ImColor& color,
-    DragXRectFlags flags,
+    DragXRangeFlags flags,
     bool *out_clicked,
     bool *out_hovered,
     bool *out_held
@@ -141,7 +141,7 @@ bool drag_xrange(
     float xmax_px = current_plot->XAxis(0).PlotToPixels(xmax);
 
     bool modified = false;
-    if (!ImHasFlag(flags, DragXRectFlag::NoInput)) {
+    if (!ImHasFlag(flags, DragXRangeFlag::NoInput)) {
         ImGuiID id = ImGui::GetCurrentWindow()->GetID(caller_id);
         const ImPlotRect plot_limits = ImPlot::GetPlotLimits();
         const ImPlotRange& xconstraint = current_plot->XAxis(0).ConstraintRange;
@@ -188,7 +188,7 @@ bool drag_xrange(
     int id,
     ImPlotRange& xrange,
     const ImColor& color,
-    plot::DragXRectFlags flags,
+    plot::DragXRangeFlags flags,
     bool *out_clicked,
     bool *out_hovered,
     bool *held

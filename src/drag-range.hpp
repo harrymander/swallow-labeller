@@ -1,14 +1,14 @@
-#ifndef INCLUDE_PLOT_DRAG_RECT_HPP
-#define INCLUDE_PLOT_DRAG_RECT_HPP
+#ifndef INCLUDE_PLOT_DRAG_RANGE_HPP
+#define INCLUDE_PLOT_DRAG_RANGE_HPP
 
 #include "imgui.h"
 #include "implot.h"
 
 namespace plot {
 
-typedef unsigned int DragXRectFlags;
+typedef unsigned int DragXRangeFlags;
 
-enum DragXRectFlag {
+enum DragXRangeFlag {
     // Disable cursors on hover
     NoCursor = 1 << 0,
 
@@ -40,7 +40,7 @@ bool drag_xrange(
     int id,
     ImPlotRange& xrange,
     const ImColor& color,
-    plot::DragXRectFlags flags = 0,
+    plot::DragXRangeFlags flags = 0,
     bool *clicked = nullptr,
     bool *hovered = nullptr,
     bool *held = nullptr
@@ -51,7 +51,7 @@ bool drag_xrange(
     double& xmin,
     double& xmax,
     const ImColor& color,
-    plot::DragXRectFlags flags = 0,
+    plot::DragXRangeFlags flags = 0,
     bool *clicked = nullptr,
     bool *hovered = nullptr,
     bool *held = nullptr
@@ -59,4 +59,4 @@ bool drag_xrange(
 
 } // namespace plot
 
-#endif // INCLUDE_PLOT_DRAG_RECT_HPP
+#endif // INCLUDE_PLOT_DRAG_RANGE_HPP
