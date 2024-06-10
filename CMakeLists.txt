@@ -27,7 +27,7 @@ target_compile_definitions(implot-rects PRIVATE
 add_custom_target(
     check
     COMMAND
-        cppcheck --error-exitcode=1 --enable=style --std=c++20 --force
+        cppcheck --error-exitcode=1 --enable=style --std=c++20 --force --quiet
         ${CMAKE_CURRENT_SOURCE_DIR}/src
     COMMENT "Checking source code with cppcheck"
 )
