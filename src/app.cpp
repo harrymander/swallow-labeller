@@ -189,11 +189,14 @@ static void draw_plot()
     static ImPlotRange selector_range;
     static ImPlotRange last_selector_range = {NAN, NAN};
 
-    static bool ctrl_for_create = false;
+    static bool ctrl_for_create = true;
+    static bool right_mouse_for_create = false;
     static plot::PlotSelectorFlags selector_flags = 0;
     ImGui::TextUnformatted("Selector options:");
     ImGui::SameLine();
     ImGui::Checkbox("Ctrl for create", &ctrl_for_create);
+    ImGui::SameLine();
+    ImGui::Checkbox("Right mouse for create", &right_mouse_for_create);
     ImGui::SameLine();
     ImGui::CheckboxFlags(
         "No cursor##selector_flags", &selector_flags, plot::PlotXSelector::NoCursor
@@ -234,7 +237,7 @@ static void draw_plot()
                 selector_range,
                 plot::PlotXSelector::DefaultColor,
                 selector_flags,
-                ImGuiMouseButton_Right,
+                right_mouse_for_create ? ImGuiMouseButton_Right : ImGuiMouseButton_Left,
                 ctrl_for_create ? ImGuiKey_LeftCtrl : ImGuiKey_None
             ))
         {
