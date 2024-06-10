@@ -1,3 +1,5 @@
+#define IMGUI_DEFINE_MATH_OPERATORS
+
 #include "drag-range.hpp"
 
 #include "imgui.h"
@@ -95,11 +97,6 @@ static bool drag_xrange(
     }
 
     return false;
-}
-
-static ImVec2 operator+(const ImVec2& lhs, const ImVec2& rhs)
-{
-    return ImVec2(lhs.x + rhs.x, lhs.y + rhs.y);
 }
 
 static void draw_plot_vspan(float x0, float x1, const ImColor& color)
