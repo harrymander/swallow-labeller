@@ -8,28 +8,53 @@
 
 namespace plot {
 
-template <class T> static Data<T> get_array(const cnpy::npz_t& data, const std::string& name)
+template <class T> static std::vector<T> get_array(const cnpy::npz_t& data, const std::string& name)
 {
     const auto found = data.find(name);
-    if (found != data.end()) {
-        return Data<T>::from_numpy(found->second);
+    if (found == data.end()) {
+        throw std::invalid_argument("missing field: " + std::string(name));
     }
-    throw std::invalid_argument("missing field: " + std::string(name));
+
+    const cnpy::NpyArray array = found->second;
+
+    if (array.fortran_order) {
+        throw std::invalid_argument("array is in Fortran order");
+    }
+
+    if (array.shape.size() != 1) {
+        throw std::invalid_argument("expected 1D array");
+    }
+
+    if (array.word_size != sizeof(T)) {
+        throw std::invalid_argument("got invalid word size");
+    }
+
+    return array.as_vec<T>();
 }
 
 SwallowTaskData SwallowTaskData::from_numpy(const cnpy::npz_t& data)
 {
-    const SwallowTaskData task_data{
-        get_array<float>(data, "flow"),
-        get_array<float>(data, "ear_audio"),
-        get_array<uint8_t>(data, "event"),
+    const SwallowTaskData task = {
+        .flow = get_array<double>(data, "flow"),
+        .event = get_array<uint8_t>(data, "event"),
+        .flow_time = get_array<double>(data, "flow_time"),
+        .audio = get_array<double>(data, "audio"),
+        .audio_time = get_array<double>(data, "audio_time"),
     };
 
-    if (task_data.event.data.size() != task_data.flow.data.size()) {
-        throw std::invalid_argument("flow and event data length mismatch");
+    const auto flow_size = task.flow.size();
+    if (flow_size != task.flow_time.size()) {
+        throw std::invalid_argument("flow and flow_time length mismatch");
+    }
+    if (flow_size != task.event.size()) {
+        throw std::invalid_argument("flow and event length mismatch");
     }
 
-    return task_data;
+    if (task.audio.size() != task.audio_time.size()) {
+        throw std::invalid_argument("audio and audio_time length mismatch");
+    }
+
+    return task;
 }
 
 }; // namespace plot
