@@ -5,7 +5,7 @@
 namespace util {
 
 template <class Comparable>
-static inline std::pair<Comparable *, Comparable *> minmax_pointers(Comparable *v1, Comparable *v2)
+inline std::pair<Comparable *, Comparable *> minmax_pointers(Comparable *v1, Comparable *v2)
 {
     return (*v1 <= *v2) ? std::make_pair(v1, v2) : std::make_pair(v2, v1);
 }
