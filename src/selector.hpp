@@ -13,14 +13,16 @@ typedef unsigned int PlotSelectorFlags;
 class PlotXSelector {
 public:
     static constexpr ImU32 DefaultColor = IM_COL32(255, 255, 0, 50);
+    static constexpr ImGuiMouseButton DefaultMouseButton = ImGuiMouseButton_Right;
+    static constexpr ImGuiKey DefaultKey = ImGuiKey_None;
 
     bool draw(
         ImGuiID id,
         ImPlotRange& range,
         const ImColor& color = DefaultColor,
         PlotSelectorFlags flags = 0,
-        ImGuiMouseButton button = ImGuiMouseButton_Right,
-        ImGuiKey key = ImGuiKey_None
+        ImGuiMouseButton button = DefaultMouseButton,
+        ImGuiKey key = DefaultKey
     );
     bool is_selecting() const;
 
