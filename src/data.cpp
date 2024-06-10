@@ -59,7 +59,7 @@ SwallowTaskData SwallowTaskData::from_numpy(const cnpy::npz_t& data)
     }
 
     if (audio_size < flow_size) {
-        throw std::invalid_argument("audio field cannot be shorter than flow and event");
+        throw std::invalid_argument("audio field shorter than flow and event");
     }
 
     return task;

@@ -75,7 +75,7 @@ TEST(TestData, TestAudioShorterFails)
     ASSERT_THROW_MSG(
         load_data(test_path::audio_field_shorter),
         std::invalid_argument,
-        "audio field cannot be shorter than flow and event"
+        "audio field shorter than flow and event"
     );
 }
 
@@ -85,7 +85,7 @@ TEST_P(TestDataMissingField, TestMissingFieldFails)
 {
     const std::string field = GetParam();
     const std::string path = test_path::missing_field_prefix + field + ".npz";
-    const std::string expected_msg = std::string("missing field: ") + field;
+    const std::string expected_msg = "missing field: " + field;
     ASSERT_THROW_MSG(load_data(path), std::invalid_argument, expected_msg);
 }
 
