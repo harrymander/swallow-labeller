@@ -78,14 +78,14 @@ def main() -> None:
         'missing_field_prefix': missing_field_prefix,
     }
 
-    fields = generate_normal_data().keys()
-    for field in fields:
+    normal_data = generate_normal_data()
+    for field in normal_data.keys():
         path = f'{missing_field_prefix}{field}.npz'
         np.savez(path, **generate_missing_field(field))
 
     len_mismatch_prefix = str(output_directory / 'len_mismatch_')
     data['len_mismatch_prefix'] = len_mismatch_prefix
-    for field in fields:
+    for field in normal_data.keys():
         path = f'{len_mismatch_prefix}{field}.npz'
         np.savez(path, **generate_shortened_field(field))
 
@@ -94,7 +94,7 @@ def main() -> None:
         data[name] = str(path)
         np.savez(path, **array)
 
-    generate('normal', generate_normal_data())
+    generate('normal', normal_data)
     generate('invalid_flow_type', generate_invalid_flow_type())
     generate('two_dimensional_array', generate_2d_array())
     generate('fortran_order', generate_fortran_order())
