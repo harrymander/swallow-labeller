@@ -14,7 +14,7 @@
 
 namespace plot {
 
-constexpr float EdgeWidthPx = 10;
+constexpr float EdgeWidthPx = 8;
 constexpr float HalfEdgeWidthPx = EdgeWidthPx / 2;
 
 template <class T> static inline void set_pointer(T *ptr, T value)
