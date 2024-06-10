@@ -32,18 +32,21 @@ target_compile_definitions(implot-rects PRIVATE
     VERSION_STR="${PROJECT_VERSION}"
 )
 
+find_program(CPPCHECK cppcheck REQUIRED)
 add_custom_target(
     check
     COMMAND
-        cppcheck --error-exitcode=1 --enable=style --std=c++20 --force --quiet
+        ${CPPCHECK}
+        --error-exitcode=1 --enable=style --std=c++20 --force --quiet
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/tests
     COMMENT "Checking source code with cppcheck"
 )
 
+find_program(CLANG_FORMAT clang-format REQUIRED)
 set(
     CLANG_FORMAT_CMD
-    clang-format -Werror
+    ${CLANG_FORMAT} -Werror
         ${CMAKE_CURRENT_SOURCE_DIR}/src/*
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp
 )
