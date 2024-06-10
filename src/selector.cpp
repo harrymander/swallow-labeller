@@ -63,6 +63,7 @@ bool PlotXSelector::draw(
                     x_axis.PlotToPixels(plot_limits.X.Max)
                 );
                 std::tie(xmin_px, xmax_px) = std::minmax(clicked_pos, position_clamped);
+                ImGui::ClearActiveID();
             } else if (!ImGui::IsMouseDown(mouse_button)) {
                 selecting = false;
             }
@@ -70,6 +71,7 @@ bool PlotXSelector::draw(
             set_active();
             selecting = true;
             xmin_px = xmax_px = position;
+            ImGui::ClearActiveID();
         }
     } else {
         cancelled = ImHasFlag(flags, CancelOnKeyRelease);
