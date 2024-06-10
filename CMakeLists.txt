@@ -4,6 +4,12 @@ project(implot-rects LANGUAGES CXX VERSION 0.1.0)
 
 add_subdirectory(vendor)
 
+option(BUILD_TESTS "Build tests" ON)
+if(BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
 add_executable(implot-rects
     src/app.cpp
     src/data.cpp
@@ -31,12 +37,15 @@ add_custom_target(
     COMMAND
         cppcheck --error-exitcode=1 --enable=style --std=c++20 --force --quiet
         ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests
     COMMENT "Checking source code with cppcheck"
 )
 
 set(
     CLANG_FORMAT_CMD
-    clang-format -Werror ${CMAKE_CURRENT_SOURCE_DIR}/src/*
+    clang-format -Werror
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/*
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp
 )
 
 add_custom_target(
