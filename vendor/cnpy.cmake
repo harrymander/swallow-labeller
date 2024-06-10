@@ -1,4 +1,7 @@
 include(FetchContent)
+
+find_package(ZLIB REQUIRED)
+
 fetchcontent_declare(
     cnpy
     GIT_REPOSITORY https://github.com/rogersce/cnpy
@@ -11,5 +14,5 @@ if(NOT cnpy_POPULATED)
 endif()
 
 add_library(cnpy-vendored INTERFACE)
-target_link_libraries(cnpy-vendored INTERFACE cnpy-static)
+target_link_libraries(cnpy-vendored INTERFACE cnpy-static ${ZLIB_LIBRARIES})
 target_include_directories(cnpy-vendored INTERFACE ${cnpy_SOURCE_DIR})
