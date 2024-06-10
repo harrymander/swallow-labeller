@@ -38,44 +38,45 @@ bool PlotXSelector::draw(
         ImHasFlag(current_plot.Flags, ImPlotFlags_NoBoxSelect), "Box select must be disabled"
     );
 
-    ImGui::PushID("#PLOT_DRAG_XSELECTOR");
     ImPlot::SetupLock();
     const ImPlotAxis& x_axis = current_plot.XAxis(0);
     const ImPlotRect plot_limits = ImPlot::GetPlotLimits();
+
+    ImGui::PushID("#PLOT_DRAG_XSELECTOR");
+    ImGuiID id = ImGui::GetCurrentWindow()->GetID(caller_id);
+    const auto set_active = [id]() {
+        ImGui::KeepAliveID(id);
+        ImGui::SetActiveID(id, ImGui::GetCurrentWindow());
+    };
+
     const bool last_selecting = selecting;
+    bool cancelled = false;
+    const bool key_down = key_down_or_none(key);
+    const float mouse_pos = ImGui::GetMousePos().x;
     float xmin_px = NAN;
     float xmax_px = NAN;
-    if (key_down_or_none(key)) {
-        ImGuiID id = ImGui::GetCurrentWindow()->GetID(caller_id);
-        const auto set_active = [id]() {
-            ImGui::KeepAliveID(id);
-            ImGui::SetActiveID(id, ImGui::GetCurrentWindow());
-        };
-
-        const float position = ImGui::GetMousePos().x;
-        if (selecting) {
-            if (ImGui::IsMouseDragging(mouse_button)) {
-                set_active();
-                const float clicked_pos = position - ImGui::GetMouseDragDelta(mouse_button).x;
-                const float position_clamped = std::clamp(
-                    position,
-                    x_axis.PlotToPixels(plot_limits.X.Min),
-                    x_axis.PlotToPixels(plot_limits.X.Max)
-                );
-                std::tie(xmin_px, xmax_px) = std::minmax(clicked_pos, position_clamped);
-                ImGui::ClearActiveID();
-            } else if (!ImGui::IsMouseDown(mouse_button)) {
-                selecting = false;
-            }
-        } else if (ImPlot::IsPlotHovered() && ImGui::IsMouseDown(mouse_button)) {
+    if (selecting) {
+        if (ImHasFlag(flags, CancelOnKeyRelease) && !key_down) {
+            cancelled = true;
+            selecting = false;
+        } else if (ImGui::IsMouseDragging(mouse_button)) {
             set_active();
-            selecting = true;
-            xmin_px = xmax_px = position;
+            const float clicked_pos = mouse_pos - ImGui::GetMouseDragDelta(mouse_button).x;
+            const float position_clamped = std::clamp(
+                mouse_pos,
+                x_axis.PlotToPixels(plot_limits.X.Min),
+                x_axis.PlotToPixels(plot_limits.X.Max)
+            );
+            std::tie(xmin_px, xmax_px) = std::minmax(clicked_pos, position_clamped);
             ImGui::ClearActiveID();
+        } else {
+            selecting = false;
         }
-    } else {
-        cancelled = ImHasFlag(flags, CancelOnKeyRelease);
-        selecting = false;
+    } else if (key_down && ImPlot::IsPlotHovered() && ImGui::IsMouseDown(mouse_button)) {
+        set_active();
+        selecting = true;
+        xmin_px = xmax_px = mouse_pos;
+        ImGui::ClearActiveID();
     }
 
     if (selecting) {
@@ -97,20 +98,12 @@ bool PlotXSelector::draw(
     }
 
     ImGui::PopID();
-    const bool retval = !cancelled && last_selecting && !selecting;
-    cancelled = false;
-    return retval;
+    return !cancelled && last_selecting && !selecting;
 }
 
 bool PlotXSelector::is_selecting() const
 {
     return selecting;
-}
-
-void PlotXSelector::cancel()
-{
-    cancelled = true;
-    selecting = false;
 }
 
 }; // namespace plot

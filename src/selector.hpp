@@ -22,7 +22,6 @@ public:
         ImGuiMouseButton button = ImGuiMouseButton_Right,
         ImGuiKey key = ImGuiKey_None
     );
-    void cancel();
     bool is_selecting() const;
 
     enum {
@@ -37,7 +36,6 @@ public:
 
 private:
     bool selecting = false;
-    bool cancelled = false;
 };
 
 }; // namespace plot
