@@ -77,15 +77,17 @@ bool PlotXSelector::draw(
     }
 
     if (selecting) {
-        range.Min = x_axis.PixelsToPlot(xmin_px);
-        range.Max = x_axis.PixelsToPlot(xmax_px);
-        ImPlot::PushPlotClipRect();
-        ImPlot::GetPlotDrawList()->AddRectFilled(
-            ImPlot::PlotToPixels(range.Min, plot_limits.Y.Min),
-            ImPlot::PlotToPixels(range.Max, plot_limits.Y.Max),
-            color
-        );
-        ImPlot::PopPlotClipRect();
+        if (!(std::isnan(xmin_px) || std::isnan(xmax_px))) {
+            range.Min = x_axis.PixelsToPlot(xmin_px);
+            range.Max = x_axis.PixelsToPlot(xmax_px);
+            ImPlot::PushPlotClipRect();
+            ImPlot::GetPlotDrawList()->AddRectFilled(
+                ImPlot::PlotToPixels(range.Min, plot_limits.Y.Min),
+                ImPlot::PlotToPixels(range.Max, plot_limits.Y.Max),
+                color
+            );
+            ImPlot::PopPlotClipRect();
+        }
 
         if (!ImHasFlag(flags, NoCursor)) {
             ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);

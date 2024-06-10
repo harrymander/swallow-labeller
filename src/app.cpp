@@ -254,7 +254,15 @@ static void draw_plot()
         for (int i = 0; i < drag_ranges.size(); i++) {
             drag_ranges[i].draw_no_input(i + 1);
         }
-        plot::drag_xrange(0, summary_range, ImColor(128, 128, 128, 60));
+
+        constexpr ImColor summary_color = {.5f, .5, .5, .6};
+        static plot::PlotXSelector summary_selector;
+        summary_selector.draw(
+            0, summary_range, summary_color, plot::PlotXSelector::NoCursor, ImGuiMouseButton_Left
+        );
+        if (!summary_selector.is_selecting()) {
+            plot::drag_xrange(0, summary_range, summary_color);
+        }
 
         ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
         ImPlot::EndPlot();
