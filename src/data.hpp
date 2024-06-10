@@ -3,7 +3,6 @@
 
 #include <cnpy.h>
 
-#include <stdexcept>
 #include <vector>
 
 namespace plot {
@@ -16,6 +15,7 @@ struct SwallowTaskData {
     std::vector<double> audio;
     std::vector<double> audio_time;
 
+    // Throws std::invalid_argument on error
     static SwallowTaskData from_numpy(const cnpy::npz_t& data);
 };
 
