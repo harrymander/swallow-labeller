@@ -23,3 +23,30 @@ target_compile_definitions(implot-rects PRIVATE
     PROGRAM_NAME="${PROJECT_NAME}"
     VERSION_STR="${PROJECT_VERSION}"
 )
+
+add_custom_target(
+    check
+    COMMAND
+        cppcheck --error-exitcode=1 --enable=style --std=c++20 --force
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+    COMMENT "Checking source code with cppcheck"
+)
+
+set(
+    CLANG_FORMAT_CMD
+    clang-format -Werror ${CMAKE_CURRENT_SOURCE_DIR}/src/*
+)
+
+add_custom_target(
+    lint
+    COMMAND ${CLANG_FORMAT_CMD} --dry-run
+    COMMENT "Linting source code with clang-format"
+)
+
+add_custom_target(lint-all DEPENDS check lint)
+
+add_custom_target(
+    format
+    COMMAND ${CLANG_FORMAT_CMD} -i
+    COMMENT "Formatting source code with clang-format"
+)
