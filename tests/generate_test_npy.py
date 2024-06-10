@@ -8,7 +8,7 @@ import numpy as np
 def write_header(file: IO[str], data: dict[str, str]) -> None:
     header_guard = 'INCLUDE_TEST_NPY_PATHS_H'
     file.write(f'#ifndef {header_guard}\n#define {header_guard}\n')
-    file.write('namespace path {\n')
+    file.write('namespace test_path {\n')
     for name, path in data.items():
         file.write(f'constexpr auto {name} = "{path}";\n')
     file.write(f'}};\n#endif // {header_guard}\n')

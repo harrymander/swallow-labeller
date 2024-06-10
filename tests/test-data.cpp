@@ -14,7 +14,7 @@ SwallowTaskData load_data(const std::string& path)
 
 TEST(TestData, TestLoadNormal)
 {
-    const auto data = load_data(path::normal);
+    const auto data = load_data(test_path::normal);
 
     ASSERT_EQ(data.flow.size(), 10);
     for (int i = 0; i < data.flow.size(); i++) {
@@ -60,10 +60,9 @@ class TestDataMissingField : public testing::TestWithParam<std::string> {};
 TEST_P(TestDataMissingField, TestMissingFieldFails)
 {
     const std::string field = GetParam();
-    const std::string path = path::missing_field_prefix + field + ".npz";
-    ASSERT_THROW_MSG(
-        load_data(path), std::invalid_argument, std::string("missing field: ") + field
-    );
+    const std::string path = test_path::missing_field_prefix + field + ".npz";
+    const std::string expected_msg = std::string("missing field: ") + field;
+    ASSERT_THROW_MSG(load_data(path), std::invalid_argument, expected_msg);
 }
 
 const auto Fields = testing::Values("flow", "flow_time", "event", "audio", "audio_time");
@@ -73,7 +72,7 @@ INSTANTIATE_TEST_SUITE_P(MissingFields, TestDataMissingField, Fields);
 TEST(TestData, TestInvalidFlowTypeFails)
 {
     ASSERT_THROW_MSG(
-        load_data(path::invalid_flow_type), std::invalid_argument, "got invalid word size"
+        load_data(test_path::invalid_flow_type), std::invalid_argument, "got invalid word size"
     );
 }
 
@@ -81,7 +80,8 @@ class TestDataShortField : public testing::TestWithParam<std::string> {};
 
 TEST_P(TestDataShortField, TestAudioTimeLengthMismatchFails)
 {
-    ASSERT_THROW(load_data(path::len_mismatch_prefix + GetParam() + ".npz"), std::invalid_argument);
+    const std::string path = test_path::len_mismatch_prefix + GetParam() + ".npz";
+    ASSERT_THROW(load_data(path), std::invalid_argument);
 }
 
 INSTANTIATE_TEST_SUITE_P(ShortenedFields, TestDataShortField, Fields);
@@ -89,13 +89,13 @@ INSTANTIATE_TEST_SUITE_P(ShortenedFields, TestDataShortField, Fields);
 TEST(TestData, Test2DArrayFails)
 {
     ASSERT_THROW_MSG(
-        load_data(path::two_dimensional_array), std::invalid_argument, "expected 1D array"
+        load_data(test_path::two_dimensional_array), std::invalid_argument, "expected 1D array"
     );
 }
 
 TEST(TestData, TestFortranOrderFails)
 {
     ASSERT_THROW_MSG(
-        load_data(path::fortran_order), std::invalid_argument, "array is in Fortran order"
+        load_data(test_path::fortran_order), std::invalid_argument, "array is in Fortran order"
     );
 }
