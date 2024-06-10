@@ -65,6 +65,11 @@ TEST(TestData, TestAudioAndFlowEqualLength)
         exc                                                                                        \
     )
 
+TEST(TestData, TestNoSamplesFails)
+{
+    ASSERT_THROW_MSG(load_data(test_path::no_samples), std::invalid_argument, "missing samples");
+}
+
 TEST(TestData, TestAudioShorterFails)
 {
     ASSERT_THROW_MSG(

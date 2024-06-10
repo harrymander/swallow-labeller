@@ -31,6 +31,16 @@ def generate_normal_data() -> dict[str, np.ndarray]:
     }
 
 
+def generate_no_samples() -> dict[str, np.ndarray]:
+    return {
+        'flow': np.float64([]),
+        'flow_time': np.float64([]),
+        'event': np.uint8([]),
+        'audio': np.float64([]),
+        'audio_time': np.float64([]),
+    }
+
+
 def generate_equal_len() -> dict[str, np.ndarray]:
     data = generate_normal_data()
     data['audio'] = data['audio'][:data['flow'].size]
@@ -111,6 +121,7 @@ def main() -> None:
     generate('normal', normal_data)
     generate('audio_flow_equal_len', generate_equal_len())
     generate('audio_field_shorter', generate_audio_field_shorter())
+    generate('no_samples', generate_no_samples())
     generate('invalid_flow_type', generate_invalid_flow_type())
     generate('two_dimensional_array', generate_2d_array())
     generate('fortran_order', generate_fortran_order())

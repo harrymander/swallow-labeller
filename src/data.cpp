@@ -43,6 +43,9 @@ SwallowTaskData SwallowTaskData::from_numpy(const cnpy::npz_t& data)
     };
 
     const auto flow_size = task.flow.size();
+    if (flow_size == 0) {
+        throw std::invalid_argument("missing samples");
+    }
     if (flow_size != task.flow_time.size()) {
         throw std::invalid_argument("flow and flow_time length mismatch");
     }
