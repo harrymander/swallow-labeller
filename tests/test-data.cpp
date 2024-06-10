@@ -78,7 +78,7 @@ TEST(TestData, TestInvalidFlowTypeFails)
 
 class TestDataShortField : public testing::TestWithParam<std::string> {};
 
-TEST_P(TestDataShortField, TestAudioTimeLengthMismatchFails)
+TEST_P(TestDataShortField, TestFieldLenMismatchFails)
 {
     const std::string path = test_path::len_mismatch_prefix + GetParam() + ".npz";
     ASSERT_THROW(load_data(path), std::invalid_argument);
