@@ -145,9 +145,12 @@ static inline const char *bool_string(bool val)
 struct DragXRange {
     DragXRange(double xmin, double xmax, const ImColor& color) : range(xmin, xmax), color(color) {}
 
-    bool draw(int id) { return draw_with_flag(id, flags); }
+    bool draw(ImGuiID id) { return draw_with_flag(id, flags); }
 
-    bool draw_no_input(int id) { return draw_with_flag(id, flags | plot::DragXRangeFlag::NoInput); }
+    bool draw_no_input(ImGuiID id)
+    {
+        return draw_with_flag(id, flags | plot::DragXRangeFlag::NoInput);
+    }
 
     void draw_info_text() const
     {
@@ -170,7 +173,7 @@ struct DragXRange {
     bool held = false;
 
 private:
-    bool draw_with_flag(int id, plot::DragXRangeFlags flags)
+    bool draw_with_flag(ImGuiID id, plot::DragXRangeFlags flags)
     {
         return plot::drag_xrange(id, range, color, flags, &clicked, &hovered, &held);
     }

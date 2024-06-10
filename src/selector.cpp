@@ -25,7 +25,7 @@ static ImPlotPlot& get_current_plot()
 }
 
 bool PlotXSelector::draw(
-    int caller_id,
+    ImGuiID caller_id,
     ImPlotRange& range,
     const ImColor& color,
     PlotSelectorFlags flags,

@@ -114,7 +114,7 @@ static void draw_plot_vspan(float x0, float x1, const ImColor& color)
 }
 
 bool drag_xrange(
-    int caller_id,
+    ImGuiID caller_id,
     double& xmin,
     double& xmax,
     const ImColor& color,
@@ -182,7 +182,7 @@ bool drag_xrange(
 }
 
 bool drag_xrange(
-    int id,
+    ImGuiID id,
     ImPlotRange& xrange,
     const ImColor& color,
     plot::DragXRangeFlags flags,

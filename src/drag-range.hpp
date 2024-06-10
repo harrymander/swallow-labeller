@@ -37,7 +37,7 @@ enum DragXRangeFlag {
  * @returns true if the region was modified
  */
 bool drag_xrange(
-    int id,
+    ImGuiID id,
     ImPlotRange& xrange,
     const ImColor& color,
     plot::DragXRangeFlags flags = 0,
@@ -47,7 +47,7 @@ bool drag_xrange(
 );
 
 bool drag_xrange(
-    int id,
+    ImGuiID id,
     double& xmin,
     double& xmax,
     const ImColor& color,

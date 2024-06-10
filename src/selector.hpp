@@ -15,7 +15,7 @@ public:
     static constexpr ImU32 DefaultColor = IM_COL32(255, 255, 0, 50);
 
     bool draw(
-        int id,
+        ImGuiID id,
         ImPlotRange& range,
         const ImColor& color = DefaultColor,
         PlotSelectorFlags flags = 0,
