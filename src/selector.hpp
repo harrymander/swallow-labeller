@@ -14,30 +14,30 @@ class PlotXSelector {
 public:
     static constexpr ImU32 DefaultColor = IM_COL32(255, 255, 0, 50);
 
-    void draw(
+    bool draw(
+        int id,
+        ImPlotRange& range,
         const ImColor& color = DefaultColor,
         PlotSelectorFlags flags = 0,
         ImGuiMouseButton button = ImGuiMouseButton_Right,
         ImGuiKey key = ImGuiKey_None
     );
+    void cancel();
     bool is_selecting() const;
-    bool has_selected() const;
-    std::optional<ImPlotRange> last_selection() const;
-
-    void clear_selection();
 
     enum {
         // Disable cursor change when dragging
         NoCursor = 1 << 0,
+
+        // If a key is passed to draw and it is released while dragging, cancel the current
+        // selection (i.e. draw will return false). Has no effect if ImGuiKey_None is passed to key
+        // argument of draw.
+        CancelOnKeyRelease = 1 << 1,
     };
 
 private:
     bool selecting = false;
-    double xmouse_start = 0;
-    double xmouse_drag = 0;
-    std::optional<ImPlotRange> last_selection_ = std::nullopt;
-
-    void draw_selection(const ImColor& color) const;
+    bool cancelled = false;
 };
 
 }; // namespace plot

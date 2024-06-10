@@ -1,11 +1,14 @@
 #include "selector.hpp"
 
+#include "drag-range.hpp"
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "implot.h"
 #include "implot_internal.h"
 
 #include <algorithm>
 #include <cmath>
+#include <tuple>
 
 namespace plot {
 
@@ -21,48 +24,78 @@ static ImPlotPlot& get_current_plot()
     return *plot;
 }
 
-void PlotXSelector::draw(
-    const ImColor& color, PlotSelectorFlags flags, ImGuiMouseButton button, ImGuiKey key
+bool PlotXSelector::draw(
+    int caller_id,
+    ImPlotRange& range,
+    const ImColor& color,
+    PlotSelectorFlags flags,
+    ImGuiMouseButton mouse_button,
+    ImGuiKey key
 )
 {
-    auto plot = get_current_plot();
+    const ImPlotPlot& current_plot = get_current_plot();
     IM_ASSERT_USER_ERROR(
-        ImHasFlag(plot.Flags, ImPlotFlags_NoBoxSelect), "Box select must be disabled"
+        ImHasFlag(current_plot.Flags, ImPlotFlags_NoBoxSelect), "Box select must be disabled"
     );
 
-    if (!(selecting || ImGui::IsItemHovered())) {
-        return;
-    }
+    ImGui::PushID("#PLOT_DRAG_XSELECTOR");
+    ImPlot::SetupLock();
+    const ImPlotAxis& x_axis = current_plot.XAxis(0);
+    const ImPlotRect plot_limits = ImPlot::GetPlotLimits();
+    ImGuiID id = ImGui::GetCurrentWindow()->GetID(caller_id);
+    const auto set_active = [id]() {
+        ImGui::KeepAliveID(id);
+        ImGui::SetActiveID(id, ImGui::GetCurrentWindow());
+    };
 
-    if (ImGui::IsMouseDown(button) && key_down_or_none(key)) {
-        const double xmouse = ImPlot::GetPlotMousePos().x;
+    const bool last_selecting = selecting;
+    float xmin_px = NAN;
+    float xmax_px = NAN;
+    if (key_down_or_none(key)) {
+        const float position = ImGui::GetMousePos().x;
         if (selecting) {
-            xmouse_drag = xmouse;
-        } else {
+            if (ImGui::IsMouseDragging(mouse_button)) {
+                set_active();
+                const float clicked_pos = position - ImGui::GetMouseDragDelta(mouse_button).x;
+                const float position_clamped = std::clamp(
+                    position,
+                    x_axis.PlotToPixels(plot_limits.X.Min),
+                    x_axis.PlotToPixels(plot_limits.X.Max)
+                );
+                std::tie(xmin_px, xmax_px) = std::minmax(clicked_pos, position_clamped);
+            } else if (!ImGui::IsMouseDown(mouse_button)) {
+                selecting = false;
+            }
+        } else if (ImPlot::IsPlotHovered() && ImGui::IsMouseDown(mouse_button)) {
+            set_active();
             selecting = true;
-            xmouse_drag = xmouse_start = xmouse;
+            xmin_px = xmax_px = position;
         }
-    } else if (selecting) {
-        const auto [xmin, xmax] = std::minmax(xmouse_drag, xmouse_start);
-        last_selection_.emplace(ImPlotRange(xmin, xmax));
+    } else {
+        cancelled = ImHasFlag(flags, CancelOnKeyRelease);
         selecting = false;
     }
 
     if (selecting) {
-        draw_selection(color);
+        range.Min = x_axis.PixelsToPlot(xmin_px);
+        range.Max = x_axis.PixelsToPlot(xmax_px);
+        ImPlot::PushPlotClipRect();
+        ImPlot::GetPlotDrawList()->AddRectFilled(
+            ImPlot::PlotToPixels(range.Min, plot_limits.Y.Min),
+            ImPlot::PlotToPixels(range.Max, plot_limits.Y.Max),
+            color
+        );
+        ImPlot::PopPlotClipRect();
+
         if (!ImHasFlag(flags, NoCursor)) {
             ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
         }
     }
-}
 
-void PlotXSelector::draw_selection(const ImColor& color) const
-{
-    const auto yrange = ImPlot::GetPlotLimits().Y;
-    const auto [xmin, xmax] = std::minmax(xmouse_drag, xmouse_start);
-    ImPlot::GetPlotDrawList()->AddRectFilled(
-        ImPlot::PlotToPixels(xmin, yrange.Min), ImPlot::PlotToPixels(xmax, yrange.Max), color
-    );
+    ImGui::PopID();
+    const bool retval = !cancelled && last_selecting && !selecting;
+    cancelled = false;
+    return retval;
 }
 
 bool PlotXSelector::is_selecting() const
@@ -70,19 +103,10 @@ bool PlotXSelector::is_selecting() const
     return selecting;
 }
 
-bool PlotXSelector::has_selected() const
+void PlotXSelector::cancel()
 {
-    return last_selection_.has_value();
-}
-
-std::optional<ImPlotRange> PlotXSelector::last_selection() const
-{
-    return last_selection_;
-}
-
-void PlotXSelector::clear_selection()
-{
-    last_selection_.reset();
+    cancelled = true;
+    selecting = false;
 }
 
 }; // namespace plot

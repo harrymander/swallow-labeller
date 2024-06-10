@@ -135,6 +135,11 @@ static void draw_plot_hovered(const PlotData& data)
     }
 }
 
+static inline const char *bool_string(bool val)
+{
+    return val ? "true" : "false";
+}
+
 struct DragXRange {
     DragXRange(double xmin, double xmax, const ImColor& color) : range(xmin, xmax), color(color) {}
 
@@ -163,8 +168,6 @@ struct DragXRange {
     bool held = false;
 
 private:
-    static inline const char *bool_string(bool val) { return val ? "true" : "false"; }
-
     bool draw_with_flag(int id, plot::DragXRangeFlags flags)
     {
         return plot::drag_xrange(id, range, color, flags, &clicked, &hovered, &held);
@@ -183,6 +186,8 @@ static void draw_plot()
 {
     static PlotData data(1001);
     static plot::PlotXSelector selector;
+    static ImPlotRange selector_range;
+    static ImPlotRange last_selector_range = {NAN, NAN};
 
     static bool ctrl_for_create = false;
     static plot::PlotSelectorFlags selector_flags = 0;
@@ -192,6 +197,10 @@ static void draw_plot()
     ImGui::SameLine();
     ImGui::CheckboxFlags(
         "No cursor##selector_flags", &selector_flags, plot::PlotXSelector::NoCursor
+    );
+    ImGui::SameLine();
+    ImGui::CheckboxFlags(
+        "Cancel on key release", &selector_flags, plot::PlotXSelector::CancelOnKeyRelease
     );
 
     static plot::DragXRangeFlags drag_flags = 0;
@@ -220,12 +229,17 @@ static void draw_plot()
         ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, data.x[0], data.x[data.size - 1]);
         setup_axis_links(ImAxis_X1, &summary_range.Min, &summary_range.Max);
         ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
-        selector.draw(
-            plot::PlotXSelector::DefaultColor,
-            selector_flags,
-            ImGuiMouseButton_Right,
-            ctrl_for_create ? ImGuiKey_LeftCtrl : ImGuiKey_None
-        );
+        if (selector.draw(
+                0,
+                selector_range,
+                plot::PlotXSelector::DefaultColor,
+                selector_flags,
+                ImGuiMouseButton_Right,
+                ctrl_for_create ? ImGuiKey_LeftCtrl : ImGuiKey_None
+            ))
+        {
+            last_selector_range = selector_range;
+        }
         for (unsigned int i = 0; i < drag_ranges.size(); i++) {
             drag_ranges[i].draw(i);
         }
@@ -246,14 +260,14 @@ static void draw_plot()
         ImPlot::EndPlot();
     }
     ImGui::Text("Summary range: [%f, %f]", summary_range.Min, summary_range.Max);
-
-    ImGui::Text("%s selecting", selector.is_selecting() ? "Is" : "Is not");
-    const auto last_selection = selector.last_selection();
-    if (last_selection) {
-        ImGui::Text("Last selection: (%lf, %lf)", last_selection->Min, last_selection->Max);
-    } else {
-        ImGui::TextUnformatted("Nothing selected yet!");
-    }
+    ImGui::Text(
+        "Selector: [%lf, %lf], selecting = %s, last selection: [%lf, %lf]",
+        selector_range.Min,
+        selector_range.Max,
+        bool_string(selector.is_selecting()),
+        last_selector_range.Min,
+        last_selector_range.Max
+    );
 
     for (auto& range : drag_ranges) {
         range.flags = drag_flags;
