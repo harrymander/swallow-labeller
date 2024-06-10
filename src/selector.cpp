@@ -42,16 +42,16 @@ bool PlotXSelector::draw(
     ImPlot::SetupLock();
     const ImPlotAxis& x_axis = current_plot.XAxis(0);
     const ImPlotRect plot_limits = ImPlot::GetPlotLimits();
-    ImGuiID id = ImGui::GetCurrentWindow()->GetID(caller_id);
-    const auto set_active = [id]() {
-        ImGui::KeepAliveID(id);
-        ImGui::SetActiveID(id, ImGui::GetCurrentWindow());
-    };
-
     const bool last_selecting = selecting;
     float xmin_px = NAN;
     float xmax_px = NAN;
     if (key_down_or_none(key)) {
+        ImGuiID id = ImGui::GetCurrentWindow()->GetID(caller_id);
+        const auto set_active = [id]() {
+            ImGui::KeepAliveID(id);
+            ImGui::SetActiveID(id, ImGui::GetCurrentWindow());
+        };
+
         const float position = ImGui::GetMousePos().x;
         if (selecting) {
             if (ImGui::IsMouseDragging(mouse_button)) {
