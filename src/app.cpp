@@ -1,3 +1,5 @@
+#define IMGUI_DEFINE_MATH_OPERATORS
+
 #include "app.hpp"
 
 #include "drag-range.hpp"
@@ -182,6 +184,18 @@ static void setup_axis_links(ImAxis axis, double *v1, double *v2)
     ImPlot::SetupAxisLinks(axis, vmin, vmax);
 }
 
+static bool mouse_inside_plot()
+{
+    if (!ImGui::IsMousePosValid()) {
+        return false;
+    }
+
+    const ImVec2 bbmin = ImPlot::GetPlotPos();
+    const ImVec2 bbmax = bbmin + ImPlot::GetPlotSize();
+    const ImVec2 pos = ImGui::GetMousePos();
+    return pos.x >= bbmin.x && pos.x <= bbmax.x && pos.y >= bbmin.y && pos.y <= bbmax.y;
+}
+
 static void draw_plot()
 {
     static PlotData data(1001);
@@ -232,6 +246,10 @@ static void draw_plot()
         ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, data.x[0], data.x[data.size - 1]);
         setup_axis_links(ImAxis_X1, &summary_range.Min, &summary_range.Max);
         ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
+        if (mouse_inside_plot()) {
+            draw_plot_hovered(data);
+        }
+
         if (selector.draw(
                 0,
                 selector_range,
