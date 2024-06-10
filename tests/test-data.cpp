@@ -7,7 +7,7 @@
 
 using namespace plot;
 
-SwallowTaskData load_data(const std::string& path)
+static SwallowTaskData load_data(const std::string& path)
 {
     return SwallowTaskData::from_numpy(cnpy::npz_load(path));
 }
