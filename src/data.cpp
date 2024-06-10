@@ -50,8 +50,13 @@ SwallowTaskData SwallowTaskData::from_numpy(const cnpy::npz_t& data)
         throw std::invalid_argument("flow and event length mismatch");
     }
 
-    if (task.audio.size() != task.audio_time.size()) {
+    const auto audio_size = task.audio.size();
+    if (audio_size != task.audio_time.size()) {
         throw std::invalid_argument("audio and audio_time length mismatch");
+    }
+
+    if (audio_size < flow_size) {
+        throw std::invalid_argument("audio field cannot be shorter than flow and event");
     }
 
     return task;

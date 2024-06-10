@@ -31,6 +31,20 @@ def generate_normal_data() -> dict[str, np.ndarray]:
     }
 
 
+def generate_equal_len() -> dict[str, np.ndarray]:
+    data = generate_normal_data()
+    data['audio'] = data['audio'][:data['flow'].size]
+    data['audio_time'] = data['audio_time'][:data['flow'].size]
+    return data
+
+
+def generate_audio_field_shorter() -> dict[str, np.ndarray]:
+    data = generate_normal_data()
+    data['audio'] = data['audio'][:data['flow'].size - 1]
+    data['audio_time'] = data['audio_time'][:data['flow'].size - 1]
+    return data
+
+
 def generate_missing_field(field: str) -> dict[str, np.ndarray]:
     data = generate_normal_data()
     del data[field]
@@ -95,6 +109,8 @@ def main() -> None:
         np.savez(path, **array)
 
     generate('normal', normal_data)
+    generate('audio_flow_equal_len', generate_equal_len())
+    generate('audio_field_shorter', generate_audio_field_shorter())
     generate('invalid_flow_type', generate_invalid_flow_type())
     generate('two_dimensional_array', generate_2d_array())
     generate('fortran_order', generate_fortran_order())

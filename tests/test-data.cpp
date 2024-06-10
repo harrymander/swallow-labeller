@@ -42,7 +42,15 @@ TEST(TestData, TestLoadNormal)
     }
 }
 
-class TestDataMissingField : public testing::TestWithParam<std::string> {};
+TEST(TestData, TestAudioAndFlowEqualLength)
+{
+    const auto data = load_data(test_path::audio_flow_equal_len);
+    ASSERT_EQ(data.flow.size(), 10);
+    ASSERT_EQ(data.flow_time.size(), 10);
+    ASSERT_EQ(data.event.size(), 10);
+    ASSERT_EQ(data.audio.size(), 10);
+    ASSERT_EQ(data.audio_time.size(), 10);
+}
 
 #define ASSERT_THROW_MSG(statement, exc, msg)                                                      \
     ASSERT_THROW(                                                                                  \
@@ -56,6 +64,17 @@ class TestDataMissingField : public testing::TestWithParam<std::string> {};
         },                                                                                         \
         exc                                                                                        \
     )
+
+TEST(TestData, TestAudioShorterFails)
+{
+    ASSERT_THROW_MSG(
+        load_data(test_path::audio_field_shorter),
+        std::invalid_argument,
+        "audio field cannot be shorter than flow and event"
+    );
+}
+
+class TestDataMissingField : public testing::TestWithParam<std::string> {};
 
 TEST_P(TestDataMissingField, TestMissingFieldFails)
 {
