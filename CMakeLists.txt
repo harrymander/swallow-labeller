@@ -6,12 +6,14 @@ add_subdirectory(vendor)
 
 add_executable(implot-rects
     src/app.cpp
+    src/data.cpp
     src/drag-range.cpp
     src/main.cpp
     src/selector.cpp
 )
 target_compile_features(implot-rects PRIVATE cxx_std_20)
 target_link_libraries(implot-rects PRIVATE
+    cnpy-vendored
     imgui::demo
     imgui::imgui
     imgui::backend::opengl
