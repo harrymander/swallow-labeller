@@ -9,7 +9,6 @@
 #include <imgui.h>
 
 #include <cstdio>
-#include <filesystem>
 #include <iostream>
 #define GL_SILENCE_DEPRECATION
 #if defined(IMGUI_IMPL_OPENGL_ES2)
