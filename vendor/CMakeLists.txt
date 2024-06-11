@@ -7,11 +7,11 @@ fetchcontent_declare(
 )
 fetchcontent_makeavailable(spdlog)
 
-FetchContent_Declare(
+fetchcontent_declare(
     json
     URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
 )
-FetchContent_MakeAvailable(json)
+fetchcontent_makeavailable(json)
 
 include(cnpy.cmake)
 include(imgui.cmake)
