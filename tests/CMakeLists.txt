@@ -16,6 +16,19 @@ add_custom_command(
 )
 
 add_executable(test-data test-data.cpp ../src/data.cpp ${DATA_TEST_FILE_HEADER})
-target_include_directories(test-data PUBLIC ../src ${DATA_TEST_FILE_DIR})
-target_link_libraries(test-data PUBLIC GTest::gtest_main cnpy-vendored)
+target_include_directories(test-data PRIVATE ../src ${DATA_TEST_FILE_DIR})
+target_link_libraries(test-data PRIVATE GTest::gtest_main cnpy-vendored)
 gtest_discover_tests(test-data)
+
+add_executable(test-tasks-parsing test-tasks-parsing.cpp)
+target_include_directories(test-tasks-parsing PRIVATE ../src)
+target_link_libraries(
+    test-tasks-parsing
+    PRIVATE GTest::gtest_main nlohmann_json::nlohmann_json
+)
+target_compile_definitions(
+    test-tasks-parsing
+    PRIVATE JSON_PATH="${CMAKE_CURRENT_SOURCE_DIR}/swallow-tasks.json"
+)
+gtest_discover_tests(test-tasks-parsing)
+
