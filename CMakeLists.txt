@@ -26,6 +26,7 @@ target_link_libraries(implot-rects PRIVATE
     imgui::backend::glfw
     implot::demo
     implot::implot
+    spdlog::spdlog
 )
 target_compile_definitions(implot-rects PRIVATE
     PROGRAM_NAME="${PROJECT_NAME}"

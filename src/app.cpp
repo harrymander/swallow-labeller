@@ -8,6 +8,8 @@
 
 #include <imgui.h>
 #include <implot.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/spdlog.h>
 
 #include <algorithm>
 #include <array>
@@ -15,6 +17,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <memory>
 #include <optional>
 #include <sstream>
 #include <vector>
@@ -25,6 +28,10 @@ static bool to_close = false;
 
 int setup()
 {
+    spdlog::default_logger()->sinks()[0] = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
+    spdlog::set_level(spdlog::level::debug);
+
+    spdlog::debug("Setting up ImGui and ImPlot...");
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImPlot::CreateContext();
@@ -35,6 +42,7 @@ int setup()
 
 void teardown()
 {
+    spdlog::debug("Tearing down ImGui and ImPlot...");
     ImPlot::DestroyContext();
     ImGui::DestroyContext();
 }
