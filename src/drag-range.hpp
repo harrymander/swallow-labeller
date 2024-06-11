@@ -15,8 +15,8 @@ enum DragXRangeFlag {
     // Disable moving/resizing, will still show cursor and report click, hold, or hovered
     NoMove = 1 << 1,
 
-    // Disable all input but still show rectangle. Will not show cursor or report click, hold, or
-    // hovered
+    // Disable all input but still show rectangle. Will not show cursor and values of report click,
+    // hold, or hovered will be unchanged
     NoInput = 1 << 2,
 };
 

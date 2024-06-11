@@ -131,14 +131,14 @@ bool drag_xrange(
     ImGui::PushID("#PLOT_DRAG_XRANGE");
     ImPlot::SetupLock();
 
-    bool clicked = false;
-    bool hovered = false;
-    bool held = false;
     float xmin_px = current_plot->XAxis(0).PlotToPixels(xmin);
     float xmax_px = current_plot->XAxis(0).PlotToPixels(xmax);
-
     bool modified = false;
     if (!ImHasFlag(flags, DragXRangeFlag::NoInput)) {
+        bool clicked = false;
+        bool hovered = false;
+        bool held = false;
+
         ImGuiID id = ImGui::GetCurrentWindow()->GetID(caller_id);
         const ImPlotRect plot_limits = ImPlot::GetPlotLimits();
         const ImPlotRange& xconstraint = current_plot->XAxis(0).ConstraintRange;
@@ -168,15 +168,15 @@ bool drag_xrange(
         if (!held && xmin > xmax) {
             std::swap(xmin, xmax);
         }
+        set_pointer(out_clicked, clicked);
+        set_pointer(out_hovered, hovered);
+        set_pointer(out_held, held);
     }
 
     ImPlot::PushPlotClipRect();
     draw_plot_vspan(xmin_px, xmax_px, color);
     ImPlot::PopPlotClipRect();
 
-    set_pointer(out_clicked, clicked);
-    set_pointer(out_hovered, hovered);
-    set_pointer(out_held, held);
     ImGui::PopID();
     return modified;
 }
