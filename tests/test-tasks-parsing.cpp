@@ -9,7 +9,7 @@
 using labelling_task::SwallowLabellingTask;
 using Json = nlohmann::json;
 
-TEST(TestSwallowLabellingTask, TestParseAndDumpJson)
+TEST(TestSwallowLabellingTask, TestParseJson)
 {
     Json json;
     {
