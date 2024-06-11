@@ -275,8 +275,17 @@ static void draw_plot()
             ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_AutoFit;
         ImPlot::SetupAxes(nullptr, nullptr, ax_flags, ax_flags);
 
-        for (int i = 0; i < drag_ranges.size(); i++) {
-            drag_ranges[i].draw_no_input(i + 1);
+        int xrange_id;
+        for (xrange_id = 0; xrange_id < drag_ranges.size(); xrange_id++) {
+            drag_ranges[xrange_id].draw_no_input(xrange_id + 1);
+        }
+        if (selector.is_selecting()) {
+            plot::drag_xrange(
+                xrange_id++,
+                selector_range,
+                plot::PlotXSelector::DefaultColor,
+                plot::DragXRangeFlag::NoInput
+            );
         }
 
         constexpr ImColor summary_color = {.5f, .5, .5, .6};
