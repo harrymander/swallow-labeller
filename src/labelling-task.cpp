@@ -17,6 +17,11 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
     }
 );
 
+std::string swallow_test_type_string(SwallowTestType type)
+{
+    return Json(type).get<std::string>();
+}
+
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LabellingDataFile, path, checksum);
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TimeRange, start, end);

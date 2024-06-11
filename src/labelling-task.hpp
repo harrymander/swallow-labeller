@@ -12,6 +12,8 @@ enum class SwallowTestType {
     Cued,
 };
 
+std::string swallow_test_type_string(SwallowTestType type);
+
 struct LabellingDataFile {
     std::string path;
     std::string checksum;

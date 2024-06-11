@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
 
 project(implot-rects LANGUAGES CXX VERSION 0.1.0)
 
+set(CMAKE_CXX_STANDARD 20)
+
 add_subdirectory(vendor)
 
 option(BUILD_TESTS "Build tests" ON)
@@ -14,6 +16,7 @@ add_executable(implot-rects
     src/app.cpp
     src/data.cpp
     src/drag-range.cpp
+    src/labelling-task.cpp
     src/main.cpp
     src/selector.cpp
 )
@@ -26,6 +29,7 @@ target_link_libraries(implot-rects PRIVATE
     imgui::backend::glfw
     implot::demo
     implot::implot
+    nlohmann_json::nlohmann_json
     spdlog::spdlog
 )
 target_compile_definitions(implot-rects PRIVATE

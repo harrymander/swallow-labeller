@@ -37,3 +37,10 @@ TEST(TestSwallowLabellingTask, TestParseJsonMissingFieldFails)
     std::vector<SwallowLabellingTask> tasks;
     ASSERT_THROW(load_from_path(MISSING_FIELD_JSON_PATH, tasks), std::invalid_argument);
 }
+
+TEST(TestSwallowLabellingTask, TestSwallowTestTypeToString)
+{
+    using enum SwallowTestType;
+    EXPECT_EQ(swallow_test_type_string(TidalBreathing), "tidal-breathing");
+    EXPECT_EQ(swallow_test_type_string(Cued), "cued");
+}
