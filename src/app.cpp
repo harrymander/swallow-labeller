@@ -15,7 +15,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <future>
 #include <optional>
 #include <sstream>
 #include <vector>
@@ -319,63 +318,10 @@ static void draw_plot()
     ImGui::Text("Mouse Position: [%.0f,%.0f]", io.MousePos.x, io.MousePos.y);
 }
 
-static void draw_large_data_plot(const PlotData& data)
-{
-    if (ImPlot::BeginPlot("##largeplot"), ImVec2(-1, 0), ImPlotFlags_NoBoxSelect) {
-        ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit);
-        ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, data.x[0], data.x[data.size - 1]);
-
-        const auto xlimits = ImPlot::GetPlotLimits().X;
-        auto xmin = util::binary_search_closest(data.x.begin(), data.x.end(), xlimits.Min);
-        if (xmin == data.x.end())
-            xmin = data.x.begin();
-        auto xmax = util::binary_search_closest(data.x.begin(), data.x.end(), xlimits.Max);
-        const size_t downsample = data.size / 10'000 + 1;
-        const auto imin = xmin - data.x.begin();
-        ImPlot::PlotStairs(
-            "##data",
-            &data.x.data()[imin],
-            &data.y.data()[imin],
-            (xmax - xmin) / downsample,
-            0,
-            0,
-            sizeof(PlotData::Vector::value_type) * downsample
-        );
-        ImPlot::EndPlot();
-    }
-}
-
-static void draw_large_data_plot()
-{
-    static std::optional<PlotData> data = std::nullopt;
-    static std::optional<std::future<PlotData>> future = std::nullopt;
-    static constexpr size_t large_data_size = 67'982'231;
-    static std::string button_label = []() {
-        std::stringstream ss;
-        ss << "Load large data (~" << large_data_size / (1 << 20) + 1 << " MiB)";
-        return ss.str();
-    }();
-
-    if (data) {
-        draw_large_data_plot(*data);
-    } else if (future.has_value()) {
-        if (future->wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
-            data.emplace(future->get());
-            future.reset();
-        } else {
-            static constexpr const char *dots[] = {"", ".", "..", "..."};
-            ImGui::Text("Loading%s", dots[(int) (ImGui::GetTime() / .25f) & 3]);
-        }
-    } else if (ImGui::Button(button_label.c_str())) {
-        future.emplace(std::async(std::launch::async, []() { return PlotData(large_data_size); }));
-    }
-}
-
 static void draw_window_contents()
 {
     draw_demo_windows();
     draw_plot();
-    draw_large_data_plot();
 }
 
 bool draw()
