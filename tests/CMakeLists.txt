@@ -20,15 +20,23 @@ target_include_directories(test-data PRIVATE ../src ${DATA_TEST_FILE_DIR})
 target_link_libraries(test-data PRIVATE GTest::gtest_main cnpy-vendored)
 gtest_discover_tests(test-data)
 
-add_executable(test-tasks-parsing test-tasks-parsing.cpp)
+add_executable(
+    test-tasks-parsing
+    test-tasks-parsing.cpp
+    ../src/labelling-task.cpp
+)
 target_include_directories(test-tasks-parsing PRIVATE ../src)
 target_link_libraries(
     test-tasks-parsing
     PRIVATE GTest::gtest_main nlohmann_json::nlohmann_json
 )
+set(TEST_JSON_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tasks)
 target_compile_definitions(
     test-tasks-parsing
-    PRIVATE JSON_PATH="${CMAKE_CURRENT_SOURCE_DIR}/swallow-tasks.json"
+    PRIVATE
+        JSON_PATH="${TEST_JSON_DIR}/swallow-tasks.json"
+        INVALID_JSON_PATH="${TEST_JSON_DIR}/invalid.json"
+        MISSING_FIELD_JSON_PATH="${TEST_JSON_DIR}/swallow-missing-field.json"
 )
 gtest_discover_tests(test-tasks-parsing)
 

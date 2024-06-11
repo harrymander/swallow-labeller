@@ -1,0 +1,17 @@
+[
+  {
+    "subject": 1,
+    "test_type": "cued",
+    "repeatnum": 1,
+    "swallownum": 1,
+    "recording_file": "8f80cf8d8afa1eee477dc32cb50bf640",
+    "csv_range_secs": {
+      "start": 0.0,
+      "end": 14.39
+    },
+    "npz_file": {
+      "path": "swallows/cued/01/2024-02-23T165916+1300-CS1-1.1.csv",
+      "checksum": "416b7aa0f8f470cccb441bb0907d7db1"
+    }
+  }
+]
