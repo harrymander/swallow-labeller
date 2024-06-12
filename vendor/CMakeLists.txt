@@ -13,6 +13,12 @@ fetchcontent_declare(
 )
 fetchcontent_makeavailable(json)
 
-include(cnpy.cmake)
+fetchcontent_declare(
+    cnpy
+    GIT_REPOSITORY https://github.com/harrymander/cnpy
+    GIT_TAG cbf1f5a9e15763ab416cb9edd4ff5e428af77bdd
+)
+fetchcontent_makeavailable(cnpy)
+
 include(imgui.cmake)
 include(implot.cmake)

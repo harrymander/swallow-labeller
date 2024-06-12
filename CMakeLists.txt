@@ -22,7 +22,7 @@ add_executable(implot-rects
 )
 target_compile_features(implot-rects PRIVATE cxx_std_20)
 target_link_libraries(implot-rects PRIVATE
-    cnpy-vendored
+    cnpy::cnpy
     imgui::demo
     imgui::imgui
     imgui::backend::opengl
