@@ -36,6 +36,7 @@ target_compile_definitions(implot-rects PRIVATE
     PROGRAM_NAME="${PROJECT_NAME}"
     VERSION_STR="${PROJECT_VERSION}"
 )
+target_compile_options(implot-rects PRIVATE -Wall)
 
 find_program(CPPCHECK cppcheck REQUIRED)
 add_custom_target(
