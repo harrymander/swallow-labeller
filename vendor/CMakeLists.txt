@@ -16,7 +16,7 @@ fetchcontent_makeavailable(json)
 fetchcontent_declare(
     cnpy
     GIT_REPOSITORY https://github.com/harrymander/cnpy
-    GIT_TAG cbf1f5a9e15763ab416cb9edd4ff5e428af77bdd
+    GIT_TAG 138c1a6d5478c521130ab38bf73fd382cdb2ab37
 )
 fetchcontent_makeavailable(cnpy)
 
