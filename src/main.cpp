@@ -33,8 +33,13 @@ static void glfw_error_callback(int error, const char *description)
 }
 
 // Main code
-int main(int, char **)
+int main(int argc, char **argv)
 {
+    if (argc != 3) {
+        std::cerr << "Usage: " << argv[0] << " <labelling_tasks_path> <data_dir>\n";
+        return 1;
+    }
+
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
         return 1;
@@ -70,7 +75,7 @@ int main(int, char **)
     glfwSwapInterval(1); // Enable vsync
 
     // Setup Dear ImGui context
-    if (app::setup() < 0) {
+    if (app::setup(argv[1], argv[2]) < 0) {
         std::cerr << "Error setting-up app\n";
         return 1;
     }

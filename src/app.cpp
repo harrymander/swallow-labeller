@@ -1,15 +1,21 @@
+#include "labelling-task.hpp"
+
+#include <fstream>
+#include <stdexcept>
 #define IMGUI_DEFINE_MATH_OPERATORS
 
 #include "app.hpp"
-
+#include "data.hpp"
 #include "drag-range.hpp"
 #include "selector.hpp"
 #include "util.hpp"
 
+#include <cnpy.h>
 #include <imgui.h>
 #include <implot.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
+#include <spdlog/stopwatch.h>
 
 #include <algorithm>
 #include <array>
@@ -17,6 +23,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <sstream>
@@ -24,12 +31,38 @@
 
 namespace app {
 
-static bool to_close = false;
+using labelling_task::SwallowLabellingTask;
 
-int setup()
+static bool to_close = false;
+static std::vector<SwallowLabellingTask> labelling_tasks;
+static std::filesystem::path data_dir;
+
+int setup(std::filesystem::path labelling_tasks_path, std::filesystem::path data_dir_)
 {
     spdlog::default_logger()->sinks()[0] = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
     spdlog::set_level(spdlog::level::debug);
+
+    data_dir = data_dir_;
+    if (!std::filesystem::is_directory(data_dir)) {
+        spdlog::error("Data directory '{}' does not exist", data_dir.string());
+        return -1;
+    }
+
+    {
+        std::ifstream stream(labelling_tasks_path);
+        if (!stream) {
+            spdlog::error(
+                "Error opening labelling tasks path: {}", std::string(labelling_tasks_path)
+            );
+            return -1;
+        }
+        try {
+            labelling_tasks = labelling_task::load_tasks_json(stream);
+        } catch (const std::invalid_argument& e) {
+            spdlog::error("Error loading labelling tasks: {}", e.what());
+            return -1;
+        }
+    }
 
     spdlog::debug("Setting up ImGui and ImPlot...");
     IMGUI_CHECKVERSION();
@@ -59,24 +92,6 @@ static void draw_demo_windows()
     if (show_implot_demo)
         ImPlot::ShowDemoWindow(&show_implot_demo);
 }
-
-struct PlotData {
-    using Vector = std::vector<float>;
-    Vector y;
-    Vector x;
-    const Vector::size_type size;
-
-    explicit PlotData(Vector::size_type size) : size(size)
-    {
-        y.reserve(size);
-        x.reserve(size);
-        for (std::size_t i = 0; i < size; i++) {
-            const float xi = i * 1.0 / (size - 1);
-            x.push_back(xi);
-            y.push_back(0.25f + 0.25f * sinf(25 * xi) * sinf(5 * xi));
-        }
-    }
-};
 
 static void add_plot_marker(ImDrawList *draw_list, const ImVec2& pos)
 {
@@ -134,13 +149,14 @@ static void draw_plot_cursor(float xplot, float yplot)
     add_plot_marker(draw_list, pospx);
 }
 
-static void draw_plot_hovered(const PlotData& data)
+static void draw_plot_hovered(const double *x, size_t n, const double *y)
 {
     const auto mouse = ImPlot::GetPlotMousePos();
-    if (mouse.x > data.x[0]) {
-        const auto xplot = util::binary_search_closest(data.x.begin(), data.x.end(), mouse.x);
-        if (xplot != data.x.end())
-            draw_plot_cursor(*xplot, data.y[std::distance(data.x.begin(), xplot)]);
+    if (mouse.x > x[0]) {
+        const double *const end = x + n;
+        const double *xclosest = util::binary_search_closest(x, end, mouse.x);
+        if (xclosest != end)
+            draw_plot_cursor(*xclosest, y[xclosest - x]);
     }
 }
 
@@ -206,9 +222,43 @@ static bool mouse_inside_plot()
     return pos.x >= bbmin.x && pos.x <= bbmax.x && pos.y >= bbmin.y && pos.y <= bbmax.y;
 }
 
+static plot::SwallowTaskData load_task(const SwallowLabellingTask& task)
+{
+    spdlog::stopwatch stopwatch;
+    const auto path = data_dir / std::filesystem::path(task.npz_file.path);
+    const auto ret = plot::SwallowTaskData::from_numpy(cnpy::npz_load(path));
+    spdlog::debug("Data loaded from '{}' in {} ms", path.string(), stopwatch.elapsed_ms().count());
+    spdlog::debug(
+        "{}: flow size = {}, audio size = {}", path.string(), ret.flow.size(), ret.audio.size()
+    );
+    return ret;
+}
+
+static void draw_task_selector(plot::SwallowTaskData& task)
+{
+    static std::size_t task_index = 0;
+    std::size_t new_index = task_index;
+    if (ImGui::ArrowButton("Prev task", ImGuiDir_Left)) {
+        new_index = task_index ? task_index - 1 : labelling_tasks.size() - 1;
+    }
+    ImGui::SameLine();
+    if (ImGui::ArrowButton("Next task", ImGuiDir_Right)) {
+        new_index = (task_index + 1) % labelling_tasks.size();
+    }
+    if (new_index != task_index) {
+        task = load_task(labelling_tasks[new_index]);
+        task_index = new_index;
+    }
+}
+
 static void draw_plot()
 {
-    static PlotData data(1001);
+    static auto task = load_task(labelling_tasks[0]);
+    draw_task_selector(task);
+
+    // FIXME: do not create this every loop
+    std::vector<double> event(task.event.begin(), task.event.end());
+
     static plot::PlotXSelector selector;
     static ImPlotRange selector_range;
     static ImPlotRange last_selector_range = {NAN, NAN};
@@ -244,7 +294,9 @@ static void draw_plot()
         DragXRange(.7, .8, ImColor(0, 255, 0, 60)),
         DragXRange(.1, .2, ImColor(0, 0, 255, 60)),
     };
-    static ImPlotRange summary_range(data.x[data.size / 4], data.x[data.size * 3 / 4]);
+    static ImPlotRange summary_range(
+        task.audio_time[task.audio_time.size() / 4], task.audio_time[task.audio_time.size() * 3 / 4]
+    );
 
     if (ImPlot::BeginPlot(
             "##mainplot",
@@ -253,11 +305,14 @@ static void draw_plot()
         ))
     {
         ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit);
-        ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, data.x[0], data.x[data.size - 1]);
+        ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, task.audio_time[0], task.audio_time.back());
         setup_axis_links(ImAxis_X1, &summary_range.Min, &summary_range.Max);
-        ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
+        ImPlot::PlotLine(
+            "##audio", task.audio_time.data(), task.audio.data(), task.audio_time.size()
+        );
+        ImPlot::PlotDigital("##event", task.flow_time.data(), event.data(), event.size());
         if (mouse_inside_plot()) {
-            draw_plot_hovered(data);
+            draw_plot_hovered(task.audio_time.data(), task.audio_time.size(), task.audio.data());
         }
 
         if (selector.draw(
@@ -282,7 +337,7 @@ static void draw_plot()
             ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_AutoFit;
         ImPlot::SetupAxes(nullptr, nullptr, ax_flags, ax_flags);
 
-        int xrange_id;
+        unsigned int xrange_id;
         for (xrange_id = 0; xrange_id < drag_ranges.size(); xrange_id++) {
             drag_ranges[xrange_id].draw_no_input(xrange_id + 1);
         }
@@ -304,7 +359,8 @@ static void draw_plot()
             plot::drag_xrange(0, summary_range, summary_color);
         }
 
-        ImPlot::PlotLine("##data", data.x.data(), data.y.data(), data.size);
+        ImPlot::PlotLine("##data", task.audio_time.data(), task.audio.data(), task.audio.size());
+        ImPlot::PlotDigital("##event", task.flow_time.data(), event.data(), event.size());
         ImPlot::EndPlot();
     }
     ImGui::Text("Summary range: [%f, %f]", summary_range.Min, summary_range.Max);
