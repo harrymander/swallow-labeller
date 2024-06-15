@@ -3,6 +3,7 @@
 #include "platform.hpp"
 
 #include <argparse/argparse.hpp>
+#include <spdlog/logger.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
@@ -23,12 +24,18 @@ static void setup_logging(std::optional<std::string>&& logfile)
 {
     spdlog::set_level(spdlog::level::debug);
 
-    spdlog::default_logger()->sinks()[0] = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
+    auto& sinks = spdlog::default_logger()->sinks();
+    sinks = {std::make_shared<spdlog::sinks::stderr_color_sink_mt>()};
     if (logfile) {
         spdlog::debug("Logging to {}", *logfile);
-        spdlog::default_logger()->sinks().push_back(
-            std::make_shared<spdlog::sinks::basic_file_sink_mt>(*logfile)
-        );
+        auto sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(*logfile);
+        sinks.push_back(sink);
+
+        // Create a separate temporary logger to write start message just to file:
+        spdlog::set_automatic_registration(false);
+        spdlog::logger("", {sink})
+            .info("*************************** NEW LOG START ***************************");
+        spdlog::set_automatic_registration(true);
     }
 }
 
