@@ -22,7 +22,6 @@ jobs:
           cmake \
             -B build \
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-            -DEXPORT_CHECK_TARGETS=off \
             -G "Visual Studio 17 2022"
       - name: Build
         run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel

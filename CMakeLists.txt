@@ -62,13 +62,10 @@ else()
 endif()
 
 
-option(
-    EXPORT_CHECK_TARGETS
-    "Add targets for running cppcheck and clang-format"
-    ON
-)
-if(EXPORT_CHECK_TARGETS)
-    find_program(CPPCHECK cppcheck REQUIRED)
+find_program(CPPCHECK cppcheck)
+if(CPPCHECK STREQUAL CPPCHECK-NOTFOUND)
+    message(WARNING "cppcheck not found, disabling check target")
+else()
     add_custom_target(
         check
         COMMAND
@@ -78,8 +75,12 @@ if(EXPORT_CHECK_TARGETS)
                         ${CMAKE_CURRENT_SOURCE_DIR}/tests
         COMMENT "Checking source code with cppcheck"
     )
+endif()
 
-    find_program(CLANG_FORMAT clang-format REQUIRED)
+find_program(CLANG_FORMAT clang-format REQUIRED)
+if(CLANG_FORMAT STREQUAL CLANG_FORMAT-NOTFOUND)
+    message(WARNING "clang-format not found, disabling lint and format targets")
+else()
     set(
         CLANG_FORMAT_CMD
         ${CLANG_FORMAT} -Werror
@@ -92,8 +93,9 @@ if(EXPORT_CHECK_TARGETS)
         COMMAND ${CLANG_FORMAT_CMD} --dry-run
         COMMENT "Linting source code with clang-format"
     )
-
-    add_custom_target(lint-all DEPENDS check lint)
+    if(TARGET check)
+        add_custom_target(lint-all DEPENDS check lint)
+    endif()
 
     add_custom_target(
         format
