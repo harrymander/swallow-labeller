@@ -62,35 +62,42 @@ else()
 endif()
 
 
-find_program(CPPCHECK cppcheck REQUIRED)
-add_custom_target(
-    check
-    COMMAND
-        ${CPPCHECK} --error-exitcode=1 --force --quiet
-                    --enable=style --language=c++ --std=c++20
-                    ${CMAKE_CURRENT_SOURCE_DIR}/src
-                    ${CMAKE_CURRENT_SOURCE_DIR}/tests
-    COMMENT "Checking source code with cppcheck"
+option(
+    EXPORT_CHECK_TARGETS
+    "Add targets for running cppcheck and clang-format"
+    ON
 )
+if(EXPORT_CHECK_TARGETS)
+    find_program(CPPCHECK cppcheck REQUIRED)
+    add_custom_target(
+        check
+        COMMAND
+            ${CPPCHECK} --error-exitcode=1 --force --quiet
+                        --enable=style --language=c++ --std=c++20
+                        ${CMAKE_CURRENT_SOURCE_DIR}/src
+                        ${CMAKE_CURRENT_SOURCE_DIR}/tests
+        COMMENT "Checking source code with cppcheck"
+    )
 
-find_program(CLANG_FORMAT clang-format REQUIRED)
-set(
-    CLANG_FORMAT_CMD
-    ${CLANG_FORMAT} -Werror
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/*
-        ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp
-)
+    find_program(CLANG_FORMAT clang-format REQUIRED)
+    set(
+        CLANG_FORMAT_CMD
+        ${CLANG_FORMAT} -Werror
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/*
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp
+    )
 
-add_custom_target(
-    lint
-    COMMAND ${CLANG_FORMAT_CMD} --dry-run
-    COMMENT "Linting source code with clang-format"
-)
+    add_custom_target(
+        lint
+        COMMAND ${CLANG_FORMAT_CMD} --dry-run
+        COMMENT "Linting source code with clang-format"
+    )
 
-add_custom_target(lint-all DEPENDS check lint)
+    add_custom_target(lint-all DEPENDS check lint)
 
-add_custom_target(
-    format
-    COMMAND ${CLANG_FORMAT_CMD} -i
-    COMMENT "Formatting source code with clang-format"
-)
+    add_custom_target(
+        format
+        COMMAND ${CLANG_FORMAT_CMD} -i
+        COMMENT "Formatting source code with clang-format"
+    )
+endif()
