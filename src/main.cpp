@@ -59,8 +59,9 @@ static int parse_args(argparse::ArgumentParser& program, int argc, const char **
 int main(int argc, const char *argv[])
 {
     argparse::ArgumentParser program(PROGRAM_NAME, VERSION_STR);
-    if (parse_args(program, argc, argv) < 0)
+    if (parse_args(program, argc, argv) < 0) {
         return 2;
+    }
     setup_logging(program.present("--log"));
 
     const std::filesystem::path data_dir = program.get("--data-dir");

@@ -63,10 +63,12 @@ void draw_demo_windows()
     ImGui::Checkbox("ImGui demo window", &show_imgui_demo);
     ImGui::SameLine();
     ImGui::Checkbox("ImPlot demo window", &show_implot_demo);
-    if (show_imgui_demo)
+    if (show_imgui_demo) {
         ImGui::ShowDemoWindow(&show_imgui_demo);
-    if (show_implot_demo)
+    }
+    if (show_implot_demo) {
         ImPlot::ShowDemoWindow(&show_implot_demo);
+    }
 }
 
 void add_plot_marker(ImDrawList *draw_list, const ImVec2& pos)
