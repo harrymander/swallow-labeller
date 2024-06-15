@@ -1,12 +1,12 @@
-#include "labelling-task.hpp"
+#include "gui.hpp"
 
 #include <fstream>
 #include <stdexcept>
 #define IMGUI_DEFINE_MATH_OPERATORS
 
-#include "app.hpp"
 #include "data.hpp"
 #include "drag-range.hpp"
+#include "labelling-task.hpp"
 #include "selector.hpp"
 #include "util.hpp"
 
@@ -29,58 +29,34 @@
 #include <sstream>
 #include <vector>
 
-namespace app {
+namespace recap::labeller::gui {
 
 using labelling_task::SwallowLabellingTask;
 
-static bool to_close = false;
-static std::vector<SwallowLabellingTask> labelling_tasks;
-static std::filesystem::path data_dir;
-
-int setup(std::filesystem::path labelling_tasks_path, std::filesystem::path data_dir_)
+Gui::Gui(const std::vector<SwallowLabellingTask>& tasks, const std::filesystem::path& data_dir) :
+    data_dir(data_dir), tasks(tasks)
 {
-    spdlog::default_logger()->sinks()[0] = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
-    spdlog::set_level(spdlog::level::debug);
-
-    data_dir = data_dir_;
-    if (!std::filesystem::is_directory(data_dir)) {
-        spdlog::error("Data directory '{}' does not exist", data_dir.string());
-        return -1;
-    }
-
-    {
-        std::ifstream stream(labelling_tasks_path);
-        if (!stream) {
-            spdlog::error(
-                "Error opening labelling tasks path: {}", std::string(labelling_tasks_path)
-            );
-            return -1;
-        }
-        try {
-            labelling_tasks = labelling_task::load_tasks_json(stream);
-        } catch (const std::invalid_argument& e) {
-            spdlog::error("Error loading labelling tasks: {}", e.what());
-            return -1;
-        }
-    }
-
     spdlog::debug("Setting up ImGui and ImPlot...");
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImPlot::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
-    return 0;
 }
 
-void teardown()
+Gui::~Gui()
 {
     spdlog::debug("Tearing down ImGui and ImPlot...");
     ImPlot::DestroyContext();
     ImGui::DestroyContext();
 }
 
-static void draw_demo_windows()
+void Gui::stop()
+{
+    to_close = true;
+}
+
+void draw_demo_windows()
 {
     static bool show_imgui_demo = false;
     static bool show_implot_demo = false;
@@ -93,7 +69,7 @@ static void draw_demo_windows()
         ImPlot::ShowDemoWindow(&show_implot_demo);
 }
 
-static void add_plot_marker(ImDrawList *draw_list, const ImVec2& pos)
+void add_plot_marker(ImDrawList *draw_list, const ImVec2& pos)
 {
     constexpr float half_width = 4;
     draw_list->AddRect(
@@ -107,8 +83,7 @@ static void add_plot_marker(ImDrawList *draw_list, const ImVec2& pos)
  * Add text in position (xp, yp), automatically right-aligining text if it would be greater than
  * xend
  */
-static void
-add_text_autoalign(ImDrawList *draw_list, const char *text, float xp, float yp, float xend)
+void add_text_autoalign(ImDrawList *draw_list, const char *text, float xp, float yp, float xend)
 {
     static constexpr float align_margin = 15;
     static constexpr float padding = 6;
@@ -121,7 +96,7 @@ add_text_autoalign(ImDrawList *draw_list, const char *text, float xp, float yp, 
     draw_list->AddText(ImVec2(xp, yp), ImGui::GetColorU32(ImGuiCol_Text), text);
 }
 
-static void add_plot_vline(ImDrawList *draw_list, const ImVec2& posplot, const ImVec2& pospx)
+void add_plot_vline(ImDrawList *draw_list, const ImVec2& posplot, const ImVec2& pospx)
 {
     const ImVec2 plot_pos = ImPlot::GetPlotPos();
     const ImVec2 plot_size = ImPlot::GetPlotSize();
@@ -141,7 +116,7 @@ static void add_plot_vline(ImDrawList *draw_list, const ImVec2& posplot, const I
     add_text_autoalign(draw_list, ytext, top.x, top.y, xend);
 }
 
-static void draw_plot_cursor(float xplot, float yplot)
+void draw_plot_cursor(float xplot, float yplot)
 {
     ImDrawList *draw_list = ImPlot::GetPlotDrawList();
     const auto pospx = ImPlot::PlotToPixels(xplot, yplot);
@@ -149,7 +124,7 @@ static void draw_plot_cursor(float xplot, float yplot)
     add_plot_marker(draw_list, pospx);
 }
 
-static void draw_plot_hovered(const double *x, size_t n, const double *y)
+void draw_plot_hovered(const double *x, size_t n, const double *y)
 {
     const auto mouse = ImPlot::GetPlotMousePos();
     if (mouse.x > x[0]) {
@@ -160,7 +135,7 @@ static void draw_plot_hovered(const double *x, size_t n, const double *y)
     }
 }
 
-static inline const char *bool_string(bool val)
+inline const char *bool_string(bool val)
 {
     return val ? "true" : "false";
 }
@@ -202,7 +177,7 @@ private:
     }
 };
 
-static void setup_axis_links(ImAxis axis, double *v1, double *v2)
+void setup_axis_links(ImAxis axis, double *v1, double *v2)
 {
     double *vmin;
     double *vmax;
@@ -210,7 +185,7 @@ static void setup_axis_links(ImAxis axis, double *v1, double *v2)
     ImPlot::SetupAxisLinks(axis, vmin, vmax);
 }
 
-static bool mouse_inside_plot()
+bool mouse_inside_plot()
 {
     if (!ImGui::IsMousePosValid()) {
         return false;
@@ -222,7 +197,7 @@ static bool mouse_inside_plot()
     return pos.x >= bbmin.x && pos.x <= bbmax.x && pos.y >= bbmin.y && pos.y <= bbmax.y;
 }
 
-static plot::SwallowTaskData load_task(const SwallowLabellingTask& task)
+plot::SwallowTaskData Gui::load_task(const SwallowLabellingTask& task) const
 {
     spdlog::stopwatch stopwatch;
     const auto path = data_dir / std::filesystem::path(task.npz_file.path);
@@ -234,26 +209,26 @@ static plot::SwallowTaskData load_task(const SwallowLabellingTask& task)
     return ret;
 }
 
-static void draw_task_selector(plot::SwallowTaskData& task)
+void Gui::draw_task_selector(plot::SwallowTaskData& task) const
 {
     static std::size_t task_index = 0;
     std::size_t new_index = task_index;
     if (ImGui::ArrowButton("Prev task", ImGuiDir_Left)) {
-        new_index = task_index ? task_index - 1 : labelling_tasks.size() - 1;
+        new_index = task_index ? task_index - 1 : tasks.size() - 1;
     }
     ImGui::SameLine();
     if (ImGui::ArrowButton("Next task", ImGuiDir_Right)) {
-        new_index = (task_index + 1) % labelling_tasks.size();
+        new_index = (task_index + 1) % tasks.size();
     }
     if (new_index != task_index) {
-        task = load_task(labelling_tasks[new_index]);
+        task = load_task(tasks[new_index]);
         task_index = new_index;
     }
 }
 
-static void draw_plot()
+void Gui::draw_plot()
 {
-    static auto task = load_task(labelling_tasks[0]);
+    static auto task = load_task(tasks[0]);
     draw_task_selector(task);
 
     // FIXME: do not create this every loop
@@ -382,13 +357,13 @@ static void draw_plot()
     ImGui::Text("Mouse Position: [%.0f,%.0f]", io.MousePos.x, io.MousePos.y);
 }
 
-static void draw_window_contents()
+void Gui::draw_window_contents()
 {
     draw_demo_windows();
     draw_plot();
 }
 
-bool draw()
+bool Gui::draw()
 {
     const auto& io = ImGui::GetIO();
     ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, io.DisplaySize.y));
@@ -404,9 +379,4 @@ bool draw()
     return !to_close;
 }
 
-void close()
-{
-    to_close = true;
-}
-
-}; // namespace app
+}; // namespace recap::labeller::gui

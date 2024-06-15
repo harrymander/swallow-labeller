@@ -13,8 +13,8 @@ if(BUILD_TESTS)
 endif()
 
 add_executable(implot-rects
-    src/app.cpp
     src/data.cpp
+    src/gui.cpp
     src/drag-range.cpp
     src/labelling-task.cpp
     src/main.cpp
@@ -22,11 +22,10 @@ add_executable(implot-rects
 )
 target_compile_features(implot-rects PRIVATE cxx_std_20)
 target_link_libraries(implot-rects PRIVATE
+    argparse
     cnpy::cnpy
     imgui::demo
     imgui::imgui
-    imgui::backend::opengl
-    imgui::backend::glfw
     implot::demo
     implot::implot
     nlohmann_json::nlohmann_json
@@ -39,6 +38,17 @@ target_compile_definitions(implot-rects PRIVATE
 if(NOT MSVC)
     target_compile_options(implot-rects PRIVATE -Wall -Wextra)
 endif()
+
+if(LINUX)
+    target_link_libraries(
+        implot-rects
+        PRIVATE imgui::backend::opengl imgui::backend::glfw
+    )
+    target_sources(implot-rects PRIVATE src/platform-glfw-opengl3.cpp)
+else()
+    message(FATAL_ERROR "Unsupported platform")
+endif()
+
 
 find_program(CPPCHECK cppcheck REQUIRED)
 add_custom_target(
