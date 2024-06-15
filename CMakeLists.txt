@@ -18,6 +18,7 @@ add_executable(implot-rects
     src/drag-range.cpp
     src/labelling-task.cpp
     src/main.cpp
+    src/plotter.cpp
     src/selector.cpp
 )
 target_compile_features(implot-rects PRIVATE cxx_std_20)
