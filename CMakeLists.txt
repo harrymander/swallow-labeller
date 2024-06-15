@@ -77,7 +77,7 @@ else()
     )
 endif()
 
-find_program(CLANG_FORMAT clang-format REQUIRED)
+find_program(CLANG_FORMAT clang-format)
 if(CLANG_FORMAT STREQUAL CLANG_FORMAT-NOTFOUND)
     message(WARNING "clang-format not found, disabling lint and format targets")
 else()
