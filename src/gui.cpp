@@ -56,10 +56,8 @@ void Gui::stop()
     to_close = true;
 }
 
-void draw_demo_windows()
+void Gui::draw_demo_windows()
 {
-    static bool show_imgui_demo = false;
-    static bool show_implot_demo = false;
     ImGui::Checkbox("ImGui demo window", &show_imgui_demo);
     ImGui::SameLine();
     ImGui::Checkbox("ImPlot demo window", &show_implot_demo);
@@ -71,7 +69,7 @@ void draw_demo_windows()
     }
 }
 
-void add_plot_marker(ImDrawList *draw_list, const ImVec2& pos)
+static void add_plot_marker(ImDrawList *draw_list, const ImVec2& pos)
 {
     constexpr float half_width = 4;
     draw_list->AddRect(
@@ -85,10 +83,11 @@ void add_plot_marker(ImDrawList *draw_list, const ImVec2& pos)
  * Add text in position (xp, yp), automatically right-aligining text if it would be greater than
  * xend
  */
-void add_text_autoalign(ImDrawList *draw_list, const char *text, float xp, float yp, float xend)
+static void
+add_text_autoalign(ImDrawList *draw_list, const char *text, float xp, float yp, float xend)
 {
-    static constexpr float align_margin = 15;
-    static constexpr float padding = 6;
+    constexpr float align_margin = 15;
+    constexpr float padding = 6;
     const auto text_size = ImGui::CalcTextSize(text);
     if (xp + text_size.x + align_margin > xend) {
         xp -= text_size.x + padding;
@@ -98,7 +97,7 @@ void add_text_autoalign(ImDrawList *draw_list, const char *text, float xp, float
     draw_list->AddText(ImVec2(xp, yp), ImGui::GetColorU32(ImGuiCol_Text), text);
 }
 
-void add_plot_vline(ImDrawList *draw_list, const ImVec2& posplot, const ImVec2& pospx)
+static void add_plot_vline(ImDrawList *draw_list, const ImVec2& posplot, const ImVec2& pospx)
 {
     const ImVec2 plot_pos = ImPlot::GetPlotPos();
     const ImVec2 plot_size = ImPlot::GetPlotSize();
@@ -118,7 +117,7 @@ void add_plot_vline(ImDrawList *draw_list, const ImVec2& posplot, const ImVec2& 
     add_text_autoalign(draw_list, ytext, top.x, top.y, xend);
 }
 
-void draw_plot_cursor(float xplot, float yplot)
+static void draw_plot_cursor(float xplot, float yplot)
 {
     ImDrawList *draw_list = ImPlot::GetPlotDrawList();
     const auto pospx = ImPlot::PlotToPixels(xplot, yplot);
@@ -126,7 +125,7 @@ void draw_plot_cursor(float xplot, float yplot)
     add_plot_marker(draw_list, pospx);
 }
 
-void draw_plot_hovered(const double *x, size_t n, const double *y)
+static void draw_plot_hovered(const double *x, size_t n, const double *y)
 {
     const auto mouse = ImPlot::GetPlotMousePos();
     if (mouse.x > x[0]) {
@@ -211,20 +210,19 @@ plot::SwallowTaskData Gui::load_task(const SwallowLabellingTask& task) const
     return ret;
 }
 
-void Gui::draw_task_selector(plot::SwallowTaskData& task) const
+void Gui::draw_task_selector(plot::SwallowTaskData& task)
 {
-    static std::size_t task_index = 0;
-    std::size_t new_index = task_index;
+    std::size_t new_index = current_task_index;
     if (ImGui::ArrowButton("Prev task", ImGuiDir_Left)) {
-        new_index = task_index ? task_index - 1 : tasks.size() - 1;
+        new_index = current_task_index ? current_task_index - 1 : tasks.size() - 1;
     }
     ImGui::SameLine();
     if (ImGui::ArrowButton("Next task", ImGuiDir_Right)) {
-        new_index = (task_index + 1) % tasks.size();
+        new_index = (current_task_index + 1) % tasks.size();
     }
-    if (new_index != task_index) {
+    if (new_index != current_task_index) {
         task = load_task(tasks[new_index]);
-        task_index = new_index;
+        current_task_index = new_index;
     }
 }
 

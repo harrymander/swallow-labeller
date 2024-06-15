@@ -4,6 +4,7 @@
 #include "data.hpp"
 #include "labelling-task.hpp"
 
+#include <cstdlib>
 #include <filesystem>
 #include <vector>
 
@@ -29,11 +30,15 @@ private:
     std::vector<labelling_task::SwallowLabellingTask> tasks;
 
     plot::SwallowTaskData load_task(const labelling_task::SwallowLabellingTask& task) const;
-    void draw_task_selector(plot::SwallowTaskData& task) const;
+    void draw_task_selector(plot::SwallowTaskData& task);
     void draw_plot();
     void draw_window_contents();
+    void draw_demo_windows();
 
+    std::size_t current_task_index = 0;
     bool to_close = false;
+    bool show_imgui_demo = false;
+    bool show_implot_demo = false;
 };
 
 }; // namespace recap::labeller::gui
