@@ -3,6 +3,11 @@ cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
 project(implot-rects LANGUAGES CXX VERSION 0.1.0)
 
 set(CMAKE_CXX_STANDARD 20)
+if(WIN32)
+    # Disables the min/max preprocessor macros, so not to interfere with
+    # min/max in the STL
+    add_compile_definitions(NOMINMAX)
+endif()
 
 add_subdirectory(vendor)
 
@@ -46,6 +51,12 @@ if(LINUX)
         PRIVATE imgui::backend::opengl imgui::backend::glfw
     )
     target_sources(implot-rects PRIVATE src/platform-glfw-opengl3.cpp)
+elseif(WIN32 AND MSVC)
+    target_sources(implot-rects PUBLIC src/platform-win32-dx12.cpp)
+    target_link_libraries(implot-rects PUBLIC imgui::backend::win32-native)
+    set_target_properties(implot-rects PROPERTIES WIN32_EXECUTABLE true)
+    target_compile_options(implot-rects PUBLIC /nologo /W4)
+    target_compile_definitions(implot-rects PUBLIC UNICODE _UNICODE)
 else()
     message(FATAL_ERROR "Unsupported platform")
 endif()
