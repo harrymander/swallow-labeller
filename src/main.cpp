@@ -34,9 +34,9 @@ static void setup_logging(std::optional<std::string>&& logfile)
 
 static int parse_args(argparse::ArgumentParser& program, int argc, const char **argv)
 {
-    program.add_argument("--log").help("File to log to");
-    program.add_argument("--tasks", "-t").required().help("Path to labelling tasks JSON");
-    program.add_argument("--data-dir", "-d").required().help("Directory containing data files");
+    program.add_argument("--log").help("file to log to");
+    program.add_argument("--tasks", "-t").required().help("path to labelling tasks JSON");
+    program.add_argument("--data-dir", "-d").required().help("directory containing data files");
 
     try {
         program.parse_args(argc, argv);
