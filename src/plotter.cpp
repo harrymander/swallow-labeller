@@ -11,16 +11,15 @@
 
 #include <algorithm>
 #include <iterator>
+#include <vector>
 
 namespace recap::labeller::plotter {
 
 using plot::SwallowTaskData;
 
-static ImPlotRange initial_range(const SwallowTaskData& data)
+static ImPlotRange initial_range(const std::vector<double>& time, const std::vector<uint8_t>& event)
 {
     constexpr double EventBufferSecs = 6;
-    const auto& event = data.event;
-    const auto& time = data.flow_time;
     constexpr auto is_non_zero = [](auto e) { return e != 0; };
 
     const auto& event_start = std::find_if(event.begin(), event.end(), is_non_zero);
@@ -45,7 +44,9 @@ static ImPlotRange initial_range(const SwallowTaskData& data)
 }
 
 SwallowTaskPlotter::SwallowTaskPlotter(const SwallowTaskData& data) :
-    data(data), event(data.event.begin(), data.event.end()), summary_range(initial_range(data))
+    data(data),
+    event(data.event.begin(), data.event.end()),
+    summary_range(initial_range(data.flow_time, data.event))
 {}
 
 static bool begin_data_plot(const char *id)
