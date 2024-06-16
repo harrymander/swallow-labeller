@@ -1,0 +1,16 @@
+{
+    "version": 6,
+    "configurePresets": [
+        {
+            "name": "windows",
+            "generator": "Visual Studio 17 2022",
+            "binaryDir": "${sourceDir}/build",
+            "toolchainFile": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+            "cacheVariables": {
+                "ZLIB_USE_STATIC_LIBS": "ON",
+                "FETCH_GTEST": "ON",
+                "BUILD_TESTS": "ON"
+            }
+        }
+    ]
+}
