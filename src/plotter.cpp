@@ -52,7 +52,7 @@ SwallowTaskPlotter::SwallowTaskPlotter(const SwallowTaskData& data) :
 static bool begin_data_plot(const char *id)
 {
     return ImPlot::BeginPlot(
-        id, ImVec2(-1, 0), ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus
+        id, {}, ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus
     );
 }
 
@@ -60,14 +60,17 @@ void SwallowTaskPlotter::draw(const char *id)
 {
     ImGui::PushID(id);
 
-    if (begin_data_plot("Flow")) {
-        draw_flow_plot();
-        ImPlot::EndPlot();
-    }
-
-    if (begin_data_plot("Ear audio")) {
-        draw_audio_plot();
-        ImPlot::EndPlot();
+    if (ImPlot::BeginSubplots("##subplot", 2, 1, {-1, 600})) {
+        if (begin_data_plot("##flow")) {
+            draw_flow_plot();
+            ImPlot::EndPlot();
+        }
+        if (begin_data_plot("##ear_audio")) {
+            ImPlot::SetupAxis(ImAxis_X1, "Time (s)");
+            draw_audio_plot();
+            ImPlot::EndPlot();
+        }
+        ImPlot::EndSubplots();
     }
 
     if (ImPlot::BeginPlot("##summary", ImVec2(-1, 75), ImPlotFlags_CanvasOnly)) {
@@ -176,10 +179,10 @@ void SwallowTaskPlotter::plot_event_digital() const
 }
 
 void SwallowTaskPlotter::plot_data(
-    const char *id, const std::vector<double>& x, const std::vector<double>& y
+    const char *id, const std::vector<double>& x, const std::vector<double>& y, const char *ylabel
 )
 {
-    ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit);
+    ImPlot::SetupAxis(ImAxis_Y1, ylabel, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, x[0], x.back());
     setup_axis_links(ImAxis_X1, &summary_range.Min, &summary_range.Max);
     plot_line(id, x, y);
@@ -191,12 +194,12 @@ void SwallowTaskPlotter::plot_data(
 
 void SwallowTaskPlotter::draw_flow_plot()
 {
-    plot_data("##flow_plot_line", data.flow_time, data.flow);
+    plot_data("##flow_plot_line", data.flow_time, data.flow, "Flow rate (L/min)");
 }
 
 void SwallowTaskPlotter::draw_audio_plot()
 {
-    plot_data("##audio_plot_line", data.audio_time, data.audio);
+    plot_data("##audio_plot_line", data.audio_time, data.audio, "Ear audio (V)");
 }
 
 void SwallowTaskPlotter::draw_summary_plot()

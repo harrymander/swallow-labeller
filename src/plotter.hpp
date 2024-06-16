@@ -20,7 +20,8 @@ private:
     void draw_flow_plot();
     void draw_summary_plot();
 
-    void plot_data(const char *, const std::vector<double>&, const std::vector<double>&);
+    void
+    plot_data(const char *, const std::vector<double>&, const std::vector<double>&, const char *);
 
     void plot_audio_line();
     void plot_flow_line();
