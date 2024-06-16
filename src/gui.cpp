@@ -71,6 +71,11 @@ public:
         return !to_close;
     }
 
+    void set_scaling_factor(float scaling_factor)
+    {
+        ImGui::GetStyle().ScaleAllSizes(scaling_factor);
+    }
+
 private:
     plot::SwallowTaskData load_current_task() const
     {
@@ -161,6 +166,11 @@ bool Gui::draw()
 void Gui::stop()
 {
     pimpl->stop();
+}
+
+void Gui::set_scaling_factor(float scaling_factor)
+{
+    pimpl->set_scaling_factor(scaling_factor);
 }
 
 }; // namespace recap::labeller::gui

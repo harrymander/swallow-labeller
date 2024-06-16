@@ -13,6 +13,7 @@
 #include <backends/imgui_impl_dx12.h>
 #include <backends/imgui_impl_win32.h>
 #include <imgui.h>
+#include <spdlog/spdlog.h>
 
 #include <d3d12.h>
 #include <dxgi1_4.h>
@@ -23,7 +24,6 @@
 #include <cmath>
 #include <cstdlib>
 #include <filesystem>
-#include <iostream>
 #include <system_error>
 
 #ifdef _DEBUG
@@ -120,7 +120,9 @@ int recap::labeller::platform::run(recap::labeller::gui::Gui& gui)
     ::UpdateWindow(hwnd);
 
     const float scale_factor = GetDPIScalingFactor();
-    // TODO: pass scale factor to gui
+    if (scale_factor > 0) {
+        gui.set_scaling_factor(scale_factor);
+    }
 
     // Setup Platform/Renderer backends
     ImGui_ImplWin32_Init(hwnd);
@@ -515,7 +517,6 @@ static float GetDPIScalingFactor()
     if (hres == S_OK)
         return static_cast<float>(scale_factor) / 100.f;
 
-    std::cerr << "Error: cannot get DPI scaling factor: " << std::system_category().message(hres)
-              << std::endl;
+    spdlog::error("Cannot get DPI scaling factor: {}", std::system_category().message(hres));
     return -1;
 }
