@@ -1,4 +1,5 @@
 import argparse
+import json
 from pathlib import Path
 from typing import IO
 
@@ -10,7 +11,7 @@ def write_header(file: IO[str], data: dict[str, str]) -> None:
     file.write(f'#ifndef {header_guard}\n#define {header_guard}\n')
     file.write('namespace test_path {\n')
     for name, path in data.items():
-        file.write(f'constexpr auto {name} = "{path}";\n')
+        file.write(f'constexpr auto {name} = {json.dumps(str(path))};\n')
     file.write(f'}};\n#endif // {header_guard}\n')
 
 
