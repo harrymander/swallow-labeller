@@ -32,12 +32,6 @@ jobs:
 
       - name: Bootstrap vcpkg
         run: vcpkg/bootstrap-vcpkg.bat
-      - name: Set Git username
-        # These values are only needed for applying git patches in cmake - the values are not
-        # actually used
-        run: |
-          git config user.name "GitHub actions"
-          git config user.email ""
       - name: Configure
         run: cmake --preset windows
       - name: Build
