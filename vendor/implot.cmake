@@ -1,8 +1,14 @@
 include(FetchContent)
+set(
+    IMPLOT_INFINITE_LOOP_FIX_PATCH
+    0001-Fix-infinite-loop-when-plot-ranges-are-very-small.patch
+)
 fetchcontent_declare(
     implot
     GIT_REPOSITORY https://github.com/epezent/implot
     GIT_TAG f156599faefe316f7dd20fe6c783bf87c8bb6fd9
+    PATCH_COMMAND
+        git am ${CMAKE_CURRENT_SOURCE_DIR}/${IMPLOT_INFINITE_LOOP_FIX_PATCH}
 )
 fetchcontent_makeavailable(implot)
 
