@@ -25,26 +25,32 @@ add_library(imgui::demo ALIAS imgui-demo)
 
 set(backends ${imgui_SOURCE_DIR}/backends)
 
-find_package(OpenGL)
-if(OpenGL_FOUND)
+if(LINUX)
+    set(_imgui_backend_glfw_opengl_opt_default ON)
+else()
+    set(_imgui_backend_glfw_opengl_opt_default OFF)
+endif()
+option(
+    IMGUI_BACKEND_GLFW_OPENGL
+    "Enable GLFW/OpenGL ImGui backend"
+    ${_imgui_backend_glfw_opengl_opt_default}
+)
+if(IMGUI_BACKEND_GLFW_OPENGL)
+    find_package(OpenGL REQUIRED)
     add_library(imgui-opengl INTERFACE)
-    target_sources(imgui-opengl INTERFACE ${backends}/imgui_impl_opengl3.cpp)
+    target_sources(
+        imgui-opengl INTERFACE ${backends}/imgui_impl_opengl3.cpp
+    )
     target_link_libraries(imgui-opengl INTERFACE OpenGL::GL)
     add_library(imgui::backend::opengl ALIAS imgui-opengl)
     set(IMGUI_BACKEND_OPENGL_FOUND TRUE PARENT_SCOPE)
-else()
-    set(IMGUI_BACKEND_OPENGL_FOUND NO PARENT_SCOPE)
-endif()
 
-find_package(glfw3 3.3)
-if(glfw3_FOUND)
+    find_package(glfw3 3.3 REQUIRED)
     add_library(imgui-glfw INTERFACE)
     target_sources(imgui-glfw INTERFACE ${backends}/imgui_impl_glfw.cpp)
     target_link_libraries(imgui-glfw INTERFACE glfw)
     add_library(imgui::backend::glfw ALIAS imgui-glfw)
     set(IMGUI_BACKEND_GLFW_FOUND TRUE PARENT_SCOPE)
-else()
-    set(IMGUI_BACKEND_GLFW_FOUND NO PARENT_SCOPE)
 endif()
 
 if(APPLE)
