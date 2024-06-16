@@ -142,14 +142,14 @@ private:
         }
     }
 
-    std::filesystem::path data_dir;
-    std::vector<SwallowLabellingTask> tasks;
-    SwallowTaskPlotter task_plotter;
-
     bool to_close = false;
     bool show_implot_demo = false;
     bool show_imgui_demo = false;
     std::size_t current_task_index = 0;
+
+    std::filesystem::path data_dir;
+    std::vector<SwallowLabellingTask> tasks;
+    SwallowTaskPlotter task_plotter;
 };
 
 Gui::Gui(const std::vector<SwallowLabellingTask>& tasks, const std::filesystem::path& data_dir) :
