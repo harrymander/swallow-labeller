@@ -174,12 +174,14 @@ void SwallowTaskPlotter::plot_event_digital() const
     ImPlot::PlotDigital("##event", data.flow_time.data(), event.data(), event.size());
 }
 
-void SwallowTaskPlotter::plot_data(const std::vector<double>& x, const std::vector<double>& y)
+void SwallowTaskPlotter::plot_data(
+    const char *id, const std::vector<double>& x, const std::vector<double>& y
+)
 {
     ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, x[0], x.back());
     setup_axis_links(ImAxis_X1, &summary_range.Min, &summary_range.Max);
-    plot_line("##data", x, y);
+    plot_line(id, x, y);
     plot_event_digital();
     if (mouse_inside_plot()) {
         draw_plot_hovered(x.data(), x.size(), y.data());
@@ -188,12 +190,12 @@ void SwallowTaskPlotter::plot_data(const std::vector<double>& x, const std::vect
 
 void SwallowTaskPlotter::draw_flow_plot()
 {
-    plot_data(data.flow_time, data.flow);
+    plot_data("##flow_plot_line", data.flow_time, data.flow);
 }
 
 void SwallowTaskPlotter::draw_audio_plot()
 {
-    plot_data(data.audio_time, data.audio);
+    plot_data("##audio_plot_line", data.audio_time, data.audio);
 }
 
 void SwallowTaskPlotter::draw_summary_plot()
@@ -209,7 +211,7 @@ void SwallowTaskPlotter::draw_summary_plot()
         plot::drag_xrange(0, summary_range, summary_color);
     }
 
-    plot_line("##summary_flow", data.flow_time, data.flow);
+    plot_line("##summary_flow_plot_line", data.flow_time, data.flow);
     plot_event_digital();
 }
 
