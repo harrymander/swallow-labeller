@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <memory>
+#include <sstream>
 #include <vector>
 
 namespace recap::labeller::gui {
@@ -26,10 +27,50 @@ inline const char *bool_string(bool val)
     return val ? "true" : "false";
 }
 
+class TaskSelectorList {
+public:
+    explicit TaskSelectorList(const std::vector<SwallowLabellingTask>& tasks)
+    {
+        for (const auto& task : tasks) {
+            std::stringstream ss;
+            ss << "Subject #" << task.subject << ", "
+               << labelling_task::swallow_test_type_string(task.test_type) << "\nRepeat #"
+               << task.repeatnum << ", swallow #" << task.swallownum;
+            list_item_texts.push_back(ss.str());
+        }
+    }
+
+    void draw(const char *id, std::size_t& index)
+    {
+        ImGui::PushID(id);
+        filter.Draw("##filter");
+        if (ImGui::BeginListBox("##listbox", {-1, -1})) {
+            for (std::size_t i = 0; i < list_item_texts.size(); i++) {
+                const bool is_selected = (index == i);
+                const char *str = list_item_texts[i].c_str();
+                if (filter.PassFilter(str)) {
+                    if (ImGui::Selectable(str, is_selected)) {
+                        index = i;
+                    }
+                    if (is_selected) {
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+            }
+            ImGui::EndListBox();
+        }
+        ImGui::PopID();
+    }
+
+private:
+    ImGuiTextFilter filter;
+    std::vector<std::string> list_item_texts;
+};
+
 class Gui::Impl {
 public:
     Impl(const std::vector<SwallowLabellingTask>& tasks, const std::filesystem::path& data_dir) :
-        data_dir(data_dir), tasks(tasks), task_plotter(load_current_task())
+        data_dir(data_dir), tasks(tasks), task_plotter(load_current_task()), task_list(tasks)
     {
         spdlog::debug("Setting up ImGui and ImPlot...");
         IMGUI_CHECKVERSION();
@@ -56,15 +97,14 @@ public:
     bool draw()
     {
         const auto& io = ImGui::GetIO();
-        ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, io.DisplaySize.y));
-        ImGui::SetNextWindowPos(ImVec2(0, 0));
-        const bool should_draw = ImGui::Begin(
-            "##mainwindow",
-            nullptr,
-            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove
-                | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus
-        );
-        if (should_draw) {
+        ImGui::SetNextWindowSize(io.DisplaySize);
+        ImGui::SetNextWindowPos({0, 0});
+        if (ImGui::Begin(
+                "##mainwindow",
+                nullptr,
+                WindowFlags | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus
+            ))
+        {
             draw_window_contents();
         }
         ImGui::End();
@@ -77,6 +117,43 @@ public:
     }
 
 private:
+    static constexpr ImGuiWindowFlags WindowFlags =
+        (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove);
+
+    void draw_window_contents()
+    {
+        const ImVec2 winsize = ImGui::GetWindowSize();
+        const ImVec2 winpos = ImGui::GetWindowPos();
+        ImGui::SetNextWindowSize({winsize.x / 2, 0}, ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowPos(winpos);
+        ImGui::SetNextWindowSizeConstraints(ImVec2(0, winsize.y), ImVec2(winsize.x, winsize.y));
+        float sidebar_width = 0;
+        if (ImGui::Begin("##sidebar", nullptr, WindowFlags)) {
+            draw_sidebar();
+            sidebar_width = ImGui::GetWindowSize().x;
+        }
+        ImGui::End();
+
+        ImGui::SetNextWindowPos({winpos.x + sidebar_width, winpos.y});
+        ImGui::SetNextWindowSize({winsize.x - sidebar_width, winsize.y});
+        if (ImGui::Begin("##content", nullptr, WindowFlags | ImGuiWindowFlags_NoResize)) {
+            draw_demo_windows();
+            draw_task_nav();
+            task_plotter.draw("##task_plotter");
+            draw_debug_info();
+        }
+        ImGui::End();
+    }
+
+    void draw_sidebar()
+    {
+        std::size_t new_index = current_task_index;
+        task_list.draw("##tasklist", new_index);
+        if (new_index != current_task_index) {
+            set_task_index(new_index);
+        }
+    }
+
     plot::SwallowTaskData load_current_task() const
     {
         spdlog::stopwatch stopwatch;
@@ -97,7 +174,7 @@ private:
         task_plotter = SwallowTaskPlotter(load_current_task());
     }
 
-    void draw_task_selector()
+    void draw_task_nav()
     {
         std::size_t new_index = current_task_index;
         if (ImGui::ArrowButton("Prev task", ImGuiDir_Left)) {
@@ -110,14 +187,6 @@ private:
         if (new_index != current_task_index) {
             set_task_index(new_index);
         }
-    }
-
-    void draw_window_contents()
-    {
-        draw_demo_windows();
-        draw_task_selector();
-        task_plotter.draw("##task_plotter");
-        draw_debug_info();
     }
 
     void draw_debug_info() const
@@ -150,6 +219,7 @@ private:
     std::filesystem::path data_dir;
     std::vector<SwallowLabellingTask> tasks;
     SwallowTaskPlotter task_plotter;
+    TaskSelectorList task_list;
 };
 
 Gui::Gui(const std::vector<SwallowLabellingTask>& tasks, const std::filesystem::path& data_dir) :

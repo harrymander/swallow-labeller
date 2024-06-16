@@ -25,6 +25,7 @@ struct TimeRange {
 };
 
 struct SwallowLabellingTask {
+    unsigned int subject;
     SwallowTestType test_type;
     unsigned int repeatnum;
     unsigned int swallownum;

@@ -28,6 +28,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TimeRange, start, end);
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
     SwallowLabellingTask,
+    subject,
     test_type,
     repeatnum,
     swallownum,
