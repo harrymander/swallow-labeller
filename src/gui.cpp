@@ -76,7 +76,7 @@ private:
     {
         spdlog::stopwatch stopwatch;
         const auto path = data_dir / std::filesystem::path(tasks[current_task_index].npz_file.path);
-        const auto ret = plot::SwallowTaskData::from_numpy(cnpy::npz_load(path));
+        const auto ret = plot::SwallowTaskData::from_numpy(cnpy::npz_load(path.string()));
         spdlog::debug(
             "Data loaded from '{}' in {} ms", path.string(), stopwatch.elapsed_ms().count()
         );
