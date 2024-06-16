@@ -116,6 +116,8 @@ int run(recap::labeller::gui::Gui& gui)
     // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
 #endif
 
+    glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
+
     // Create window with graphics context
     GLFWwindow *window = glfwCreateWindow(1280, 720, PROGRAM_NAME " v" VERSION_STR, NULL, NULL);
     if (window == NULL) {
