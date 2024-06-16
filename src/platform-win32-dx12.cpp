@@ -514,8 +514,11 @@ static float GetDPIScalingFactor()
     const auto monitor = ::MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST);
     DEVICE_SCALE_FACTOR scale_factor;
     const auto hres = ::GetScaleFactorForMonitor(monitor, &scale_factor);
-    if (hres == S_OK)
-        return static_cast<float>(scale_factor) / 100.f;
+    if (hres == S_OK) {
+        const float sf = static_cast<float>(scale_factor) / 100.f;
+        spdlog::debug("DPI scaling factor = {}", sf);
+        return sf;
+    }
 
     spdlog::error("Cannot get DPI scaling factor: {}", std::system_category().message(hres));
     return -1;
