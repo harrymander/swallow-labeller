@@ -79,6 +79,10 @@ int main(int argc, const char *argv[])
             return 1;
         }
         labelling_tasks = labelling_task::load_tasks_json(stream);
+        if (labelling_tasks.empty()) {
+            spdlog::critical("Labelling tasks list is empty!");
+            return 1;
+        }
     } catch (const std::invalid_argument& e) {
         spdlog::critical("Invalid labelling tasks file: {}", e.what());
         return 1;
