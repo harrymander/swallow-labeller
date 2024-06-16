@@ -26,14 +26,14 @@ private:
     void plot_flow_line();
     void plot_event_digital() const;
 
-    plot::SwallowTaskData data;
-    std::vector<double> event;
-    ImPlotRange summary_range;
-
     plot::PlotXSelector summary_selector;
     plot::PlotXSelector selector;
     ImPlotRange selector_range;
     ImPlotRange last_selector_range = {NAN, NAN};
+
+    plot::SwallowTaskData data;
+    std::vector<double> event;
+    ImPlotRange summary_range;
 };
 
 }; // namespace recap::labeller::plotter
