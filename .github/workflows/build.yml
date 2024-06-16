@@ -46,4 +46,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: recapctl-windows
-          path: build/implot-rects*.exe
+          path: build/Release/implot-rects*.exe
