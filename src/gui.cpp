@@ -96,8 +96,7 @@ public:
 
     bool draw()
     {
-        const auto& io = ImGui::GetIO();
-        ImGui::SetNextWindowSize(io.DisplaySize);
+        ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
         ImGui::SetNextWindowPos({0, 0});
         if (ImGui::Begin(
                 "##mainwindow",
@@ -122,27 +121,25 @@ private:
 
     void draw_window_contents()
     {
-        const ImVec2 winsize = ImGui::GetWindowSize();
-        const ImVec2 winpos = ImGui::GetWindowPos();
-        ImGui::SetNextWindowSize({winsize.x / 2, 0}, ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowPos(winpos);
-        ImGui::SetNextWindowSizeConstraints(ImVec2(0, winsize.y), ImVec2(winsize.x, winsize.y));
-        float sidebar_width = 0;
-        if (ImGui::Begin("##sidebar", nullptr, WindowFlags)) {
+        if (ImGui::BeginChild(
+                "##sidebar",
+                {ImGui::GetWindowSize().x / 5, 0},
+                ImGuiChildFlags_Border | ImGuiChildFlags_ResizeX,
+                WindowFlags
+            ))
+        {
             draw_sidebar();
-            sidebar_width = ImGui::GetWindowSize().x;
         }
-        ImGui::End();
+        ImGui::EndChild();
 
-        ImGui::SetNextWindowPos({winpos.x + sidebar_width, winpos.y});
-        ImGui::SetNextWindowSize({winsize.x - sidebar_width, winsize.y});
-        if (ImGui::Begin("##content", nullptr, WindowFlags | ImGuiWindowFlags_NoResize)) {
+        ImGui::SameLine();
+        if (ImGui::BeginChild("##content", {0, 0}, ImGuiChildFlags_None, WindowFlags)) {
             draw_demo_windows();
             draw_task_nav();
             task_plotter.draw("##task_plotter");
             draw_debug_info();
         }
-        ImGui::End();
+        ImGui::EndChild();
     }
 
     void draw_sidebar()
