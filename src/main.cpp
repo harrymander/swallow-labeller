@@ -66,7 +66,7 @@ int main(int argc, const char *argv[])
 
     const std::filesystem::path data_dir = program.get("--data-dir");
     if (!std::filesystem::is_directory(data_dir)) {
-        spdlog::critical("Data directory does not exist: {}", data_dir.string());
+        spdlog::critical("Data directory does not exist: {}", data_dir.c_str());
         return 1;
     }
 

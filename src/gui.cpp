@@ -200,10 +200,10 @@ private:
         const auto path = data_dir / std::filesystem::path(tasks[current_task_index].npz_file.path);
         const auto ret = plot::SwallowTaskData::from_numpy(cnpy::npz_load(path.string()));
         spdlog::debug(
-            "Data loaded from '{}' in {} ms", path.string(), stopwatch.elapsed_ms().count()
+            "Data loaded from '{}' in {} ms", path.c_str(), stopwatch.elapsed_ms().count()
         );
         spdlog::debug(
-            "{}: flow size = {}, audio size = {}", path.string(), ret.flow.size(), ret.audio.size()
+            "{}: flow size = {}, audio size = {}", path.c_str(), ret.flow.size(), ret.audio.size()
         );
         return ret;
     }
