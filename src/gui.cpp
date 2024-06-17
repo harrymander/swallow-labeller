@@ -23,6 +23,7 @@
 namespace recap::labeller::gui {
 
 using labelling_task::SwallowLabellingTask;
+using plot::SwallowTaskData;
 using namespace recap::labeller::plotter;
 
 namespace {
@@ -78,7 +79,7 @@ private:
     std::vector<std::string> list_item_texts;
 };
 
-plot::SwallowTaskData load_swallow_task_data(const std::filesystem::path& path)
+SwallowTaskData load_swallow_task_data(const std::filesystem::path& path)
 {
     spdlog::stopwatch stopwatch;
     if (!std::filesystem::exists(path)) {
@@ -88,7 +89,7 @@ plot::SwallowTaskData load_swallow_task_data(const std::filesystem::path& path)
     }
     std::ifstream stream(path, std::ios::binary | std::ios::in);
 
-    const auto ret = plot::SwallowTaskData::from_numpy(cnpy::npz_load(stream));
+    const auto ret = SwallowTaskData::from_numpy(cnpy::npz_load(stream));
     spdlog::debug(
         "Data loaded from '{}' in {} ms:\n\t#flow samples: {}, #audio samples: {}",
         path.string(),
