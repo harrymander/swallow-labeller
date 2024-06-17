@@ -16,12 +16,15 @@
 #include <fstream>
 #include <memory>
 #include <sstream>
+#include <variant>
 #include <vector>
 
 namespace recap::labeller::gui {
 
 using labelling_task::SwallowLabellingTask;
 using namespace recap::labeller::plotter;
+
+namespace {
 
 class TaskSelectorList {
 public:
@@ -72,16 +75,63 @@ private:
     std::vector<std::string> list_item_texts;
 };
 
-static plot::SwallowTaskData load_task_data(const std::filesystem::path& path)
-{
-    std::ifstream stream(path, std::ios::binary | std::ios::in);
-    return plot::SwallowTaskData::from_numpy(cnpy::npz_load(stream));
-}
+class TaskView {
+public:
+    using Variant = std::variant<std::string, SwallowTaskPlotter>;
+
+    explicit TaskView(const std::filesystem::path& path) : path_str(path.string())
+    {
+        spdlog::stopwatch stopwatch;
+        std::ifstream stream(path, std::ios::binary | std::ios::in);
+        if (stream) {
+            try {
+                auto ret = plot::SwallowTaskData::from_numpy(cnpy::npz_load(stream));
+                spdlog::debug(
+                    "Data loaded from '{}' in {} ms", path_str, stopwatch.elapsed_ms().count()
+                );
+                spdlog::debug(
+                    "{}: flow size = {}, audio size = {}",
+                    path_str,
+                    ret.flow.size(),
+                    ret.audio.size()
+                );
+                error_or_plotter.emplace<SwallowTaskPlotter>(ret);
+            } catch (const std::exception& e) {
+                error_or_plotter = e.what();
+            }
+        } else {
+            error_or_plotter = "cannot open file";
+        }
+
+        if (error_str()) {
+            spdlog::error("Failed to load task data file '{}': {}", path_str, *error_str());
+        }
+    }
+
+    void draw()
+    {
+        const auto *error = error_str();
+        if (error) {
+            ImGui::Text("Error loading task at path %s: %s", path_str.c_str(), error->c_str());
+        } else {
+            ImGui::TextUnformatted(path_str.c_str());
+            std::get<SwallowTaskPlotter>(error_or_plotter).draw("#task_plot");
+        }
+    }
+
+private:
+    const std::string *error_str() const { return std::get_if<std::string>(&error_or_plotter); }
+
+    std::string path_str;
+    Variant error_or_plotter;
+};
+
+}; // namespace
 
 class Gui::Impl {
 public:
     Impl(const std::vector<SwallowLabellingTask>& tasks, const std::filesystem::path& data_dir) :
-        data_dir(data_dir), tasks(tasks), task_plotter(load_current_task()), task_list(tasks)
+        data_dir(data_dir), tasks(tasks), task_view(load_current_task()), task_list(tasks)
     {
         spdlog::debug("Setting up ImGui and ImPlot...");
         IMGUI_CHECKVERSION();
@@ -179,7 +229,7 @@ private:
         ImGui::SameLine();
         if (ImGui::BeginChild("##content", {0, 0}, ImGuiChildFlags_None, WindowFlags)) {
             draw_demo_windows();
-            task_plotter.draw("##task_plotter");
+            task_view.draw();
             if (show_debug_info) {
                 draw_debug_info();
             }
@@ -196,24 +246,17 @@ private:
         }
     }
 
-    plot::SwallowTaskData load_current_task() const
+    TaskView load_current_task() const
     {
-        spdlog::stopwatch stopwatch;
-        const auto path = data_dir / std::filesystem::path(tasks[current_task_index].npz_file.path);
-        const auto ret = load_task_data(path);
-        spdlog::debug(
-            "Data loaded from '{}' in {} ms", path.string(), stopwatch.elapsed_ms().count()
-        );
-        spdlog::debug(
-            "{}: flow size = {}, audio size = {}", path.string(), ret.flow.size(), ret.audio.size()
-        );
-        return ret;
+        auto path = data_dir / std::filesystem::path(tasks[current_task_index].npz_file.path);
+        path.make_preferred();
+        return TaskView(path);
     }
 
     void set_task_index(std::size_t index)
     {
         current_task_index = index;
-        task_plotter = SwallowTaskPlotter(load_current_task());
+        task_view = load_current_task();
     }
 
     void draw_debug_info() const
@@ -247,7 +290,7 @@ private:
 
     std::filesystem::path data_dir;
     std::vector<SwallowLabellingTask> tasks;
-    SwallowTaskPlotter task_plotter;
+    TaskView task_view;
     TaskSelectorList task_list;
 };
 
