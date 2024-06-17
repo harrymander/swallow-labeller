@@ -23,11 +23,6 @@ namespace recap::labeller::gui {
 using labelling_task::SwallowLabellingTask;
 using namespace recap::labeller::plotter;
 
-inline const char *bool_string(bool val)
-{
-    return val ? "true" : "false";
-}
-
 class TaskSelectorList {
 public:
     explicit TaskSelectorList(const std::vector<SwallowLabellingTask>& tasks)

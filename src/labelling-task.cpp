@@ -38,11 +38,6 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
     npz_file
 );
 
-std::string dump_tasks_json(const std::vector<SwallowLabellingTask>& tasks)
-{
-    return Json(tasks).dump();
-}
-
 std::vector<SwallowLabellingTask> load_tasks_json(std::istream& stream)
 {
     try {

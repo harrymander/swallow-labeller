@@ -36,7 +36,6 @@ struct SwallowLabellingTask {
 };
 
 std::vector<SwallowLabellingTask> load_tasks_json(std::istream& stream);
-std::string dump_tasks_json(const std::vector<SwallowLabellingTask>& tasks);
 
 }; // namespace labelling_task
 
