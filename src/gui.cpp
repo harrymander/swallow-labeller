@@ -40,7 +40,7 @@ public:
         }
     }
 
-    void draw(const char *id, std::size_t& index)
+    std::size_t draw(const char *id, std::size_t index)
     {
         ImGui::PushID(id);
         filter.Draw("##filter");
@@ -69,6 +69,8 @@ public:
             ImGui::EndListBox();
         }
         ImGui::PopID();
+
+        return index;
     }
 
 private:
@@ -241,8 +243,7 @@ private:
 
     void draw_sidebar()
     {
-        std::size_t new_index = current_task_index;
-        task_list.draw("##tasklist", new_index);
+        const std::size_t new_index = task_list.draw("##tasklist", current_task_index);
         if (new_index != current_task_index) {
             set_task_index(new_index);
         }
