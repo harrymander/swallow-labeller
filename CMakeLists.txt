@@ -70,7 +70,7 @@ else()
         check
         COMMAND
             ${CPPCHECK} --error-exitcode=1 --force --quiet
-                        --enable=style --language=c++ --std=c++20
+                        --enable=style,unusedFunction --language=c++ --std=c++20
                         ${CMAKE_CURRENT_SOURCE_DIR}/src
                         ${CMAKE_CURRENT_SOURCE_DIR}/tests
         COMMENT "Checking source code with cppcheck"
