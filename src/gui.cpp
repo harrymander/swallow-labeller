@@ -114,9 +114,9 @@ public:
 
     void draw()
     {
-        const auto *error = error_str();
-        if (error) {
-            ImGui::Text("Error loading task at path %s: %s", path_str.c_str(), error->c_str());
+        const std::string *error_str = std::get_if<std::string>(&error_or_plotter);
+        if (error_str) {
+            ImGui::Text("Error loading task at path %s: %s", path_str.c_str(), error_str->c_str());
         } else {
             ImGui::TextUnformatted(path_str.c_str());
             std::get<SwallowTaskPlotter>(error_or_plotter).draw("#task_plot");
@@ -124,8 +124,6 @@ public:
     }
 
 private:
-    const std::string *error_str() const { return std::get_if<std::string>(&error_or_plotter); }
-
     std::string path_str;
     Variant error_or_plotter;
 };
