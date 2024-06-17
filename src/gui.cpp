@@ -74,7 +74,7 @@ private:
 
 static plot::SwallowTaskData load_task_data(const std::filesystem::path& path)
 {
-    std::ifstream stream(path);
+    std::ifstream stream(path, std::ios::binary | std::ios::in);
     return plot::SwallowTaskData::from_numpy(cnpy::npz_load(stream));
 }
 
