@@ -44,6 +44,15 @@ public:
     {
         ImGui::PushID(id);
         filter.Draw("##filter");
+        ImGui::SameLine();
+        if (ImGui::ArrowButton("Prev task", ImGuiDir_Left)) {
+            index = index ? index - 1 : list_item_texts.size() - 1;
+        }
+        ImGui::SameLine();
+        if (ImGui::ArrowButton("Next task", ImGuiDir_Right)) {
+            index = (index + 1) % list_item_texts.size();
+        }
+
         if (ImGui::BeginListBox("##listbox", {-1, -1})) {
             for (std::size_t i = 0; i < list_item_texts.size(); i++) {
                 const bool is_selected = (index == i);
@@ -135,7 +144,6 @@ private:
         ImGui::SameLine();
         if (ImGui::BeginChild("##content", {0, 0}, ImGuiChildFlags_None, WindowFlags)) {
             draw_demo_windows();
-            draw_task_nav();
             task_plotter.draw("##task_plotter");
             draw_debug_info();
         }
@@ -169,21 +177,6 @@ private:
     {
         current_task_index = index;
         task_plotter = SwallowTaskPlotter(load_current_task());
-    }
-
-    void draw_task_nav()
-    {
-        std::size_t new_index = current_task_index;
-        if (ImGui::ArrowButton("Prev task", ImGuiDir_Left)) {
-            new_index = current_task_index ? current_task_index - 1 : tasks.size() - 1;
-        }
-        ImGui::SameLine();
-        if (ImGui::ArrowButton("Next task", ImGuiDir_Right)) {
-            new_index = (current_task_index + 1) % tasks.size();
-        }
-        if (new_index != current_task_index) {
-            set_task_index(new_index);
-        }
     }
 
     void draw_debug_info() const
