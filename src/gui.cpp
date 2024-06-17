@@ -13,6 +13,7 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <sstream>
 #include <vector>
@@ -75,6 +76,12 @@ private:
     ImGuiTextFilter filter;
     std::vector<std::string> list_item_texts;
 };
+
+static plot::SwallowTaskData load_task_data(const std::filesystem::path& path)
+{
+    std::ifstream stream(path);
+    return plot::SwallowTaskData::from_numpy(cnpy::npz_load(stream));
+}
 
 class Gui::Impl {
 public:
@@ -198,7 +205,7 @@ private:
     {
         spdlog::stopwatch stopwatch;
         const auto path = data_dir / std::filesystem::path(tasks[current_task_index].npz_file.path);
-        const auto ret = plot::SwallowTaskData::from_numpy(cnpy::npz_load(path.string()));
+        const auto ret = load_task_data(path);
         spdlog::debug(
             "Data loaded from '{}' in {} ms", path.string(), stopwatch.elapsed_ms().count()
         );
