@@ -110,9 +110,14 @@ public:
         if (ImGui::Begin(
                 "##mainwindow",
                 nullptr,
-                WindowFlags | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus
+                WindowFlags | ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoResize
+                    | ImGuiWindowFlags_NoBringToFrontOnFocus
             ))
         {
+            if (ImGui::BeginMenuBar()) {
+                draw_menu_bar();
+                ImGui::EndMenuBar();
+            }
             draw_window_contents();
         }
         ImGui::End();
@@ -127,6 +132,34 @@ public:
 private:
     static constexpr ImGuiWindowFlags WindowFlags =
         (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove);
+
+    void draw_menu_bar()
+    {
+        if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("Quit", "Alt+F4")) {
+                spdlog::info("Quit requested from menu bar");
+                stop();
+            }
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Tools")) {
+            if (ImGui::MenuItem("ImGui demo...") && !show_imgui_demo) {
+                spdlog::debug("Opening ImGui demo window");
+                show_imgui_demo = true;
+            }
+            if (ImGui::MenuItem("Debug/metrics...") && !show_imgui_metrics) {
+                spdlog::debug("Opening ImGui debug/metrics window");
+                show_imgui_metrics = true;
+            }
+            if (ImGui::MenuItem("ImPlot demo...") && !show_implot_demo) {
+                spdlog::debug("Opening ImPlot demo window");
+                show_implot_demo = true;
+            }
+            ImGui::Checkbox("Show debug info", &show_debug_info);
+            ImGui::EndMenu();
+        }
+    }
 
     void draw_window_contents()
     {
@@ -145,7 +178,9 @@ private:
         if (ImGui::BeginChild("##content", {0, 0}, ImGuiChildFlags_None, WindowFlags)) {
             draw_demo_windows();
             task_plotter.draw("##task_plotter");
-            draw_debug_info();
+            if (show_debug_info) {
+                draw_debug_info();
+            }
         }
         ImGui::EndChild();
     }
@@ -190,11 +225,11 @@ private:
 
     void draw_demo_windows()
     {
-        ImGui::Checkbox("ImGui demo window", &show_imgui_demo);
-        ImGui::SameLine();
-        ImGui::Checkbox("ImPlot demo window", &show_implot_demo);
         if (show_imgui_demo) {
             ImGui::ShowDemoWindow(&show_imgui_demo);
+        }
+        if (show_imgui_metrics) {
+            ImGui::ShowMetricsWindow();
         }
         if (show_implot_demo) {
             ImPlot::ShowDemoWindow(&show_implot_demo);
@@ -204,6 +239,8 @@ private:
     bool to_close = false;
     bool show_implot_demo = false;
     bool show_imgui_demo = false;
+    bool show_imgui_metrics = false;
+    bool show_debug_info = true;
     std::size_t current_task_index = 0;
 
     std::filesystem::path data_dir;
