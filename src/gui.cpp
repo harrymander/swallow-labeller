@@ -16,6 +16,7 @@
 #include <fstream>
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <variant>
 #include <vector>
 
@@ -75,36 +76,39 @@ private:
     std::vector<std::string> list_item_texts;
 };
 
+plot::SwallowTaskData load_swallow_task_data(const std::filesystem::path& path)
+{
+    spdlog::stopwatch stopwatch;
+    if (!std::filesystem::exists(path)) {
+        throw std::runtime_error("file does not exist");
+    } else if (std::filesystem::is_directory(path)) {
+        throw std::runtime_error("is a directory");
+    }
+    std::ifstream stream(path, std::ios::binary | std::ios::in);
+
+    const auto ret = plot::SwallowTaskData::from_numpy(cnpy::npz_load(stream));
+    spdlog::debug(
+        "Data loaded from '{}' in {} ms:\n\t#flow samples: {}, #audio samples: {}",
+        path.string(),
+        stopwatch.elapsed_ms().count(),
+        ret.flow.size(),
+        ret.audio.size()
+    );
+    return ret;
+}
+
 class TaskView {
 public:
     using Variant = std::variant<std::string, SwallowTaskPlotter>;
 
     explicit TaskView(const std::filesystem::path& path) : path_str(path.string())
     {
-        spdlog::stopwatch stopwatch;
-        std::ifstream stream(path, std::ios::binary | std::ios::in);
-        if (stream) {
-            try {
-                auto ret = plot::SwallowTaskData::from_numpy(cnpy::npz_load(stream));
-                spdlog::debug(
-                    "Data loaded from '{}' in {} ms", path_str, stopwatch.elapsed_ms().count()
-                );
-                spdlog::debug(
-                    "{}: flow size = {}, audio size = {}",
-                    path_str,
-                    ret.flow.size(),
-                    ret.audio.size()
-                );
-                error_or_plotter.emplace<SwallowTaskPlotter>(ret);
-            } catch (const std::exception& e) {
-                error_or_plotter = e.what();
-            }
-        } else {
-            error_or_plotter = "cannot open file";
-        }
-
-        if (error_str()) {
-            spdlog::error("Failed to load task data file '{}': {}", path_str, *error_str());
+        try {
+            error_or_plotter.emplace<SwallowTaskPlotter>(load_swallow_task_data(path));
+        } catch (const std::exception& e) {
+            const auto what = e.what();
+            spdlog::error("Error loading task at path '{}': {}", path_str, what);
+            error_or_plotter = what;
         }
     }
 
