@@ -11,10 +11,12 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/stopwatch.h>
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <random>
 #include <sstream>
 #include <stdexcept>
 #include <variant>
@@ -131,12 +133,33 @@ private:
     Variant error_or_plotter;
 };
 
+template <class T, class Rng> std::vector<T> shuffled_vector(const std::vector<T>& v, Rng& rng)
+{
+    std::vector<T> shuffled = v;
+    std::shuffle(shuffled.begin(), shuffled.end(), rng);
+    return shuffled;
+}
+
+template <class T> std::vector<T> shuffled_vector(const std::vector<T>& v)
+{
+    static std::random_device rd;
+    static std::default_random_engine rng(rd());
+    return shuffled_vector(v, rng);
+}
+
 }; // namespace
 
 class Gui::Impl {
 public:
-    Impl(const std::vector<SwallowLabellingTask>& tasks, const std::filesystem::path& data_dir) :
-        data_dir(data_dir), tasks(tasks), task_view(load_current_task()), task_list(tasks)
+    Impl(
+        const std::vector<SwallowLabellingTask>& tasks_,
+        const std::filesystem::path& data_dir,
+        bool shuffle
+    ) :
+        data_dir(data_dir),
+        tasks(shuffle ? shuffled_vector(tasks_) : tasks_),
+        task_view(load_current_task()),
+        task_list(this->tasks)
     {
         spdlog::debug("Setting up ImGui and ImPlot...");
         IMGUI_CHECKVERSION();
@@ -298,8 +321,12 @@ private:
     TaskSelectorList task_list;
 };
 
-Gui::Gui(const std::vector<SwallowLabellingTask>& tasks, const std::filesystem::path& data_dir) :
-    pimpl(std::make_unique<Impl>(tasks, data_dir))
+Gui::Gui(
+    const std::vector<SwallowLabellingTask>& tasks,
+    const std::filesystem::path& data_dir,
+    bool shuffle
+) :
+    pimpl(std::make_unique<Impl>(tasks, data_dir, shuffle))
 {}
 
 Gui::~Gui() = default;

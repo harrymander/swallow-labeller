@@ -13,7 +13,8 @@ namespace recap::labeller::gui {
 class Gui {
 public:
     Gui(const std::vector<labelling_task::SwallowLabellingTask>& tasks,
-        const std::filesystem::path& data_dir);
+        const std::filesystem::path& data_dir,
+        bool shuffle = true);
     ~Gui();
 
     // Returns False when ready to quit

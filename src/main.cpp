@@ -1,4 +1,4 @@
-#include "gui.hpp"
+ #include "gui.hpp"
 #include "labelling-task.hpp"
 #include "platform.hpp"
 
@@ -44,6 +44,7 @@ static int parse_args(argparse::ArgumentParser& program, int argc, const char **
     program.add_argument("--log").help("file to log to");
     program.add_argument("--tasks", "-t").required().help("path to labelling tasks JSON");
     program.add_argument("--data-dir", "-d").required().help("directory containing data files");
+    program.add_argument("--no-shuffle").flag().help("do not display tasks in random order");
 
     try {
         program.parse_args(argc, argv);
@@ -88,6 +89,6 @@ int main(int argc, const char *argv[])
         return 1;
     }
 
-    Gui gui(labelling_tasks, data_dir);
+    Gui gui(labelling_tasks, data_dir, program["--no-shuffle"] == false);
     return platform::run(gui);
 }
