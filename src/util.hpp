@@ -11,13 +11,14 @@ inline std::pair<Comparable *, Comparable *> minmax_pointers(Comparable *v1, Com
 }
 
 template <class BidirIt, class T>
-BidirIt binary_search_closest(BidirIt first, BidirIt last, const T& value)
+inline BidirIt binary_search_closest(BidirIt first, BidirIt last, const T& value)
 {
     BidirIt found = std::lower_bound(first, last, value);
     if (found != last && found != first) {
         const auto prev = std::prev(found);
-        if (value - *prev < *found - value)
+        if (value - *prev < *found - value) {
             found = prev;
+        }
     }
     return found;
 }
