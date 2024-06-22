@@ -153,6 +153,9 @@ class Gui::Impl {
 public:
     Impl(std::vector<SwallowLabellingTask> tasks_, std::filesystem::path data_dir, bool shuffle) :
         data_dir(std::move(data_dir)),
+
+        // Not sure why cppcheck complains about accessing moved variable... only one of the ternary
+        // expressions is computed
         tasks(
             shuffle ? shuffled_vector(std::move(tasks_)) :
                       std::move(tasks_) // cppcheck-suppress accessMoved
