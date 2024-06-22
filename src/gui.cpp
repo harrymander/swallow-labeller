@@ -38,10 +38,10 @@ AnnotationsMap make_annotations_map(const std::vector<SwallowAnnotation>& annota
 {
     std::map<std::string, SwallowAnnotation> map;
     for (const auto& annotation : annotations) {
-        if (map.contains(annotation.id)) {
-            spdlog::error("Duplicate annotation ID: {}; overwriting!", annotation.id);
+        if (map.contains(annotation.id())) {
+            spdlog::error("Duplicate annotation ID: {}; overwriting!", annotation.id());
         }
-        map[annotation.id] = annotation;
+        map[annotation.id()] = annotation;
     }
     return map;
 }
