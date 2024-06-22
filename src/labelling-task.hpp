@@ -1,8 +1,6 @@
 #ifndef INCLUDE_LABELLING_TASK_HPP
 #define INCLUDE_LABELLING_TASK_HPP
 
-#include <nlohmann/json_fwd.hpp>
-
 #include <istream>
 #include <optional>
 #include <string>
@@ -42,15 +40,8 @@ struct SwallowTaskInfo {
 
 std::vector<SwallowTaskInfo> load_swallow_task_info_json(std::istream& stream);
 
-class SwallowAnnotation {
-public:
-    [[nodiscard]] const std::string& id() const { return m_id; }
-
-private:
-    friend void to_json(nlohmann::json&, const SwallowAnnotation&);
-    friend void from_json(const nlohmann::json&, SwallowAnnotation&);
-
-    std::string m_id;
+struct SwallowAnnotation {
+    std::string id;
 };
 
 std::vector<SwallowAnnotation> load_swallow_annotation_json(std::istream& stream);

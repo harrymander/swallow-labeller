@@ -59,17 +59,7 @@ std::vector<SwallowTaskInfo> load_swallow_task_info_json(std::istream& stream)
     return parse_json<std::vector<SwallowTaskInfo>>(stream);
 }
 
-void to_json(Json& j, const SwallowAnnotation& annotation)
-{
-    j = {
-        {"id", annotation.id()},
-    };
-}
-
-void from_json(const Json& j, SwallowAnnotation& annotation)
-{
-    j.at("id").get_to(annotation.m_id);
-}
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SwallowAnnotation, id);
 
 std::vector<SwallowAnnotation> load_swallow_annotation_json(std::istream& stream)
 {
