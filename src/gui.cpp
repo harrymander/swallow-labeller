@@ -24,7 +24,7 @@
 
 namespace recap::labeller::gui {
 
-using labelling_task::SwallowLabellingTask;
+using labelling_task::SwallowTaskInfo;
 using plot::SwallowTaskData;
 using namespace recap::labeller::plotter;
 
@@ -32,7 +32,7 @@ namespace {
 
 class TaskSelectorList {
 public:
-    explicit TaskSelectorList(const std::vector<SwallowLabellingTask>& tasks)
+    explicit TaskSelectorList(const std::vector<SwallowTaskInfo>& tasks)
     {
         for (const auto& task : tasks) {
             std::stringstream ss;
@@ -149,9 +149,24 @@ template <class T> std::vector<T> shuffled_vector(std::vector<T> v)
 
 }; // namespace
 
+std::map<std::string, labelling_task::SwallowAnnotation>
+make_annotations_map(const std::vector<labelling_task::SwallowAnnotation>& annotations)
+{
+    std::map<std::string, labelling_task::SwallowAnnotation> map;
+    for (const auto& annot : annotations) {
+        map[annot.id] = annot;
+    }
+    return map;
+}
+
 class Gui::Impl {
 public:
-    Impl(std::vector<SwallowLabellingTask> tasks_, std::filesystem::path data_dir, bool shuffle) :
+    Impl(
+        std::vector<SwallowTaskInfo> tasks_,
+        const std::vector<labelling_task::SwallowAnnotation>& annotations,
+        std::filesystem::path data_dir,
+        bool shuffle
+    ) :
         data_dir(std::move(data_dir)),
 
         // Not sure why cppcheck complains about accessing moved variable... only one of the ternary
@@ -161,7 +176,8 @@ public:
                       std::move(tasks_) // cppcheck-suppress accessMoved
         ),
         task_view(load_current_task()),
-        task_list(this->tasks)
+        task_list(this->tasks),
+        annotations(make_annotations_map(annotations))
     {
         spdlog::debug("Setting up ImGui and ImPlot...");
         IMGUI_CHECKVERSION();
@@ -318,13 +334,19 @@ private:
     std::size_t current_task_index = 0;
 
     std::filesystem::path data_dir;
-    std::vector<SwallowLabellingTask> tasks;
+    std::vector<SwallowTaskInfo> tasks;
     TaskView task_view;
     TaskSelectorList task_list;
+    std::map<std::string, labelling_task::SwallowAnnotation> annotations;
 };
 
-Gui::Gui(std::vector<SwallowLabellingTask> tasks, std::filesystem::path data_dir, bool shuffle) :
-    pimpl(std::make_unique<Impl>(std::move(tasks), std::move(data_dir), shuffle))
+Gui::Gui(
+    std::vector<SwallowTaskInfo> tasks,
+    const std::vector<labelling_task::SwallowAnnotation>& annotations,
+    std::filesystem::path data_dir,
+    bool shuffle
+) :
+    pimpl(std::make_unique<Impl>(std::move(tasks), annotations, std::move(data_dir), shuffle))
 {}
 
 Gui::~Gui() = default;

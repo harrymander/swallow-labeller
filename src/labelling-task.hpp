@@ -2,6 +2,7 @@
 #define INCLUDE_LABELLING_TASK_HPP
 
 #include <istream>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -24,7 +25,7 @@ struct TimeRange {
     double end;
 };
 
-struct SwallowLabellingTask {
+struct SwallowTaskInfo {
     unsigned int subject;
     SwallowTestType test_type;
     unsigned int repeatnum;
@@ -33,9 +34,17 @@ struct SwallowLabellingTask {
     TimeRange csv_range_secs;
     TimeRange event_range_secs;
     LabellingDataFile npz_file;
+
+    [[nodiscard]] const std::string& get_id() const { return npz_file.checksum; }
 };
 
-std::vector<SwallowLabellingTask> load_tasks_json(std::istream& stream);
+std::vector<SwallowTaskInfo> load_swallow_task_info_json(std::istream& stream);
+
+struct SwallowAnnotation {
+    std::string id;
+};
+
+std::vector<SwallowAnnotation> load_swallow_annotation_json(std::istream& stream);
 
 }; // namespace labelling_task
 

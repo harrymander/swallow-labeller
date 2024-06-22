@@ -4,10 +4,26 @@
 
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace labelling_task {
 
 using Json = nlohmann::json;
+
+namespace {
+
+template <class T> T parse_json(std::istream& stream)
+{
+    try {
+        return Json::parse(stream).template get<T>();
+    } catch (const nlohmann::json::parse_error&) {
+        throw std::invalid_argument("JSON parse error");
+    } catch (const nlohmann::json::exception&) {
+        throw std::invalid_argument("Invalid JSON");
+    }
+}
+
+}; // namespace
 
 NLOHMANN_JSON_SERIALIZE_ENUM(
     SwallowTestType,
@@ -27,7 +43,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LabellingDataFile, path, checksum);
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TimeRange, start, end);
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
-    SwallowLabellingTask,
+    SwallowTaskInfo,
     subject,
     test_type,
     repeatnum,
@@ -38,15 +54,16 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
     npz_file
 );
 
-std::vector<SwallowLabellingTask> load_tasks_json(std::istream& stream)
+std::vector<SwallowTaskInfo> load_swallow_task_info_json(std::istream& stream)
 {
-    try {
-        return Json::parse(stream).template get<std::vector<SwallowLabellingTask>>();
-    } catch (const nlohmann::json::parse_error&) {
-        throw std::invalid_argument("JSON parse error");
-    } catch (const nlohmann::json::exception&) {
-        throw std::invalid_argument("Invalid JSON");
-    }
+    return parse_json<std::vector<SwallowTaskInfo>>(stream);
+}
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SwallowAnnotation, id);
+
+std::vector<SwallowAnnotation> load_swallow_annotation_json(std::istream& stream)
+{
+    return parse_json<std::vector<SwallowAnnotation>>(stream);
 }
 
 }; // namespace labelling_task

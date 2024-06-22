@@ -9,6 +9,7 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/stopwatch.h>
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -18,7 +19,7 @@
 
 namespace platform = recap::labeller::platform;
 using namespace recap::labeller::gui;
-using labelling_task::SwallowLabellingTask;
+using labelling_task::SwallowTaskInfo;
 
 static void setup_logging(std::optional<std::string>&& logfile)
 {
@@ -43,6 +44,7 @@ static int parse_args(argparse::ArgumentParser& program, int argc, const char **
 {
     program.add_argument("--log").help("file to log to");
     program.add_argument("--tasks", "-t").required().help("path to labelling tasks JSON");
+    program.add_argument("--annotations", "-a").help("path to annotations JSON");
     program.add_argument("--data-dir", "-d").required().help("directory containing data files");
     program.add_argument("--no-shuffle").flag().help("do not display tasks in random order");
 
@@ -71,7 +73,7 @@ int main(int argc, const char *argv[])
         return 1;
     }
 
-    std::vector<SwallowLabellingTask> labelling_tasks;
+    std::vector<SwallowTaskInfo> labelling_tasks;
     try {
         std::string tasks_path = program.get("--tasks");
         std::ifstream stream(tasks_path);
@@ -79,7 +81,7 @@ int main(int argc, const char *argv[])
             spdlog::critical("Could not open labelling tasks file: {}", tasks_path);
             return 1;
         }
-        labelling_tasks = labelling_task::load_tasks_json(stream);
+        labelling_tasks = labelling_task::load_swallow_task_info_json(stream);
         if (labelling_tasks.empty()) {
             spdlog::critical("Labelling tasks list is empty!");
             return 1;
@@ -88,7 +90,25 @@ int main(int argc, const char *argv[])
         spdlog::critical("Invalid labelling tasks file: {}", e.what());
         return 1;
     }
+    spdlog::debug("Loaded {} task info(s)", labelling_tasks.size());
 
-    Gui gui(labelling_tasks, data_dir, program["--no-shuffle"] == false);
+    const auto annotations_path = program.present("--annotations");
+    std::vector<labelling_task::SwallowAnnotation> annotations;
+    if (annotations_path.has_value()) {
+        std::ifstream stream(*annotations_path);
+        if (!stream) {
+            spdlog::critical("Could not open annotations file: {}", *annotations_path);
+            return 1;
+        }
+        try {
+            annotations = labelling_task::load_swallow_annotation_json(stream);
+        } catch (const std::invalid_argument& e) {
+            spdlog::critical("Invalid annotations file: {}", e.what());
+            return 1;
+        }
+    }
+    spdlog::debug("Loaded {} annotation(s)", annotations.size());
+
+    Gui gui(labelling_tasks, annotations, data_dir, program["--no-shuffle"] == false);
     return platform::run(gui);
 }
