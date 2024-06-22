@@ -12,9 +12,11 @@
 #include <spdlog/stopwatch.h>
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <memory>
 #include <random>
 #include <sstream>
@@ -24,45 +26,65 @@
 
 namespace recap::labeller::gui {
 
-using labelling_task::SwallowTaskInfo;
+using namespace labelling_task;
 using plot::SwallowTaskData;
 using namespace recap::labeller::plotter;
 
 namespace {
 
-class TaskSelectorList {
+using AnnotationsMap = std::map<std::string, SwallowAnnotation>;
+
+AnnotationsMap make_annotations_map(const std::vector<SwallowAnnotation>& annotations)
+{
+    std::map<std::string, SwallowAnnotation> map;
+    for (const auto& annot : annotations) {
+        map[annot.id] = annot;
+    }
+    return map;
+}
+
+class TaskManager {
 public:
-    explicit TaskSelectorList(const std::vector<SwallowTaskInfo>& tasks)
+    TaskManager(const std::vector<SwallowTaskInfo>& all_tasks, const AnnotationsMap& annotations)
     {
-        for (const auto& task : tasks) {
-            std::stringstream ss;
-            ss << "Subject #" << task.subject << ", "
-               << labelling_task::swallow_test_type_string(task.test_type) << "\nRepeat #"
-               << task.repeatnum << ", swallow #" << task.swallownum;
-            list_item_texts.push_back(ss.str());
+        std::vector<TaskStrWrapper> annotated;
+        std::vector<TaskStrWrapper> unannotated;
+        for (auto task : all_tasks) {
+            const auto found_annotated = annotations.find(task.get_id());
+            if (found_annotated != annotations.end()) {
+                annotated.emplace_back(TaskStrWrapper(std::move(task), true));
+            } else {
+                unannotated.emplace_back(TaskStrWrapper(std::move(task), false));
+            }
         }
+
+        annotated_start_index = static_cast<decltype(annotated_start_index)>(unannotated.size());
+        tasks = std::move(unannotated);
+        tasks.insert(tasks.end(), annotated.begin(), annotated.end());
     }
 
-    std::size_t draw(const char *id, std::size_t index)
+    // Return true if task changed
+    bool draw(const char *id)
     {
         ImGui::PushID(id);
         filter.Draw("##filter");
         ImGui::SameLine();
+        auto new_index = index;
         if (ImGui::ArrowButton("Prev task", ImGuiDir_Left)) {
-            index = index ? index - 1 : list_item_texts.size() - 1;
+            new_index = index ? index - 1 : static_cast<decltype(new_index)>(tasks.size()) - 1;
         }
         ImGui::SameLine();
         if (ImGui::ArrowButton("Next task", ImGuiDir_Right)) {
-            index = (index + 1) % list_item_texts.size();
+            new_index = (index + 1) % static_cast<decltype(new_index)>(tasks.size());
         }
 
         if (ImGui::BeginListBox("##listbox", {-1, -1})) {
-            for (std::size_t i = 0; i < list_item_texts.size(); i++) {
+            for (decltype(index) i = 0; i < static_cast<decltype(new_index)>(tasks.size()); i++) {
                 const bool is_selected = (index == i);
-                const char *str = list_item_texts[i].c_str();
+                const char *str = tasks[i].c_str();
                 if (filter.PassFilter(str)) {
                     if (ImGui::Selectable(str, is_selected)) {
-                        index = i;
+                        new_index = i;
                     }
                     if (is_selected) {
                         ImGui::SetItemDefaultFocus();
@@ -72,13 +94,70 @@ public:
             ImGui::EndListBox();
         }
         ImGui::PopID();
+        bool changed = new_index != index;
+        index = new_index;
+        return changed;
+    }
 
-        return index;
+    [[nodiscard]] const SwallowTaskInfo& current_task() const { return tasks[index].info(); }
+
+    [[nodiscard]] bool current_task_annotated() const { return index >= annotated_start_index; }
+
+    // Moves task to front of annotated
+    // TODO: return to original position?
+    void set_current_task_annotated()
+    {
+        if (current_task_annotated()) {
+            return;
+        }
+
+        tasks.insert(tasks.begin() + annotated_start_index, {current_task(), true});
+        annotated_start_index -= 1;
+        tasks.erase(tasks.begin() + index);
+        index = annotated_start_index;
+    }
+
+    // Moves task to front
+    // TODO: return to original position?
+    void clear_current_task_annotated()
+    {
+        if (!current_task_annotated()) {
+            return;
+        }
+        tasks.insert(tasks.begin(), {current_task(), false});
+        tasks.erase(tasks.begin() + index + 1);
+        annotated_start_index += 1;
+        index = 0;
     }
 
 private:
+    class TaskStrWrapper {
+    public:
+        TaskStrWrapper(SwallowTaskInfo info, bool annotated) : info_(std::move(info))
+        {
+            std::stringstream ss;
+            if (annotated) {
+                ss << "[annotated] ";
+            }
+            ss << "Subject #" << info_.subject << ", " << swallow_test_type_string(info_.test_type)
+               << "\nRepeat #" << info_.repeatnum << ", swallow #" << info_.swallownum;
+            str_ = ss.str();
+        }
+
+        [[nodiscard]] const SwallowTaskInfo& info() const { return info_; }
+
+        [[nodiscard]] const char *c_str() const { return str_.c_str(); }
+
+    private:
+        SwallowTaskInfo info_;
+        std::string str_;
+    };
+
     ImGuiTextFilter filter;
-    std::vector<std::string> list_item_texts;
+    std::vector<TaskStrWrapper>::difference_type index = 0;
+
+    std::vector<TaskStrWrapper> tasks;
+    decltype(index) annotated_start_index;
 };
 
 SwallowTaskData load_swallow_task_data(const std::filesystem::path& path)
@@ -149,35 +228,18 @@ template <class T> std::vector<T> shuffled_vector(std::vector<T> v)
 
 }; // namespace
 
-std::map<std::string, labelling_task::SwallowAnnotation>
-make_annotations_map(const std::vector<labelling_task::SwallowAnnotation>& annotations)
-{
-    std::map<std::string, labelling_task::SwallowAnnotation> map;
-    for (const auto& annot : annotations) {
-        map[annot.id] = annot;
-    }
-    return map;
-}
-
 class Gui::Impl {
 public:
     Impl(
         std::vector<SwallowTaskInfo> tasks_,
-        const std::vector<labelling_task::SwallowAnnotation>& annotations,
+        const std::vector<SwallowAnnotation>& annotations,
         std::filesystem::path data_dir,
         bool shuffle
     ) :
         data_dir(std::move(data_dir)),
-
-        // Not sure why cppcheck complains about accessing moved variable... only one of the ternary
-        // expressions is computed
-        tasks(
-            shuffle ? shuffled_vector(std::move(tasks_)) :
-                      std::move(tasks_) // cppcheck-suppress accessMoved
-        ),
-        task_view(load_current_task()),
-        task_list(this->tasks),
-        annotations(make_annotations_map(annotations))
+        annotations(make_annotations_map(annotations)),
+        task_manager(shuffle ? shuffled_vector(std::move(tasks_)) : tasks_, this->annotations),
+        task_view(load_current_task())
     {
         spdlog::debug("Setting up ImGui and ImPlot...");
         IMGUI_CHECKVERSION();
@@ -275,6 +337,18 @@ private:
         ImGui::SameLine();
         if (ImGui::BeginChild("##content", {0, 0}, ImGuiChildFlags_None, WindowFlags)) {
             draw_demo_windows();
+
+            // TEMPORARY: this is just for testing
+            if (task_manager.current_task_annotated()) {
+                if (ImGui::Button("Clear annotation")) {
+                    task_manager.clear_current_task_annotated();
+                }
+            } else {
+                if (ImGui::Button("Set annotation")) {
+                    task_manager.set_current_task_annotated();
+                }
+            }
+
             task_view.draw();
             if (show_debug_info) {
                 draw_debug_info();
@@ -285,23 +359,16 @@ private:
 
     void draw_sidebar()
     {
-        const std::size_t new_index = task_list.draw("##tasklist", current_task_index);
-        if (new_index != current_task_index) {
-            set_task_index(new_index);
+        if (task_manager.draw("##tasklist")) {
+            task_view = load_current_task();
         }
     }
 
     [[nodiscard]] TaskView load_current_task() const
     {
-        auto path = data_dir / std::filesystem::path(tasks[current_task_index].npz_file.path);
+        auto path = data_dir / std::filesystem::path(task_manager.current_task().npz_file.path);
         path.make_preferred();
         return TaskView(path);
-    }
-
-    void set_task_index(std::size_t index)
-    {
-        current_task_index = index;
-        task_view = load_current_task();
     }
 
     static void draw_debug_info()
@@ -331,18 +398,16 @@ private:
     bool show_imgui_demo = false;
     bool show_imgui_metrics = false;
     bool show_debug_info = true;
-    std::size_t current_task_index = 0;
 
     std::filesystem::path data_dir;
-    std::vector<SwallowTaskInfo> tasks;
+    AnnotationsMap annotations;
+    TaskManager task_manager;
     TaskView task_view;
-    TaskSelectorList task_list;
-    std::map<std::string, labelling_task::SwallowAnnotation> annotations;
 };
 
 Gui::Gui(
     std::vector<SwallowTaskInfo> tasks,
-    const std::vector<labelling_task::SwallowAnnotation>& annotations,
+    const std::vector<SwallowAnnotation>& annotations,
     std::filesystem::path data_dir,
     bool shuffle
 ) :
