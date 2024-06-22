@@ -37,8 +37,11 @@ using AnnotationsMap = std::map<std::string, SwallowAnnotation>;
 AnnotationsMap make_annotations_map(const std::vector<SwallowAnnotation>& annotations)
 {
     std::map<std::string, SwallowAnnotation> map;
-    for (const auto& annot : annotations) {
-        map[annot.id] = annot;
+    for (const auto& annotation : annotations) {
+        if (map.contains(annotation.id)) {
+            spdlog::error("Duplicate annotation ID: {}; overwriting!", annotation.id);
+        }
+        map[annotation.id] = annotation;
     }
     return map;
 }
