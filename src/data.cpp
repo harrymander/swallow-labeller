@@ -34,7 +34,7 @@ template <class T> static std::vector<T> get_array(const cnpy::npz_t& data, cons
 
 SwallowTaskData SwallowTaskData::from_numpy(const cnpy::npz_t& data)
 {
-    const SwallowTaskData task = {
+    SwallowTaskData task = {
         .flow = get_array<double>(data, "flow"),
         .event = get_array<uint8_t>(data, "event"),
         .flow_time = get_array<double>(data, "flow_time"),

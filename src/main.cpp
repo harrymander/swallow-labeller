@@ -1,4 +1,4 @@
- #include "gui.hpp"
+#include "gui.hpp"
 #include "labelling-task.hpp"
 #include "platform.hpp"
 

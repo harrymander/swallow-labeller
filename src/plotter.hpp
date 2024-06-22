@@ -12,7 +12,7 @@ namespace recap::labeller::plotter {
 
 class SwallowTaskPlotter {
 public:
-    explicit SwallowTaskPlotter(const plot::SwallowTaskData& data);
+    explicit SwallowTaskPlotter(plot::SwallowTaskData data);
     void draw(const char *id);
 
 private:

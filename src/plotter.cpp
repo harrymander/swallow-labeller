@@ -43,8 +43,8 @@ static ImPlotRange initial_range(const std::vector<double>& time, const std::vec
     };
 }
 
-SwallowTaskPlotter::SwallowTaskPlotter(const SwallowTaskData& data) :
-    data(data),
+SwallowTaskPlotter::SwallowTaskPlotter(SwallowTaskData data_) :
+    data(std::move(data_)),
     event(data.event.begin(), data.event.end()),
     summary_range(initial_range(data.flow_time, data.event))
 {}
@@ -139,13 +139,13 @@ static void add_plot_vline(ImDrawList *draw_list, const ImVec2& posplot, const I
 
     const float xend = plot_pos.x + plot_size.x;
     char xtext[20];
-    std::snprintf(xtext, sizeof(xtext), "x=%g", posplot.x);
+    (void) std::snprintf(xtext, sizeof(xtext), "x=%g", posplot.x);
     add_text_autoalign(
         draw_list, xtext, bottom.x, bottom.y - ImGui::GetTextLineHeightWithSpacing(), xend
     );
 
     char ytext[20];
-    std::snprintf(ytext, sizeof(ytext), "y=%g", posplot.y);
+    (void) std::snprintf(ytext, sizeof(ytext), "y=%g", posplot.y);
     add_text_autoalign(draw_list, ytext, top.x, top.y, xend);
 }
 
@@ -163,8 +163,9 @@ static void draw_plot_hovered(const double *x, size_t n, const double *y)
     if (mouse.x > x[0]) {
         const double *const end = x + n;
         const double *xclosest = util::binary_search_closest(x, end, mouse.x);
-        if (xclosest != end)
+        if (xclosest != end) {
             draw_plot_cursor(*xclosest, y[xclosest - x]);
+        }
     }
 }
 

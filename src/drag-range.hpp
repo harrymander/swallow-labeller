@@ -6,7 +6,7 @@
 
 namespace plot {
 
-typedef unsigned int DragXRangeFlags;
+using DragXRangeFlags = unsigned int;
 
 enum DragXRangeFlag {
     // Disable cursors on hover

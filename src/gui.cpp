@@ -86,12 +86,13 @@ SwallowTaskData load_swallow_task_data(const std::filesystem::path& path)
     spdlog::stopwatch stopwatch;
     if (!std::filesystem::exists(path)) {
         throw std::runtime_error("file does not exist");
-    } else if (std::filesystem::is_directory(path)) {
+    }
+    if (std::filesystem::is_directory(path)) {
         throw std::runtime_error("is a directory");
     }
     std::ifstream stream(path, std::ios::binary | std::ios::in);
 
-    const auto ret = SwallowTaskData::from_numpy(cnpy::npz_load(stream));
+    auto ret = SwallowTaskData::from_numpy(cnpy::npz_load(stream));
     spdlog::debug(
         "Data loaded from '{}' in {} ms:\n\t#flow samples: {}, #audio samples: {}",
         path.string(),
@@ -111,7 +112,7 @@ public:
         try {
             error_or_plotter.emplace<SwallowTaskPlotter>(load_swallow_task_data(path));
         } catch (const std::exception& e) {
-            const auto what = e.what();
+            const auto& what = e.what();
             spdlog::error("Error loading task at path '{}': {}", path_str, what);
             error_or_plotter = what;
         }
@@ -133,31 +134,29 @@ private:
     Variant error_or_plotter;
 };
 
-template <class T, class Rng> std::vector<T> shuffled_vector(const std::vector<T>& v, Rng& rng)
+template <class T, class Rng> std::vector<T> shuffled_vector(std::vector<T> v, Rng& rng)
 {
-    std::vector<T> shuffled = v;
-    std::shuffle(shuffled.begin(), shuffled.end(), rng);
-    return shuffled;
+    std::shuffle(v.begin(), v.end(), rng);
+    return v;
 }
 
-template <class T> std::vector<T> shuffled_vector(const std::vector<T>& v)
+template <class T> std::vector<T> shuffled_vector(std::vector<T> v)
 {
     static std::random_device rd;
     static std::default_random_engine rng(rd());
-    return shuffled_vector(v, rng);
+    return shuffled_vector(std::move(v), rng);
 }
 
 }; // namespace
 
 class Gui::Impl {
 public:
-    Impl(
-        const std::vector<SwallowLabellingTask>& tasks_,
-        const std::filesystem::path& data_dir,
-        bool shuffle
-    ) :
-        data_dir(data_dir),
-        tasks(shuffle ? shuffled_vector(tasks_) : tasks_),
+    Impl(std::vector<SwallowLabellingTask> tasks_, std::filesystem::path data_dir, bool shuffle) :
+        data_dir(std::move(data_dir)),
+        tasks(
+            shuffle ? shuffled_vector(std::move(tasks_)) :
+                      std::move(tasks_) // cppcheck-suppress accessMoved
+        ),
         task_view(load_current_task()),
         task_list(this->tasks)
     {
@@ -204,7 +203,7 @@ public:
         return !to_close;
     }
 
-    void set_scaling_factor(float scaling_factor)
+    static void set_scaling_factor(float scaling_factor)
     {
         ImGui::GetStyle().ScaleAllSizes(scaling_factor);
     }
@@ -273,7 +272,7 @@ private:
         }
     }
 
-    TaskView load_current_task() const
+    [[nodiscard]] TaskView load_current_task() const
     {
         auto path = data_dir / std::filesystem::path(tasks[current_task_index].npz_file.path);
         path.make_preferred();
@@ -286,7 +285,7 @@ private:
         task_view = load_current_task();
     }
 
-    void draw_debug_info() const
+    static void draw_debug_info()
     {
         ImGuiIO& io = ImGui::GetIO();
         ImGui::Text("Mouse Position: [%.0f,%.0f]", io.MousePos.x, io.MousePos.y);
@@ -321,12 +320,8 @@ private:
     TaskSelectorList task_list;
 };
 
-Gui::Gui(
-    const std::vector<SwallowLabellingTask>& tasks,
-    const std::filesystem::path& data_dir,
-    bool shuffle
-) :
-    pimpl(std::make_unique<Impl>(tasks, data_dir, shuffle))
+Gui::Gui(std::vector<SwallowLabellingTask> tasks, std::filesystem::path data_dir, bool shuffle) :
+    pimpl(std::make_unique<Impl>(std::move(tasks), std::move(data_dir), shuffle))
 {}
 
 Gui::~Gui() = default;

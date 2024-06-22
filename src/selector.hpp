@@ -8,7 +8,7 @@
 
 namespace plot {
 
-typedef unsigned int PlotSelectorFlags;
+using PlotSelectorFlags = unsigned int;
 
 class PlotXSelector {
 public:
@@ -24,7 +24,7 @@ public:
         ImGuiMouseButton button = DefaultMouseButton,
         ImGuiKey key = DefaultKey
     );
-    bool is_selecting() const;
+    [[nodiscard]] bool is_selecting() const;
 
     enum {
         // Disable cursor change when dragging

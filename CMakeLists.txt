@@ -69,7 +69,7 @@ else()
     add_custom_target(
         check
         COMMAND
-            ${CPPCHECK} --error-exitcode=1 --force --quiet
+            ${CPPCHECK} --error-exitcode=1 --force --quiet --inline-suppr
                         --enable=style,unusedFunction --language=c++ --std=c++20
                         ${CMAKE_CURRENT_SOURCE_DIR}/src
                         ${CMAKE_CURRENT_SOURCE_DIR}/tests

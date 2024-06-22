@@ -1,0 +1,17 @@
+Checks: "*,
+        -abseil-*,
+        -altera-*,
+        -android-*,
+        -fuchsia-*,
+        -llvm*,
+        -modernize-use-trailing-return-type,
+        -zircon-*,
+        -readability-identifier-length,
+        -readability-implicit-bool-conversion,
+        -cppcoreguidelines-pro-type-vararg,
+        -hicpp-signed-bitwise,
+        -hicpp-vararg,
+        -google-build-using-namespace,
+"
+WarningsAsErrors: ''
+FormatStyle: none
