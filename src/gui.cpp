@@ -70,6 +70,8 @@ public:
         filter.Draw("##filter");
         ImGui::SameLine();
         auto new_index = index;
+
+        // FIXME: currently this steps through all tasks, even if not displayed
         if (ImGui::ArrowButton("Prev task", ImGuiDir_Left)) {
             new_index = index ? index - 1 : static_cast<decltype(new_index)>(tasks.size()) - 1;
         }
@@ -78,8 +80,20 @@ public:
             new_index = (index + 1) % static_cast<decltype(new_index)>(tasks.size());
         }
 
+        if (ImGui::Button(only_show_annotated ? "Show all" : "Show annotated only")) {
+            only_show_annotated = !only_show_annotated;
+        }
         if (ImGui::BeginListBox("##listbox", {-1, -1})) {
-            for (decltype(index) i = 0; i < static_cast<decltype(new_index)>(tasks.size()); i++) {
+            decltype(index) i;
+            decltype(index) end;
+            if (only_show_annotated) {
+                i = annotated_start_index;
+                end = static_cast<decltype(index)>(tasks.size());
+            } else {
+                i = 0;
+                end = annotated_start_index;
+            }
+            for (; i < end; i++) {
                 const bool is_selected = (index == i);
                 const char *str = tasks[i].c_str();
                 if (filter.PassFilter(str)) {
@@ -153,6 +167,7 @@ private:
         std::string str_;
     };
 
+    bool only_show_annotated = false;
     ImGuiTextFilter filter;
     std::vector<TaskStrWrapper>::difference_type index = 0;
 
