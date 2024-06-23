@@ -3,6 +3,7 @@
 
 #include <istream>
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -40,8 +41,40 @@ struct SwallowTaskInfo {
 
 std::vector<SwallowTaskInfo> load_swallow_task_info_json(std::istream& stream);
 
+enum class SRCPattern {
+    ExEx,
+    ExIn,
+    InEx,
+    InIn,
+};
+
+struct SwallowApneaLabel {
+    TimeRange time;
+    SRCPattern pattern;
+    bool is_ambiguous;
+};
+
+enum class SwallowLabelInfo {
+    Ok,
+    FlowError,
+    NoSwallow,
+    ApneaCutOff,
+};
+
+enum class EarClickLabelInfo {
+    Ok,
+    NoEarClick,
+    AudioError,
+};
+
 struct SwallowAnnotation {
-    std::string id;
+    std::optional<SwallowApneaLabel> swallow_apnea;
+    SwallowLabelInfo swallow_info;
+    std::optional<std::string> swallow_notes;
+
+    std::vector<TimeRange> ear_clicks;
+    EarClickLabelInfo ear_click_info;
+    std::optional<std::string> ear_click_notes;
 };
 
 using AnnotationsMap = std::map<std::string, SwallowAnnotation>;

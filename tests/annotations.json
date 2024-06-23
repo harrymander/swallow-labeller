@@ -1,0 +1,49 @@
+{
+    "all_fields_present": {
+        "swallow_apnea": {
+            "time": {"start": 10, "end": 100},
+            "pattern": "ex-in",
+            "is_ambiguous": false
+        },
+        "swallow_info": "ok",
+        "swallow_notes": "Test note",
+        "ear_clicks": [],
+        "ear_click_info": "no-ear-click",
+        "ear_click_notes": "No ear clicks"
+    },
+
+    "no_swallow_label": {
+        "swallow_apnea": null,
+        "swallow_info": "ok",
+        "swallow_notes": "Test note",
+        "ear_clicks": [],
+        "ear_click_info": "no-ear-click",
+        "ear_click_notes": "No ear clicks"
+    },
+
+    "no_swallow_notes": {
+        "swallow_apnea": {
+            "time": {"start": 10, "end": 100},
+            "pattern": "ex-in",
+            "is_ambiguous": false
+        },
+        "swallow_info": "ok",
+        "swallow_notes": null,
+        "ear_clicks": [],
+        "ear_click_info": "no-ear-click",
+        "ear_click_notes": "No ear clicks"
+    },
+
+    "no_ear_click_notes": {
+        "swallow_apnea": {
+            "time": {"start": 10, "end": 100},
+            "pattern": "ex-in",
+            "is_ambiguous": false
+        },
+        "swallow_info": "ok",
+        "swallow_notes": "Test note",
+        "ear_clicks": [],
+        "ear_click_info": "no-ear-click",
+        "ear_click_notes": null
+    }
+}

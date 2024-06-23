@@ -65,6 +65,7 @@ target_compile_definitions(
         JSON_PATH="${TEST_JSON_DIR}/swallow-tasks.json"
         INVALID_JSON_PATH="${TEST_JSON_DIR}/invalid.json"
         MISSING_FIELD_JSON_PATH="${TEST_JSON_DIR}/swallow-missing-field.json"
+        ANNOTATIONS_JSON_PATH="${CMAKE_CURRENT_SOURCE_DIR}/annotations.json"
 )
 gtest_discover_tests(test-tasks-parsing)
 

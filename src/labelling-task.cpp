@@ -2,9 +2,36 @@
 
 #include <nlohmann/json.hpp>
 
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
+
+NLOHMANN_JSON_NAMESPACE_BEGIN
+
+// Adapted from
+// https://json.nlohmann.me/features/arbitrary_types/#how-do-i-convert-third-party-types
+template <typename T> struct adl_serializer<std::optional<T>> {
+    static void to_json(json& j, const std::optional<T>& val)
+    {
+        if (val.has_value()) {
+            j = *val;
+        } else {
+            j = nullptr;
+        }
+    }
+
+    static void from_json(const json& j, std::optional<T>& val)
+    {
+        if (j.is_null()) {
+            val = std::nullopt;
+        } else {
+            val = j.template get<T>();
+        }
+    }
+};
+
+NLOHMANN_JSON_NAMESPACE_END
 
 namespace labelling_task {
 
@@ -59,7 +86,46 @@ std::vector<SwallowTaskInfo> load_swallow_task_info_json(std::istream& stream)
     return parse_json<std::vector<SwallowTaskInfo>>(stream);
 }
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SwallowAnnotation, id);
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    SRCPattern,
+    {
+        {SRCPattern::ExEx, "ex-ex"},
+        {SRCPattern::ExIn, "ex-in"},
+        {SRCPattern::InEx, "in-ex"},
+        {SRCPattern::InIn, "in-in"},
+    }
+);
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    SwallowLabelInfo,
+    {
+        {SwallowLabelInfo::Ok, "ok"},
+        {SwallowLabelInfo::FlowError, "flow-error"},
+        {SwallowLabelInfo::NoSwallow, "no-swallow"},
+        {SwallowLabelInfo::ApneaCutOff, "apnea-cutoff"},
+    }
+);
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    EarClickLabelInfo,
+    {
+        {EarClickLabelInfo::Ok, "ok"},
+        {EarClickLabelInfo::NoEarClick, "no-ear-click"},
+        {EarClickLabelInfo::AudioError, "audio-error"},
+    }
+);
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SwallowApneaLabel, time, pattern, is_ambiguous);
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
+    SwallowAnnotation,
+    swallow_apnea,
+    swallow_info,
+    swallow_notes,
+    ear_clicks,
+    ear_click_info,
+    ear_click_notes
+);
 
 AnnotationsMap load_swallow_annotation_json(std::istream& stream)
 {
