@@ -1,10 +1,10 @@
-#include <sstream>
 #define IMGUI_DEFINE_MATH_OPERATORS
+
+#include "plotter.hpp"
 
 #include "data.hpp"
 #include "drag-range.hpp"
 #include "labelling-task.hpp"
-#include "plotter.hpp"
 #include "util.hpp"
 
 #include <imgui.h>
@@ -15,8 +15,11 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <iterator>
 #include <optional>
+#include <sstream>
+#include <string>
 #include <vector>
 
 namespace recap::labeller::plotter {
@@ -25,32 +28,6 @@ using plot::SwallowTaskData;
 using namespace labelling_task;
 
 namespace {
-
-ImPlotRange initial_range(const std::vector<double>& time, const std::vector<uint8_t>& event)
-{
-    constexpr double EventBufferSecs = 6;
-    constexpr auto is_non_zero = [](auto e) { return e != 0; };
-
-    const auto& event_start = std::find_if(event.begin(), event.end(), is_non_zero);
-    if (event_start == event.end()) {
-        return {time.front(), time.back()};
-    }
-    const double event_start_time = time[std::distance(event.begin(), event_start)];
-
-    const auto& event_end = std::find_if(event.rbegin(), event.rend(), is_non_zero);
-    double end_time;
-    if (event_end == event.rend()) {
-        end_time = time.back();
-    } else {
-        const double event_end_time = time[std::distance(event.begin(), event_end.base()) - 1];
-        end_time = std::min(time.back(), event_end_time + EventBufferSecs);
-    }
-
-    return {
-        std::max(event_start_time - EventBufferSecs, time.front()),
-        end_time,
-    };
-}
 
 bool begin_data_plot(const char *id)
 {
@@ -246,165 +223,101 @@ std::vector<ImPlotRange> range_vector_from_time_ranges(const std::vector<TimeRan
     return result;
 }
 
-}; // namespace
+class PlotSelectionsEditor {
+private:
+    std::string name;
+    ImColor color;
+    ImColor hovered_color;
+    ImColor selected_color;
+    std::vector<ImPlotRange> ranges;
+    std::vector<std::string> labels;
 
-SwallowAnnotationEditor::SwallowAnnotationEditor(SwallowAnnotation annotation_) :
-    annotation(std::move(annotation_)),
-    src_pattern(
-        annotation.swallow_apnea.has_value() ? annotation.swallow_apnea->pattern : SRCPattern{}
-    ),
-    is_ambiguous(
-        annotation.swallow_apnea.has_value() ? annotation.swallow_apnea->is_ambiguous : false
-    ),
-    swallow_notes(util::value_or_default(annotation.swallow_notes)),
-    ear_click_notes(util::value_or_default(annotation.ear_click_notes)),
-    earclick_selections(
-        "Ear click",
-        EarclickLabelColor,
-        EarclickLabelColorHovered,
-        EarclickLabelColorSelected,
-        annotation.ear_clicks
-    )
-{
-    if (annotation.swallow_apnea.has_value()) {
-        const auto& region = annotation.swallow_apnea->time;
-        std::tie(apnea_range.Min, apnea_range.Max) = std::minmax(region.start, region.end);
-    }
-}
+    plot::PlotXSelector selector;
+    ImPlotRange next_range = {NAN, NAN};
+    std::optional<std::size_t> selected_index = std::nullopt;
+    std::optional<std::size_t> hovered_index = std::nullopt;
 
-void SwallowAnnotationEditor::draw_swallow_label_info()
-{
-    radio_button_swallow_label_info("##swallow_label_info", annotation.swallow_info);
-}
+    void remove_selection(std::size_t i)
+    {
+        if (selected_index.has_value()) {
+            if (*selected_index == i) {
+                selected_index.reset();
+            } else if (i < *selected_index) {
+                *selected_index -= 1;
+            }
+        }
 
-void SwallowAnnotationEditor::draw_swallow_apnea_info()
-{
-    ImGui::BeginDisabled(annotation.swallow_info != SwallowLabelInfo::Ok);
-    radio_button_src_patterns("##src_pattern", src_pattern);
-    ImGui::SameLine();
-    ImGui::Checkbox("Ambiguous swallow", &is_ambiguous);
-    ImGui::EndDisabled();
-}
-
-void SwallowAnnotationEditor::draw_earclick_label_info()
-{
-    radio_button_earclick_label_info("##earclick_label_info", annotation.ear_click_info);
-}
-
-void SwallowAnnotationEditor::draw_earclick_notes()
-{
-    text_input_trim("Ear click notes", ear_click_notes, annotation.ear_click_notes);
-}
-
-void SwallowAnnotationEditor::draw_swallow_notes()
-{
-    text_input_trim("Swallow notes", swallow_notes, annotation.swallow_notes);
-}
-
-bool SwallowAnnotationEditor::draw_apnea_selector()
-{
-    const bool new_label = apnea_selector.draw(
-        0, apnea_range, ApneaLabelColorSelecting, 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl
-    );
-    if (new_label) {
-        spdlog::debug("Placed new swallow apnea label: [{}, {}]", apnea_range.Min, apnea_range.Max);
-    }
-    return new_label;
-}
-
-void SwallowAnnotationEditor::draw_apnea_selection()
-{
-    if (annotation.swallow_info != SwallowLabelInfo::Ok) {
-        return;
-    }
-    ImGui::PushID("##apnea_selection");
-    if (!(apnea_selector.is_selecting() || range_isnan(apnea_range)) || draw_apnea_selector()) {
-        plot::drag_xrange(0, apnea_range, ApneaLabelColorSelected);
-    }
-    ImGui::PopID();
-}
-
-void SwallowAnnotationEditor::draw_earclick_selection()
-{
-    if (annotation.ear_click_info != EarClickLabelInfo::Ok) {
-        return;
+        const auto range = ranges.begin() + static_cast<decltype(ranges)::difference_type>(i);
+        spdlog::debug("{}: removing label [{}, {}] (#{})", name, range->Min, range->Max, i + 1);
+        ranges.erase(range);
+        set_labels();
     }
 
-    earclick_selections.draw_plot_selection("##earclick_selections");
-}
-
-void SwallowAnnotationEditor::draw_earclick_selection_list()
-{
-    ImGui::BeginDisabled(annotation.ear_click_info != EarClickLabelInfo::Ok);
-    earclick_selections.draw_list("##earclick_selection_list");
-    ImGui::EndDisabled();
-}
-
-PlotSelectionsEditor::PlotSelectionsEditor(
-    std::string_view name,
-    ImColor color,
-    ImColor hovered_color,
-    ImColor selected_color,
-    const std::vector<TimeRange>& ranges
-) :
-    name(name),
-    color(color),
-    hovered_color(hovered_color),
-    selected_color(selected_color),
-    ranges(range_vector_from_time_ranges(ranges))
-{
-    set_labels();
-}
-
-void PlotSelectionsEditor::set_labels()
-{
-    labels.clear();
-    labels.reserve(ranges.size());
-    for (std::size_t i = 0; i < ranges.size(); i++) {
+    [[nodiscard]] std::string label_str(std::size_t i) const
+    {
         std::stringstream ss;
         ss << name << " #" << i + 1;
-        labels.push_back(ss.str());
+        return ss.str();
     }
-}
 
-void PlotSelectionsEditor::draw_plot_selection(const char *id)
-{
-    ImGui::PushID(id);
-    if (selector.is_selecting() || range_isnan(next_range)) {
-        const bool finished =
-            selector.draw(0, next_range, color, 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl);
-
-        if (finished) {
-            spdlog::debug("{}: placed new label: [{}, {}]", id, next_range.Min, next_range.Max);
-            ranges.push_back(next_range);
-            set_labels();
-            next_range = {NAN, NAN};
+    void set_labels()
+    {
+        labels.clear();
+        labels.reserve(ranges.size());
+        for (std::size_t i = 0; i < ranges.size(); i++) {
+            labels.push_back(label_str(i));
         }
     }
 
-    for (std::size_t i = 0; i < ranges.size(); i++) {
-        const bool selected = util::has_value_and_equal(selected_index, i);
-        plot::drag_xrange(
-            static_cast<ImGuiID>(i) + 1,
-            ranges[i],
-            selected ? selected_color :
-                       (util::has_value_and_equal(hovered_index, i) ? hovered_color : color),
-            selected && !selector.is_selecting() ? 0 : plot::DragXRangeFlag::NoInput
-        );
-    }
-    ImGui::PopID();
-}
-
-void PlotSelectionsEditor::draw_list(const char *id)
-{
-    if (ranges.empty()) {
-        return;
+public:
+    PlotSelectionsEditor(
+        std::string_view name,
+        ImColor color,
+        ImColor hovered_color,
+        ImColor selected_color,
+        const std::vector<TimeRange>& ranges
+    ) :
+        name(name),
+        color(color),
+        hovered_color(hovered_color),
+        selected_color(selected_color),
+        ranges(range_vector_from_time_ranges(ranges))
+    {
+        set_labels();
     }
 
-    ImGui::PushID(id);
+    void draw_plot_selection(const char *id)
+    {
+        ImGui::PushID(id);
+        if (selector.is_selecting() || range_isnan(next_range)) {
+            const bool finished =
+                selector.draw(0, next_range, color, 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl);
 
-    hovered_index.reset();
-    if (ImGui::BeginListBox("##listbox", {-1, -1})) {
+            if (finished) {
+                spdlog::debug("{}: placed new label: [{}, {}]", id, next_range.Min, next_range.Max);
+                ranges.push_back(next_range);
+                set_labels();
+                next_range = {NAN, NAN};
+            }
+        }
+
+        for (std::size_t i = 0; i < ranges.size(); i++) {
+            const bool selected = util::has_value_and_equal(selected_index, i);
+            plot::drag_xrange(
+                static_cast<ImGuiID>(i) + 1,
+                ranges[i],
+                selected ? selected_color :
+                           (util::has_value_and_equal(hovered_index, i) ? hovered_color : color),
+                selected && !selector.is_selecting() ? 0 : plot::DragXRangeFlag::NoInput
+            );
+        }
+        ImGui::PopID();
+    }
+
+    void draw_list(const char *id)
+    {
+        ImGui::PushID(id);
+        hovered_index.reset();
         for (std::size_t i = 0; i < ranges.size(); i++) {
             ImGui::PushID(static_cast<int>(i));
             const bool remove = ImGui::Button("Remove");
@@ -435,36 +348,169 @@ void PlotSelectionsEditor::draw_list(const char *id)
                     hovered_index = i;
                 }
             }
-            ImGui::PopID();
         }
+        ImGui::PopID();
+    }
+};
 
-        ImGui::EndListBox();
+}; // namespace
+
+class SwallowTaskPlotter::AnnotationEditor {
+private:
+    static constexpr ImColor ApneaLabelColorSelecting = ImColor(1.0F, 1.0F, 0.0F, 0.2F);
+    static constexpr ImColor ApneaLabelColorSelected = ImColor(1.0F, 1.0F, 0.0F, 0.4F);
+    static constexpr ImColor EarclickLabelColor = ImColor(0.0F, 1.0F, 0.0F, 0.1F);
+    static constexpr ImColor EarclickLabelColorHovered = ImColor(0.0F, 1.0F, 0.0F, 0.25F);
+    static constexpr ImColor EarclickLabelColorSelected = ImColor(0.0F, 1.0F, 0.0F, 0.4F);
+
+    ImPlotRange apnea_range = {NAN, NAN};
+    plot::PlotXSelector apnea_selector;
+
+    labelling_task::SwallowAnnotation annotation;
+    labelling_task::SRCPattern src_pattern;
+    bool is_ambiguous;
+    std::string swallow_notes;
+    std::string ear_click_notes;
+    PlotSelectionsEditor earclick_selections;
+
+    [[nodiscard]] bool draw_apnea_selector()
+    {
+        const bool new_label = apnea_selector.draw(
+            0, apnea_range, ApneaLabelColorSelecting, 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl
+        );
+        if (new_label) {
+            spdlog::debug(
+                "Placed new swallow apnea label: [{}, {}]", apnea_range.Min, apnea_range.Max
+            );
+        }
+        return new_label;
     }
 
-    ImGui::PopID();
-}
+public:
+    explicit AnnotationEditor(SwallowAnnotation annotation_ = {}) :
+        annotation(std::move(annotation_)),
+        src_pattern(
+            annotation.swallow_apnea.has_value() ? annotation.swallow_apnea->pattern : SRCPattern{}
+        ),
+        is_ambiguous(
+            annotation.swallow_apnea.has_value() ? annotation.swallow_apnea->is_ambiguous : false
+        ),
+        swallow_notes(util::value_or_default(annotation.swallow_notes)),
+        ear_click_notes(util::value_or_default(annotation.ear_click_notes)),
+        earclick_selections(
+            "Ear click",
+            EarclickLabelColor,
+            EarclickLabelColorHovered,
+            EarclickLabelColorSelected,
+            annotation.ear_clicks
+        )
+    {
+        if (annotation.swallow_apnea.has_value()) {
+            const auto& region = annotation.swallow_apnea->time;
+            std::tie(apnea_range.Min, apnea_range.Max) = std::minmax(region.start, region.end);
+        }
+    }
 
-void PlotSelectionsEditor::remove_selection(std::size_t i)
+    void draw_swallow_label_info()
+    {
+        radio_button_swallow_label_info("##swallow_label_info", annotation.swallow_info);
+    }
+
+    void draw_swallow_apnea_info()
+    {
+        ImGui::BeginDisabled(annotation.swallow_info != SwallowLabelInfo::Ok);
+        radio_button_src_patterns("##src_pattern", src_pattern);
+        ImGui::SameLine();
+        ImGui::Checkbox("Ambiguous swallow", &is_ambiguous);
+        ImGui::EndDisabled();
+    }
+
+    void draw_earclick_label_info()
+    {
+        radio_button_earclick_label_info("##earclick_label_info", annotation.ear_click_info);
+    }
+
+    void draw_earclick_notes()
+    {
+        text_input_trim("Ear click notes", ear_click_notes, annotation.ear_click_notes);
+    }
+
+    void draw_swallow_notes()
+    {
+        text_input_trim("Swallow notes", swallow_notes, annotation.swallow_notes);
+    }
+
+    void draw_apnea_selection()
+    {
+        if (annotation.swallow_info != SwallowLabelInfo::Ok) {
+            return;
+        }
+        ImGui::PushID("##apnea_selection");
+        if (!(apnea_selector.is_selecting() || range_isnan(apnea_range)) || draw_apnea_selector()) {
+            plot::drag_xrange(0, apnea_range, ApneaLabelColorSelected);
+        }
+        ImGui::PopID();
+    }
+
+    void draw_earclick_selection()
+    {
+        if (annotation.ear_click_info != EarClickLabelInfo::Ok) {
+            return;
+        }
+
+        earclick_selections.draw_plot_selection("##earclick_selections");
+    }
+
+    void draw_earclick_selection_list()
+    {
+        ImGui::BeginDisabled(annotation.ear_click_info != EarClickLabelInfo::Ok);
+        if (ImGui::BeginListBox("##earclick_selection_list", {-1, -1})) {
+            earclick_selections.draw_list("##earclick_selection_list_items");
+
+            ImGui::EndListBox();
+        }
+        ImGui::EndDisabled();
+    }
+};
+
+ImPlotRange SwallowTaskPlotter::initial_range(
+    const std::vector<double>& time, const std::vector<uint8_t>& event
+)
 {
-    if (selected_index.has_value()) {
-        if (*selected_index == i) {
-            selected_index.reset();
-        } else if (i < *selected_index) {
-            *selected_index -= 1;
-        }
+    constexpr double EventBufferSecs = 6;
+    constexpr auto is_non_zero = [](auto e) { return e != 0; };
+
+    const auto& event_start = std::find_if(event.begin(), event.end(), is_non_zero);
+    if (event_start == event.end()) {
+        return {time.front(), time.back()};
+    }
+    const double event_start_time = time[std::distance(event.begin(), event_start)];
+
+    const auto& event_end = std::find_if(event.rbegin(), event.rend(), is_non_zero);
+    double end_time;
+    if (event_end == event.rend()) {
+        end_time = time.back();
+    } else {
+        const double event_end_time = time[std::distance(event.begin(), event_end.base()) - 1];
+        end_time = std::min(time.back(), event_end_time + EventBufferSecs);
     }
 
-    const auto range = ranges.begin() + static_cast<decltype(ranges)::difference_type>(i);
-    spdlog::debug("{}: removing label [{}, {}] ({})", name, range->Min, range->Max, labels[i]);
-    ranges.erase(range);
-    set_labels();
+    return {
+        std::max(event_start_time - EventBufferSecs, time.front()),
+        end_time,
+    };
 }
 
 SwallowTaskPlotter::SwallowTaskPlotter(SwallowTaskData data_) :
     data(std::move(data_)),
     event(data.event.begin(), data.event.end()),
-    summary_range(initial_range(data.flow_time, data.event))
+    summary_range(initial_range(data.flow_time, data.event)),
+    annotation_editor(std::make_unique<AnnotationEditor>())
 {}
+
+SwallowTaskPlotter::~SwallowTaskPlotter() noexcept = default;
+SwallowTaskPlotter::SwallowTaskPlotter(SwallowTaskPlotter&&) noexcept = default;
+SwallowTaskPlotter& SwallowTaskPlotter::operator=(SwallowTaskPlotter&&) noexcept = default;
 
 void SwallowTaskPlotter::draw(const char *id)
 {
@@ -477,7 +523,7 @@ void SwallowTaskPlotter::draw(const char *id)
     ImGui::SameLine();
     if (ImGui::BeginChild("##earclick_selection_list", {-1, -1}, ImGuiChildFlags_Border)) {
         ImGui::TextUnformatted("Ear click labels:");
-        annotation_editor.draw_earclick_selection_list();
+        annotation_editor->draw_earclick_selection_list();
     }
     ImGui::EndChild();
 
@@ -487,23 +533,23 @@ void SwallowTaskPlotter::draw(const char *id)
 void SwallowTaskPlotter::draw_plots()
 {
     if (ImPlot::BeginAlignedPlots("##aligned_plots")) {
-        annotation_editor.draw_swallow_label_info();
-        annotation_editor.draw_swallow_apnea_info();
+        annotation_editor->draw_swallow_label_info();
+        annotation_editor->draw_swallow_apnea_info();
         if (begin_data_plot("##flow")) {
             draw_flow_plot();
-            annotation_editor.draw_apnea_selection();
+            annotation_editor->draw_apnea_selection();
             ImPlot::EndPlot();
         }
-        annotation_editor.draw_swallow_notes();
+        annotation_editor->draw_swallow_notes();
 
-        annotation_editor.draw_earclick_label_info();
+        annotation_editor->draw_earclick_label_info();
         if (begin_data_plot("##ear_audio")) {
             ImPlot::SetupAxis(ImAxis_X1, "Time (s)");
             draw_audio_plot();
-            annotation_editor.draw_earclick_selection();
+            annotation_editor->draw_earclick_selection();
             ImPlot::EndPlot();
         }
-        annotation_editor.draw_earclick_notes();
+        annotation_editor->draw_earclick_notes();
 
         ImPlot::EndAlignedPlots();
     }
