@@ -28,6 +28,8 @@ public:
 
     void draw(const char *id);
 
+    [[nodiscard]] const labelling_task::SwallowAnnotation& annotation() const;
+
 private:
     static ImPlotRange
     initial_range(const std::vector<double>& time, const std::vector<uint8_t>& event);
