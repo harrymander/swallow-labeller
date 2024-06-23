@@ -4,18 +4,22 @@
 
 #include "data.hpp"
 #include "drag-range.hpp"
+#include "labelling-task.hpp"
 #include "util.hpp"
 
 #include <imgui.h>
 #include <implot.h>
+#include <spdlog/spdlog.h>
 
 #include <algorithm>
+#include <array>
 #include <iterator>
 #include <vector>
 
 namespace recap::labeller::plotter {
 
 using plot::SwallowTaskData;
+using namespace labelling_task;
 
 namespace {
 
@@ -144,6 +148,70 @@ void plot_line(const char *id, const std::vector<double>& x, const std::vector<d
     ImPlot::PlotLine(id, x.data(), y.data(), y.size());
 }
 
+template <class T> struct RadioButtonField {
+    const char *label;
+    T value;
+};
+
+template <class T>
+bool radio_button_enums(const char *id, T& value, const RadioButtonField<T> *options, std::size_t n)
+{
+    ImGui::PushID(id);
+    bool changed = false;
+    for (std::size_t i = 0; i < n; i++) {
+        if (i > 0) {
+            ImGui::SameLine();
+        }
+
+        const bool enabled = options[i].value == value;
+        if (ImGui::RadioButton(options[i].label, enabled) && !enabled) {
+            value = options[i].value;
+            changed = true;
+            spdlog::debug("Radio buttons {}: changed to '{}'", id, options[i].label);
+        }
+    }
+    ImGui::PopID();
+    return changed;
+}
+
+template <class T, class Container>
+bool radio_button_enums(const char *id, T& value, const Container& options)
+{
+    return radio_button_enums(id, value, options.data(), options.size());
+}
+
+bool radio_button_src_patterns(const char *id, SRCPattern& pattern)
+{
+    static std::array<RadioButtonField<SRCPattern>, 4> fields = {{
+        {"ex-ex", SRCPattern::ExEx},
+        {"ex-in", SRCPattern::ExIn},
+        {"in-ex", SRCPattern::InEx},
+        {"in-in", SRCPattern::InIn},
+    }};
+    return radio_button_enums(id, pattern, fields);
+}
+
+bool radio_button_swallow_label_info(const char *id, SwallowLabelInfo& info)
+{
+    static std::array<RadioButtonField<SwallowLabelInfo>, 4> fields = {{
+        {"Ok", SwallowLabelInfo::Ok},
+        {"No swallow", SwallowLabelInfo::NoSwallow},
+        {"Apnoea cut-off", SwallowLabelInfo::ApneaCutOff},
+        {"Flow error", SwallowLabelInfo::FlowError},
+    }};
+    return radio_button_enums(id, info, fields);
+}
+
+bool radio_button_earclick_label_info(const char *id, EarClickLabelInfo& info)
+{
+    static std::array<RadioButtonField<EarClickLabelInfo>, 3> fields = {{
+        {"Ok", EarClickLabelInfo::Ok},
+        {"No ear click", EarClickLabelInfo::NoEarClick},
+        {"Audio error", EarClickLabelInfo::AudioError},
+    }};
+    return radio_button_enums(id, info, fields);
+}
+
 }; // namespace
 
 SwallowTaskPlotter::SwallowTaskPlotter(SwallowTaskData data_) :
@@ -156,6 +224,8 @@ void SwallowTaskPlotter::draw(const char *id)
 {
     ImGui::PushID(id);
 
+    radio_button_swallow_label_info("##swallow_label_info", annotation.swallow_info);
+    radio_button_earclick_label_info("##earclick_label_info", annotation.ear_click_info);
     if (ImPlot::BeginSubplots("##subplot", 2, 1, {-1, 600})) {
         if (begin_data_plot("##flow")) {
             draw_flow_plot();

@@ -3,6 +3,7 @@
 
 #include "data.hpp"
 #include "implot.h"
+#include "labelling-task.hpp"
 #include "selector.hpp"
 
 #include <cmath>
@@ -27,10 +28,11 @@ private:
     void plot_flow_line();
     void plot_event_digital() const;
 
-    plot::PlotXSelector summary_selector;
-    plot::PlotXSelector selector;
-    ImPlotRange selector_range;
+    plot::PlotXSelector summary_selector = {};
+    plot::PlotXSelector selector = {};
+    ImPlotRange selector_range = {};
     ImPlotRange last_selector_range = {NAN, NAN};
+    labelling_task::SwallowAnnotation annotation = {};
 
     plot::SwallowTaskData data;
     std::vector<double> event;
