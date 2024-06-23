@@ -17,7 +17,9 @@ namespace recap::labeller::plotter {
 
 using plot::SwallowTaskData;
 
-static ImPlotRange initial_range(const std::vector<double>& time, const std::vector<uint8_t>& event)
+namespace {
+
+ImPlotRange initial_range(const std::vector<double>& time, const std::vector<uint8_t>& event)
 {
     constexpr double EventBufferSecs = 6;
     constexpr auto is_non_zero = [](auto e) { return e != 0; };
@@ -43,18 +45,112 @@ static ImPlotRange initial_range(const std::vector<double>& time, const std::vec
     };
 }
 
-SwallowTaskPlotter::SwallowTaskPlotter(SwallowTaskData data_) :
-    data(std::move(data_)),
-    event(data.event.begin(), data.event.end()),
-    summary_range(initial_range(data.flow_time, data.event))
-{}
-
-static bool begin_data_plot(const char *id)
+bool begin_data_plot(const char *id)
 {
     return ImPlot::BeginPlot(
         id, {}, ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus
     );
 }
+
+void setup_axis_links(ImAxis axis, double *v1, double *v2)
+{
+    double *vmin;
+    double *vmax;
+    std::tie(vmin, vmax) = util::minmax_pointers(v1, v2);
+    ImPlot::SetupAxisLinks(axis, vmin, vmax);
+}
+
+bool mouse_inside_plot()
+{
+    if (!ImGui::IsMousePosValid()) {
+        return false;
+    }
+
+    const ImVec2 bbmin = ImPlot::GetPlotPos();
+    const ImVec2 bbmax = bbmin + ImPlot::GetPlotSize();
+    const ImVec2 pos = ImGui::GetMousePos();
+    return pos.x >= bbmin.x && pos.x <= bbmax.x && pos.y >= bbmin.y && pos.y <= bbmax.y;
+}
+
+void add_plot_marker(ImDrawList *draw_list, const ImVec2& pos)
+{
+    constexpr float half_width = 4;
+    draw_list->AddRect(
+        ImVec2(pos.x - half_width, pos.y - half_width),
+        ImVec2(pos.x + half_width, pos.y + half_width),
+        ImColor(128, 128, 128)
+    );
+}
+
+/**
+ * Add text in position (xp, yp), automatically right-aligining text if it would be greater than
+ * xend
+ */
+void add_text_autoalign(ImDrawList *draw_list, const char *text, float xp, float yp, float xend)
+{
+    constexpr float align_margin = 15;
+    constexpr float padding = 6;
+    const auto text_size = ImGui::CalcTextSize(text);
+    if (xp + text_size.x + align_margin > xend) {
+        xp -= text_size.x + padding;
+    } else {
+        xp += padding;
+    }
+    draw_list->AddText(ImVec2(xp, yp), ImGui::GetColorU32(ImGuiCol_Text), text);
+}
+
+void add_plot_vline(ImDrawList *draw_list, const ImVec2& posplot, const ImVec2& pospx)
+{
+    const ImVec2 plot_pos = ImPlot::GetPlotPos();
+    const ImVec2 plot_size = ImPlot::GetPlotSize();
+    const ImVec2 top(pospx.x, plot_pos.y);
+    const ImVec2 bottom(pospx.x, top.y + plot_size.y);
+    draw_list->AddLine(top, bottom, ImColor(128, 128, 128));
+
+    const float xend = plot_pos.x + plot_size.x;
+    char xtext[20];
+    (void) std::snprintf(xtext, sizeof(xtext), "x=%g", posplot.x);
+    add_text_autoalign(
+        draw_list, xtext, bottom.x, bottom.y - ImGui::GetTextLineHeightWithSpacing(), xend
+    );
+
+    char ytext[20];
+    (void) std::snprintf(ytext, sizeof(ytext), "y=%g", posplot.y);
+    add_text_autoalign(draw_list, ytext, top.x, top.y, xend);
+}
+
+void draw_plot_cursor(float xplot, float yplot)
+{
+    ImDrawList *draw_list = ImPlot::GetPlotDrawList();
+    const auto pospx = ImPlot::PlotToPixels(xplot, yplot);
+    add_plot_vline(draw_list, ImVec2(xplot, yplot), pospx);
+    add_plot_marker(draw_list, pospx);
+}
+
+void draw_plot_hovered(const double *x, size_t n, const double *y)
+{
+    const auto mouse = ImPlot::GetPlotMousePos();
+    if (mouse.x > x[0]) {
+        const double *const end = x + n;
+        const double *xclosest = util::binary_search_closest(x, end, mouse.x);
+        if (xclosest != end) {
+            draw_plot_cursor(*xclosest, y[xclosest - x]);
+        }
+    }
+}
+
+void plot_line(const char *id, const std::vector<double>& x, const std::vector<double>& y)
+{
+    ImPlot::PlotLine(id, x.data(), y.data(), y.size());
+}
+
+}; // namespace
+
+SwallowTaskPlotter::SwallowTaskPlotter(SwallowTaskData data_) :
+    data(std::move(data_)),
+    event(data.event.begin(), data.event.end()),
+    summary_range(initial_range(data.flow_time, data.event))
+{}
 
 void SwallowTaskPlotter::draw(const char *id)
 {
@@ -79,99 +175,6 @@ void SwallowTaskPlotter::draw(const char *id)
     }
 
     ImGui::PopID();
-}
-
-static void setup_axis_links(ImAxis axis, double *v1, double *v2)
-{
-    double *vmin;
-    double *vmax;
-    std::tie(vmin, vmax) = util::minmax_pointers(v1, v2);
-    ImPlot::SetupAxisLinks(axis, vmin, vmax);
-}
-
-static bool mouse_inside_plot()
-{
-    if (!ImGui::IsMousePosValid()) {
-        return false;
-    }
-
-    const ImVec2 bbmin = ImPlot::GetPlotPos();
-    const ImVec2 bbmax = bbmin + ImPlot::GetPlotSize();
-    const ImVec2 pos = ImGui::GetMousePos();
-    return pos.x >= bbmin.x && pos.x <= bbmax.x && pos.y >= bbmin.y && pos.y <= bbmax.y;
-}
-
-static void add_plot_marker(ImDrawList *draw_list, const ImVec2& pos)
-{
-    constexpr float half_width = 4;
-    draw_list->AddRect(
-        ImVec2(pos.x - half_width, pos.y - half_width),
-        ImVec2(pos.x + half_width, pos.y + half_width),
-        ImColor(128, 128, 128)
-    );
-}
-
-/**
- * Add text in position (xp, yp), automatically right-aligining text if it would be greater than
- * xend
- */
-static void
-add_text_autoalign(ImDrawList *draw_list, const char *text, float xp, float yp, float xend)
-{
-    constexpr float align_margin = 15;
-    constexpr float padding = 6;
-    const auto text_size = ImGui::CalcTextSize(text);
-    if (xp + text_size.x + align_margin > xend) {
-        xp -= text_size.x + padding;
-    } else {
-        xp += padding;
-    }
-    draw_list->AddText(ImVec2(xp, yp), ImGui::GetColorU32(ImGuiCol_Text), text);
-}
-
-static void add_plot_vline(ImDrawList *draw_list, const ImVec2& posplot, const ImVec2& pospx)
-{
-    const ImVec2 plot_pos = ImPlot::GetPlotPos();
-    const ImVec2 plot_size = ImPlot::GetPlotSize();
-    const ImVec2 top(pospx.x, plot_pos.y);
-    const ImVec2 bottom(pospx.x, top.y + plot_size.y);
-    draw_list->AddLine(top, bottom, ImColor(128, 128, 128));
-
-    const float xend = plot_pos.x + plot_size.x;
-    char xtext[20];
-    (void) std::snprintf(xtext, sizeof(xtext), "x=%g", posplot.x);
-    add_text_autoalign(
-        draw_list, xtext, bottom.x, bottom.y - ImGui::GetTextLineHeightWithSpacing(), xend
-    );
-
-    char ytext[20];
-    (void) std::snprintf(ytext, sizeof(ytext), "y=%g", posplot.y);
-    add_text_autoalign(draw_list, ytext, top.x, top.y, xend);
-}
-
-static void draw_plot_cursor(float xplot, float yplot)
-{
-    ImDrawList *draw_list = ImPlot::GetPlotDrawList();
-    const auto pospx = ImPlot::PlotToPixels(xplot, yplot);
-    add_plot_vline(draw_list, ImVec2(xplot, yplot), pospx);
-    add_plot_marker(draw_list, pospx);
-}
-
-static void draw_plot_hovered(const double *x, size_t n, const double *y)
-{
-    const auto mouse = ImPlot::GetPlotMousePos();
-    if (mouse.x > x[0]) {
-        const double *const end = x + n;
-        const double *xclosest = util::binary_search_closest(x, end, mouse.x);
-        if (xclosest != end) {
-            draw_plot_cursor(*xclosest, y[xclosest - x]);
-        }
-    }
-}
-
-inline void plot_line(const char *id, const std::vector<double>& x, const std::vector<double>& y)
-{
-    ImPlot::PlotLine(id, x.data(), y.data(), y.size());
 }
 
 void SwallowTaskPlotter::plot_event_digital() const
