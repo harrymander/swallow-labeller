@@ -338,7 +338,7 @@ void SwallowAnnotationEditor::draw_earclick_selection_list()
     earclick_selections.draw_list("##earclick_selection_list");
 }
 
-PlotSelections::PlotSelections(
+PlotSelectionsEditor::PlotSelectionsEditor(
     std::string_view name,
     ImColor color,
     ImColor hovered_color,
@@ -354,7 +354,7 @@ PlotSelections::PlotSelections(
     set_labels();
 }
 
-void PlotSelections::set_labels()
+void PlotSelectionsEditor::set_labels()
 {
     labels.clear();
     labels.reserve(ranges.size());
@@ -365,7 +365,7 @@ void PlotSelections::set_labels()
     }
 }
 
-void PlotSelections::draw_plot_selection(const char *id)
+void PlotSelectionsEditor::draw_plot_selection(const char *id)
 {
     ImGui::PushID(id);
     if (selector.is_selecting() || range_isnan(next_range)) {
@@ -393,7 +393,7 @@ void PlotSelections::draw_plot_selection(const char *id)
     ImGui::PopID();
 }
 
-void PlotSelections::draw_list(const char *id)
+void PlotSelectionsEditor::draw_list(const char *id)
 {
     if (ranges.empty()) {
         return;
@@ -442,7 +442,7 @@ void PlotSelections::draw_list(const char *id)
     ImGui::PopID();
 }
 
-void PlotSelections::remove_selection(std::size_t i)
+void PlotSelectionsEditor::remove_selection(std::size_t i)
 {
     if (selected_index.has_value()) {
         if (*selected_index == i) {
@@ -468,34 +468,44 @@ void SwallowTaskPlotter::draw(const char *id)
 {
     ImGui::PushID(id);
 
-    if (ImPlot::BeginAlignedPlots("##aligned_plots")) {
-        annotation_editor.draw_swallow_label_info();
-        annotation_editor.draw_swallow_apnea_info();
-        if (begin_data_plot("##flow")) {
-            draw_flow_plot();
-            annotation_editor.draw_apnea_selection();
+    const bool split = annotation_editor.has_earclick_selections();
+    if (!split || ImGui::BeginChild("##plotter", {-100, -1}, ImGuiChildFlags_ResizeX)) {
+        if (ImPlot::BeginAlignedPlots("##aligned_plots")) {
+            annotation_editor.draw_swallow_label_info();
+            annotation_editor.draw_swallow_apnea_info();
+            if (begin_data_plot("##flow")) {
+                draw_flow_plot();
+                annotation_editor.draw_apnea_selection();
+                ImPlot::EndPlot();
+            }
+            annotation_editor.draw_swallow_notes();
+
+            annotation_editor.draw_earclick_label_info();
+            if (begin_data_plot("##ear_audio")) {
+                ImPlot::SetupAxis(ImAxis_X1, "Time (s)");
+                draw_audio_plot();
+                annotation_editor.draw_earclick_selection();
+                ImPlot::EndPlot();
+            }
+            annotation_editor.draw_earclick_notes();
+
+            ImPlot::EndAlignedPlots();
+        }
+
+        if (ImPlot::BeginPlot("##summary", ImVec2(-1, 75), ImPlotFlags_CanvasOnly)) {
+            draw_summary_plot();
             ImPlot::EndPlot();
         }
-        annotation_editor.draw_swallow_notes();
-
-        annotation_editor.draw_earclick_label_info();
-        if (begin_data_plot("##ear_audio")) {
-            ImPlot::SetupAxis(ImAxis_X1, "Time (s)");
-            draw_audio_plot();
-            annotation_editor.draw_earclick_selection();
-            ImPlot::EndPlot();
+    }
+    if (split) {
+        ImGui::EndChild();
+        ImGui::SameLine();
+        if (ImGui::BeginChild("##earclick_selection_list", {-1, -1}, ImGuiChildFlags_Border)) {
+            ImGui::TextUnformatted("Ear click labels:");
+            annotation_editor.draw_earclick_selection_list();
         }
-        annotation_editor.draw_earclick_notes();
-
-        ImPlot::EndAlignedPlots();
+        ImGui::EndChild();
     }
-
-    if (ImPlot::BeginPlot("##summary", ImVec2(-1, 75), ImPlotFlags_CanvasOnly)) {
-        draw_summary_plot();
-        ImPlot::EndPlot();
-    }
-
-    annotation_editor.draw_earclick_selection_list();
 
     ImGui::PopID();
 }

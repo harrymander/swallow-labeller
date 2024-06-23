@@ -333,6 +333,9 @@ private:
         ImGui::SameLine();
         if (ImGui::BeginChild("##content", {0, 0}, ImGuiChildFlags_None, WindowFlags)) {
             draw_demo_windows();
+            if (show_debug_info) {
+                draw_debug_info();
+            }
 
             // TEMPORARY: this is just for testing
             if (task_manager.current_task_annotated()) {
@@ -346,9 +349,6 @@ private:
             }
 
             task_view.draw();
-            if (show_debug_info) {
-                draw_debug_info();
-            }
         }
         ImGui::EndChild();
     }

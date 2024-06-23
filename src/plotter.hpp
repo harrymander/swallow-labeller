@@ -14,9 +14,9 @@
 
 namespace recap::labeller::plotter {
 
-class PlotSelections {
+class PlotSelectionsEditor {
 public:
-    PlotSelections(
+    PlotSelectionsEditor(
         std::string_view name,
         ImColor color,
         ImColor hovered_color,
@@ -26,6 +26,8 @@ public:
 
     void draw_plot_selection(const char *id);
     void draw_list(const char *id);
+
+    [[nodiscard]] bool has_selections() const { return !ranges.empty(); }
 
 private:
     std::string name;
@@ -59,6 +61,11 @@ public:
     void draw_earclick_selection();
     void draw_earclick_selection_list();
 
+    [[nodiscard]] bool has_earclick_selections() const
+    {
+        return earclick_selections.has_selections();
+    }
+
 private:
     static constexpr ImColor ApneaLabelColor = ImColor(1.0F, 1.0F, 0.0F, 0.2F);
     static constexpr ImColor EarclickLabelColor = ImColor(0.0F, 1.0F, 0.0F, 0.1F);
@@ -75,7 +82,7 @@ private:
     bool is_ambiguous;
     std::string swallow_notes;
     std::string ear_click_notes;
-    PlotSelections earclick_selections;
+    PlotSelectionsEditor earclick_selections;
 };
 
 class SwallowTaskPlotter {
