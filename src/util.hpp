@@ -1,6 +1,9 @@
 #include <algorithm>
+#include <cctype>
 #include <iterator>
+#include <locale>
 #include <optional>
+#include <string>
 #include <utility>
 
 namespace util {
