@@ -19,7 +19,7 @@
 
 namespace platform = recap::labeller::platform;
 using namespace recap::labeller::gui;
-using labelling_task::SwallowTaskInfo;
+using namespace labelling_task;
 
 static void setup_logging(std::optional<std::string>&& logfile)
 {
@@ -81,7 +81,7 @@ int main(int argc, const char *argv[])
             spdlog::critical("Could not open labelling tasks file: {}", tasks_path);
             return 1;
         }
-        labelling_tasks = labelling_task::load_swallow_task_info_json(stream);
+        labelling_tasks = load_swallow_task_info_json(stream);
         if (labelling_tasks.empty()) {
             spdlog::critical("Labelling tasks list is empty!");
             return 1;
@@ -93,7 +93,7 @@ int main(int argc, const char *argv[])
     spdlog::debug("Loaded {} task info(s)", labelling_tasks.size());
 
     const auto annotations_path = program.present("--annotations");
-    std::vector<labelling_task::SwallowAnnotation> annotations;
+    AnnotationsMap annotations;
     if (annotations_path.has_value()) {
         std::ifstream stream(*annotations_path);
         if (!stream) {
@@ -101,7 +101,7 @@ int main(int argc, const char *argv[])
             return 1;
         }
         try {
-            annotations = labelling_task::load_swallow_annotation_json(stream);
+            annotations = load_swallow_annotation_json(stream);
         } catch (const std::invalid_argument& e) {
             spdlog::critical("Invalid annotations file: {}", e.what());
             return 1;

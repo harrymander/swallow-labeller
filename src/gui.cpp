@@ -32,20 +32,6 @@ using namespace recap::labeller::plotter;
 
 namespace {
 
-using AnnotationsMap = std::map<std::string, SwallowAnnotation>;
-
-AnnotationsMap make_annotations_map(const std::vector<SwallowAnnotation>& annotations)
-{
-    std::map<std::string, SwallowAnnotation> map;
-    for (const auto& annotation : annotations) {
-        if (map.contains(annotation.id)) {
-            spdlog::error("Duplicate annotation ID: {}; overwriting!", annotation.id);
-        }
-        map[annotation.id] = annotation;
-    }
-    return map;
-}
-
 class TaskManager {
 public:
     TaskManager(const std::vector<SwallowTaskInfo>& all_tasks, const AnnotationsMap& annotations)
@@ -242,12 +228,12 @@ class Gui::Impl {
 public:
     Impl(
         std::vector<SwallowTaskInfo> tasks_,
-        const std::vector<SwallowAnnotation>& annotations,
+        AnnotationsMap annotations,
         std::filesystem::path data_dir,
         bool shuffle
     ) :
         data_dir(std::move(data_dir)),
-        annotations(make_annotations_map(annotations)),
+        annotations(std::move(annotations)),
         task_manager(shuffle ? shuffled_vector(std::move(tasks_)) : tasks_, this->annotations),
         task_view(load_current_task())
     {
@@ -417,11 +403,13 @@ private:
 
 Gui::Gui(
     std::vector<SwallowTaskInfo> tasks,
-    const std::vector<SwallowAnnotation>& annotations,
+    AnnotationsMap annotations,
     std::filesystem::path data_dir,
     bool shuffle
 ) :
-    pimpl(std::make_unique<Impl>(std::move(tasks), annotations, std::move(data_dir), shuffle))
+    pimpl(std::make_unique<Impl>(
+        std::move(tasks), std::move(annotations), std::move(data_dir), shuffle
+    ))
 {}
 
 Gui::~Gui() = default;

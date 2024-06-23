@@ -2,7 +2,7 @@
 #define INCLUDE_LABELLING_TASK_HPP
 
 #include <istream>
-#include <optional>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -44,7 +44,9 @@ struct SwallowAnnotation {
     std::string id;
 };
 
-std::vector<SwallowAnnotation> load_swallow_annotation_json(std::istream& stream);
+using AnnotationsMap = std::map<std::string, SwallowAnnotation>;
+
+AnnotationsMap load_swallow_annotation_json(std::istream& stream);
 
 }; // namespace labelling_task
 
