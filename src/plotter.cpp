@@ -314,6 +314,20 @@ public:
         ImGui::PopID();
     }
 
+    void draw_regions_readonly(ImGuiID start_id)
+    {
+        for (std::size_t i = 0; i < ranges.size(); i++) {
+            const bool selected = util::has_value_and_equal(selected_index, i);
+            plot::drag_xrange(
+                static_cast<ImGuiID>(i) + start_id,
+                ranges[i],
+                selected ? selected_color :
+                           (util::has_value_and_equal(hovered_index, i) ? hovered_color : color),
+                plot::DragXRangeFlag::NoInput
+            );
+        }
+    }
+
     void draw_list(const char *id)
     {
         ImGui::PushID(id);
@@ -357,7 +371,7 @@ public:
 
 class SwallowTaskPlotter::AnnotationEditor {
 private:
-    static constexpr ImColor ApneaLabelColorSelecting = ImColor(1.0F, 1.0F, 0.0F, 0.2F);
+    static constexpr ImColor ApneaLabelColorSelecting = ImColor(1.0F, 1.0F, 0.0F, 0.1F);
     static constexpr ImColor ApneaLabelColorSelected = ImColor(1.0F, 1.0F, 0.0F, 0.4F);
     static constexpr ImColor EarclickLabelColor = ImColor(0.0F, 1.0F, 0.0F, 0.1F);
     static constexpr ImColor EarclickLabelColorHovered = ImColor(0.0F, 1.0F, 0.0F, 0.25F);
@@ -471,6 +485,19 @@ public:
         }
         ImGui::EndDisabled();
     }
+
+    void draw_regions_readonly()
+    {
+        if (annotation.swallow_info == SwallowLabelInfo::Ok) {
+            plot::drag_xrange(
+                0, apnea_range, ApneaLabelColorSelecting, plot::DragXRangeFlag::NoInput
+            );
+        }
+
+        if (annotation.ear_click_info == EarClickLabelInfo::Ok) {
+            earclick_selections.draw_regions_readonly(1);
+        }
+    }
 };
 
 ImPlotRange SwallowTaskPlotter::initial_range(
@@ -556,6 +583,7 @@ void SwallowTaskPlotter::draw_plots()
 
     if (ImPlot::BeginPlot("##summary", ImVec2(-1, 75), ImPlotFlags_CanvasOnly)) {
         draw_summary_plot();
+        annotation_editor->draw_regions_readonly();
         ImPlot::EndPlot();
     }
 }
