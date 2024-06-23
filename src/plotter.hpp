@@ -9,9 +9,40 @@
 #include <implot.h>
 
 #include <cmath>
+#include <optional>
 #include <vector>
 
 namespace recap::labeller::plotter {
+
+class PlotSelections {
+public:
+    PlotSelections(
+        std::string_view name,
+        ImColor color,
+        ImColor hovered_color,
+        ImColor selected_color,
+        const std::vector<labelling_task::TimeRange>& ranges = {}
+    );
+
+    void draw_plot_selection(const char *id);
+    void draw_list(const char *id);
+
+private:
+    std::string name;
+    ImColor color;
+    ImColor hovered_color;
+    ImColor selected_color;
+    std::vector<ImPlotRange> ranges;
+    std::vector<std::string> labels;
+
+    plot::PlotXSelector selector;
+    ImPlotRange next_range = {NAN, NAN};
+    std::optional<std::size_t> selected_index = std::nullopt;
+    std::optional<std::size_t> hovered_index = std::nullopt;
+
+    void remove_selection(std::size_t i);
+    void set_labels();
+};
 
 class SwallowAnnotationEditor {
 public:
@@ -26,10 +57,12 @@ public:
     void draw_earclick_label_info();
     void draw_earclick_notes();
     void draw_earclick_selection();
+    void draw_earclick_selection_list();
 
 private:
     static constexpr ImColor ApneaLabelColor = ImColor(1.0F, 1.0F, 0.0F, 0.2F);
-    static constexpr ImColor EarclickLabelColor = ImColor(0.0F, 1.0F, 0.0F, 0.2F);
+    static constexpr ImColor EarclickLabelColor = ImColor(0.0F, 1.0F, 0.0F, 0.1F);
+    static constexpr ImColor EarclickLabelColorHovered = ImColor(0.0F, 1.0F, 0.0F, 0.25F);
     static constexpr ImColor EarclickLabelColorSelected = ImColor(0.0F, 1.0F, 0.0F, 0.4F);
 
     [[nodiscard]] bool draw_apnea_selector();
@@ -37,15 +70,12 @@ private:
     ImPlotRange apnea_range = {NAN, NAN};
     plot::PlotXSelector apnea_selector;
 
-    std::vector<ImPlotRange> earclick_ranges = {};
-    plot::PlotXSelector earclick_selector;
-    ImPlotRange next_earclick_range = {NAN, NAN};
-
     labelling_task::SwallowAnnotation annotation;
     labelling_task::SRCPattern src_pattern;
     bool is_ambiguous;
     std::string swallow_notes;
     std::string ear_click_notes;
+    PlotSelections earclick_selections;
 };
 
 class SwallowTaskPlotter {

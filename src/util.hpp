@@ -32,6 +32,11 @@ template <class T> inline T value_or_default(const std::optional<T>& opt)
     return opt.value_or(T{});
 }
 
+template <class T> inline bool has_value_and_equal(const std::optional<T>& opt, const T& val)
+{
+    return opt.has_value() && *opt == val;
+}
+
 // trim from start (in place)
 inline void ltrim(std::string& s)
 {
