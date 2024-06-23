@@ -69,10 +69,13 @@ else()
     add_custom_target(
         check
         COMMAND
-            ${CPPCHECK} --error-exitcode=1 --force --quiet --inline-suppr
-                        --enable=style,unusedFunction --language=c++ --std=c++20
-                        ${CMAKE_CURRENT_SOURCE_DIR}/src
-                        ${CMAKE_CURRENT_SOURCE_DIR}/tests
+            ${CPPCHECK}
+            --error-exitcode=1 --quiet --force --language=c++ --std=c++20
+            --enable=style,unusedFunction
+            --inline-suppr --suppressions-list=cppcheck-suppressions.txt
+            --relative-paths=${CMAKE_SOURCE_DIR}
+            src tests
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         COMMENT "Checking source code with cppcheck"
     )
 endif()
