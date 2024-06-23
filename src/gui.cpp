@@ -87,16 +87,8 @@ public:
             only_show_annotated = !only_show_annotated;
         }
         if (ImGui::BeginListBox("##listbox", {-1, -1})) {
-            decltype(index) i;
-            decltype(index) end;
-            if (only_show_annotated) {
-                i = annotated_start_index;
-                end = static_cast<decltype(index)>(tasks.size());
-            } else {
-                i = 0;
-                end = annotated_start_index;
-            }
-            for (; i < end; i++) {
+            decltype(index) i = only_show_annotated ? annotated_start_index : 0;
+            for (; i < static_cast<decltype(index)>(tasks.size()); i++) {
                 const bool is_selected = (index == i);
                 const char *str = tasks[i].c_str();
                 if (filter.PassFilter(str)) {
