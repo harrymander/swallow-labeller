@@ -11,6 +11,24 @@
 
 namespace recap::labeller::plotter {
 
+class SwallowAnnotationEditor {
+public:
+    explicit SwallowAnnotationEditor(labelling_task::SwallowAnnotation annotation = {});
+
+    void draw_swallow_label_info();
+    void draw_swallow_apnea_info();
+    void draw_swallow_notes();
+
+    void draw_earclick_label_info();
+    void draw_earclick_notes();
+
+private:
+    labelling_task::SwallowAnnotation annotation;
+    labelling_task::SwallowApneaLabel swallow_apnea;
+    std::string swallow_notes;
+    std::string ear_click_notes;
+};
+
 class SwallowTaskPlotter {
 public:
     explicit SwallowTaskPlotter(plot::SwallowTaskData data);
@@ -32,11 +50,11 @@ private:
     plot::PlotXSelector selector = {};
     ImPlotRange selector_range = {};
     ImPlotRange last_selector_range = {NAN, NAN};
-    labelling_task::SwallowAnnotation annotation = {};
 
     plot::SwallowTaskData data;
     std::vector<double> event;
     ImPlotRange summary_range;
+    SwallowAnnotationEditor annotation_editor;
 };
 
 }; // namespace recap::labeller::plotter

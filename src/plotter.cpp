@@ -8,12 +8,14 @@
 #include "util.hpp"
 
 #include <imgui.h>
+#include <imgui_stdlib.h>
 #include <implot.h>
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
 #include <array>
 #include <iterator>
+#include <optional>
 #include <vector>
 
 namespace recap::labeller::plotter {
@@ -212,7 +214,58 @@ bool radio_button_earclick_label_info(const char *id, EarClickLabelInfo& info)
     return radio_button_enums(id, info, fields);
 }
 
+void text_input_trim(const char *label, std::string& text, std::optional<std::string>& output)
+{
+    ImGui::InputText(label, &text);
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+        std::string trimmed = util::trimmed(text);
+        if (trimmed.empty()) {
+            spdlog::debug("Text input '{}' cleared", label);
+            output = std::nullopt;
+        } else {
+            spdlog::debug("Text input '{}' = {}", label, trimmed);
+            output.emplace(std::move(trimmed));
+        }
+    }
+}
+
 }; // namespace
+
+SwallowAnnotationEditor::SwallowAnnotationEditor(SwallowAnnotation annotation) :
+    annotation(std::move(annotation)),
+    swallow_apnea(util::value_or_default(annotation.swallow_apnea)),
+    swallow_notes(util::value_or_default(annotation.swallow_notes)),
+    ear_click_notes(util::value_or_default(annotation.ear_click_notes))
+{}
+
+void SwallowAnnotationEditor::draw_swallow_label_info()
+{
+    radio_button_swallow_label_info("##swallow_label_info", annotation.swallow_info);
+}
+
+void SwallowAnnotationEditor::draw_swallow_apnea_info()
+{
+    ImGui::BeginDisabled(annotation.swallow_info != SwallowLabelInfo::Ok);
+    radio_button_src_patterns("##src_pattern", swallow_apnea.pattern);
+    ImGui::SameLine();
+    ImGui::Checkbox("Ambiguous swallow", &swallow_apnea.is_ambiguous);
+    ImGui::EndDisabled();
+}
+
+void SwallowAnnotationEditor::draw_earclick_label_info()
+{
+    radio_button_earclick_label_info("##earclick_label_info", annotation.ear_click_info);
+}
+
+void SwallowAnnotationEditor::draw_earclick_notes()
+{
+    text_input_trim("Ear click notes", ear_click_notes, annotation.ear_click_notes);
+}
+
+void SwallowAnnotationEditor::draw_swallow_notes()
+{
+    text_input_trim("Swallow notes", swallow_notes, annotation.swallow_notes);
+}
 
 SwallowTaskPlotter::SwallowTaskPlotter(SwallowTaskData data_) :
     data(std::move(data_)),
@@ -225,18 +278,22 @@ void SwallowTaskPlotter::draw(const char *id)
     ImGui::PushID(id);
 
     if (ImPlot::BeginAlignedPlots("##aligned_plots")) {
-        radio_button_swallow_label_info("##swallow_label_info", annotation.swallow_info);
+        annotation_editor.draw_swallow_label_info();
+        annotation_editor.draw_swallow_apnea_info();
         if (begin_data_plot("##flow")) {
             draw_flow_plot();
             ImPlot::EndPlot();
         }
+        annotation_editor.draw_swallow_notes();
 
-        radio_button_earclick_label_info("##earclick_label_info", annotation.ear_click_info);
+        annotation_editor.draw_earclick_label_info();
         if (begin_data_plot("##ear_audio")) {
             ImPlot::SetupAxis(ImAxis_X1, "Time (s)");
             draw_audio_plot();
             ImPlot::EndPlot();
         }
+        annotation_editor.draw_earclick_notes();
+
         ImPlot::EndAlignedPlots();
     }
 

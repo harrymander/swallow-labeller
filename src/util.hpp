@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <iterator>
+#include <optional>
 #include <utility>
 
 namespace util {
@@ -21,6 +22,42 @@ inline BidirIt binary_search_closest(BidirIt first, BidirIt last, const T& value
         }
     }
     return found;
+}
+
+template <class T> inline T value_or_default(const std::optional<T>& opt)
+{
+    return opt.value_or(T{});
+}
+
+// trim from start (in place)
+inline void ltrim(std::string& s)
+{
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+                return !std::isspace(ch);
+            }));
+}
+
+// trim from end (in place)
+inline void rtrim(std::string& s)
+{
+    s.erase(
+        std::find_if(
+            s.rbegin(), s.rend(), [](unsigned char ch) { return !std::isspace(ch); }
+        ).base(),
+        s.end()
+    );
+}
+
+inline void trim(std::string& s)
+{
+    ltrim(s);
+    rtrim(s);
+}
+
+inline std::string trimmed(std::string s)
+{
+    trim(s);
+    return s;
 }
 
 }; // namespace util
