@@ -16,7 +16,9 @@ namespace recap::labeller::plotter {
 
 class SwallowTaskPlotter {
 public:
-    explicit SwallowTaskPlotter(plot::SwallowTaskData data);
+    explicit SwallowTaskPlotter(
+        plot::SwallowTaskData data, labelling_task::SwallowAnnotation annotation = {}
+    );
     ~SwallowTaskPlotter() noexcept;
     SwallowTaskPlotter(SwallowTaskPlotter&&) noexcept;
     SwallowTaskPlotter& operator=(SwallowTaskPlotter&&) noexcept;

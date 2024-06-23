@@ -528,11 +528,11 @@ ImPlotRange SwallowTaskPlotter::initial_range(
     };
 }
 
-SwallowTaskPlotter::SwallowTaskPlotter(SwallowTaskData data_) :
+SwallowTaskPlotter::SwallowTaskPlotter(SwallowTaskData data_, SwallowAnnotation annotation) :
     data(std::move(data_)),
     event(data.event.begin(), data.event.end()),
     summary_range(initial_range(data.flow_time, data.event)),
-    annotation_editor(std::make_unique<AnnotationEditor>())
+    annotation_editor(std::make_unique<AnnotationEditor>(std::move(annotation)))
 {}
 
 SwallowTaskPlotter::~SwallowTaskPlotter() noexcept = default;
