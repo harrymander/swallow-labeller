@@ -106,7 +106,7 @@ void add_text_autoalign(ImDrawList *draw_list, const char *text, float xp, float
     draw_list->AddText(ImVec2(xp, yp), ImGui::GetColorU32(ImGuiCol_Text), text);
 }
 
-void add_plot_vline(ImDrawList *draw_list, const ImVec2& posplot, const ImVec2& pospx)
+void add_plot_vline(ImDrawList *draw_list, double xplot, double yplot, const ImVec2& pospx)
 {
     const ImVec2 plot_pos = ImPlot::GetPlotPos();
     const ImVec2 plot_size = ImPlot::GetPlotSize();
@@ -116,21 +116,21 @@ void add_plot_vline(ImDrawList *draw_list, const ImVec2& posplot, const ImVec2& 
 
     const float xend = plot_pos.x + plot_size.x;
     char xtext[20];
-    (void) std::snprintf(xtext, sizeof(xtext), "x=%g", posplot.x);
+    (void) std::snprintf(xtext, sizeof(xtext), "x=%lg", xplot);
     add_text_autoalign(
         draw_list, xtext, bottom.x, bottom.y - ImGui::GetTextLineHeightWithSpacing(), xend
     );
 
     char ytext[20];
-    (void) std::snprintf(ytext, sizeof(ytext), "y=%g", posplot.y);
+    (void) std::snprintf(ytext, sizeof(ytext), "y=%lg", yplot);
     add_text_autoalign(draw_list, ytext, top.x, top.y, xend);
 }
 
-void draw_plot_cursor(float xplot, float yplot)
+void draw_plot_cursor(double xplot, double yplot)
 {
     ImDrawList *draw_list = ImPlot::GetPlotDrawList();
     const auto pospx = ImPlot::PlotToPixels(xplot, yplot);
-    add_plot_vline(draw_list, ImVec2(xplot, yplot), pospx);
+    add_plot_vline(draw_list, xplot, yplot, pospx);
     add_plot_marker(draw_list, pospx);
 }
 
@@ -546,7 +546,7 @@ void SwallowTaskPlotter::draw_summary_plot()
     constexpr ImPlotAxisFlags ax_flags = ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_AutoFit;
     ImPlot::SetupAxes(nullptr, nullptr, ax_flags, ax_flags);
 
-    constexpr ImColor summary_color = {.5f, .5, .5, .6};
+    constexpr ImColor summary_color = {.5F, .5F, .5F, .6F};
     summary_selector.draw(
         0, summary_range, summary_color, plot::PlotXSelector::NoCursor, ImGuiMouseButton_Left
     );
