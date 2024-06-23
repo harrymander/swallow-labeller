@@ -290,9 +290,13 @@ void SwallowAnnotationEditor::draw_swallow_notes()
 
 bool SwallowAnnotationEditor::draw_apnea_selector()
 {
-    return apnea_selector.draw(
+    const bool new_label = apnea_selector.draw(
         0, apnea_range, ApneaLabelColor, 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl
     );
+    if (new_label) {
+        spdlog::debug("Placed new swallow apnea label: [{}, {}]", apnea_range.Min, apnea_range.Max);
+    }
+    return new_label;
 }
 
 void SwallowAnnotationEditor::draw_apnea_selection()
@@ -300,9 +304,42 @@ void SwallowAnnotationEditor::draw_apnea_selection()
     if (annotation.swallow_info != SwallowLabelInfo::Ok) {
         return;
     }
+    ImGui::PushID("##apnea_selection");
     if (!(apnea_selector.is_selecting() || range_isnan(apnea_range)) || draw_apnea_selector()) {
         plot::drag_xrange(0, apnea_range, ApneaLabelColor);
     }
+    ImGui::PopID();
+}
+
+void SwallowAnnotationEditor::draw_earclick_selection()
+{
+    if (annotation.ear_click_info != EarClickLabelInfo::Ok) {
+        return;
+    }
+
+    ImGui::PushID("##earclick_selection");
+    if (earclick_selector.is_selecting() || range_isnan(next_earclick_range)) {
+        const bool finished = earclick_selector.draw(
+            0, next_earclick_range, EarclickLabelColor, 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl
+        );
+
+        if (finished) {
+            spdlog::debug(
+                "Placed new ear click label: [{}, {}]",
+                next_earclick_range.Min,
+                next_earclick_range.Max
+            );
+            earclick_ranges.push_back(next_earclick_range);
+            next_earclick_range = {NAN, NAN};
+        }
+    }
+
+    ImGuiID id = 1;
+    for (auto& range : earclick_ranges) {
+        plot::drag_xrange(id, range, EarclickLabelColor, plot::DragXRangeFlag::NoInput);
+        id += 1;
+    }
+    ImGui::PopID();
 }
 
 SwallowTaskPlotter::SwallowTaskPlotter(SwallowTaskData data_) :
@@ -329,6 +366,7 @@ void SwallowTaskPlotter::draw(const char *id)
         if (begin_data_plot("##ear_audio")) {
             ImPlot::SetupAxis(ImAxis_X1, "Time (s)");
             draw_audio_plot();
+            annotation_editor.draw_earclick_selection();
             ImPlot::EndPlot();
         }
         annotation_editor.draw_earclick_notes();

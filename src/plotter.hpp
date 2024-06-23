@@ -2,11 +2,11 @@
 #define INCLUDE_RECAP_LABELLER_PLOTTER_HPP
 
 #include "data.hpp"
-#include "implot.h"
 #include "labelling-task.hpp"
 #include "selector.hpp"
 
-#include "imgui.h"
+#include <imgui.h>
+#include <implot.h>
 
 #include <cmath>
 #include <vector>
@@ -25,9 +25,12 @@ public:
 
     void draw_earclick_label_info();
     void draw_earclick_notes();
+    void draw_earclick_selection();
 
 private:
     static constexpr ImColor ApneaLabelColor = ImColor(1.0F, 1.0F, 0.0F, 0.2F);
+    static constexpr ImColor EarclickLabelColor = ImColor(0.0F, 1.0F, 0.0F, 0.2F);
+    static constexpr ImColor EarclickLabelColorSelected = ImColor(0.0F, 1.0F, 0.0F, 0.4F);
 
     [[nodiscard]] bool draw_apnea_selector();
 
@@ -36,6 +39,7 @@ private:
 
     std::vector<ImPlotRange> earclick_ranges = {};
     plot::PlotXSelector earclick_selector;
+    ImPlotRange next_earclick_range = {NAN, NAN};
 
     labelling_task::SwallowAnnotation annotation;
     labelling_task::SRCPattern src_pattern;
