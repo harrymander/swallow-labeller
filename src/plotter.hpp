@@ -67,7 +67,8 @@ public:
     }
 
 private:
-    static constexpr ImColor ApneaLabelColor = ImColor(1.0F, 1.0F, 0.0F, 0.2F);
+    static constexpr ImColor ApneaLabelColorSelecting = ImColor(1.0F, 1.0F, 0.0F, 0.2F);
+    static constexpr ImColor ApneaLabelColorSelected = ImColor(1.0F, 1.0F, 0.0F, 0.4F);
     static constexpr ImColor EarclickLabelColor = ImColor(0.0F, 1.0F, 0.0F, 0.1F);
     static constexpr ImColor EarclickLabelColorHovered = ImColor(0.0F, 1.0F, 0.0F, 0.25F);
     static constexpr ImColor EarclickLabelColorSelected = ImColor(0.0F, 1.0F, 0.0F, 0.4F);
@@ -91,6 +92,7 @@ public:
     void draw(const char *id);
 
 private:
+    void draw_plots();
     void draw_audio_plot();
     void draw_flow_plot();
     void draw_summary_plot();

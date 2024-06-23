@@ -304,7 +304,7 @@ void SwallowAnnotationEditor::draw_swallow_notes()
 bool SwallowAnnotationEditor::draw_apnea_selector()
 {
     const bool new_label = apnea_selector.draw(
-        0, apnea_range, ApneaLabelColor, 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl
+        0, apnea_range, ApneaLabelColorSelecting, 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl
     );
     if (new_label) {
         spdlog::debug("Placed new swallow apnea label: [{}, {}]", apnea_range.Min, apnea_range.Max);
@@ -319,7 +319,7 @@ void SwallowAnnotationEditor::draw_apnea_selection()
     }
     ImGui::PushID("##apnea_selection");
     if (!(apnea_selector.is_selecting() || range_isnan(apnea_range)) || draw_apnea_selector()) {
-        plot::drag_xrange(0, apnea_range, ApneaLabelColor);
+        plot::drag_xrange(0, apnea_range, ApneaLabelColorSelected);
     }
     ImGui::PopID();
 }
@@ -335,7 +335,9 @@ void SwallowAnnotationEditor::draw_earclick_selection()
 
 void SwallowAnnotationEditor::draw_earclick_selection_list()
 {
+    ImGui::BeginDisabled(annotation.ear_click_info != EarClickLabelInfo::Ok);
     earclick_selections.draw_list("##earclick_selection_list");
+    ImGui::EndDisabled();
 }
 
 PlotSelectionsEditor::PlotSelectionsEditor(
@@ -468,46 +470,48 @@ void SwallowTaskPlotter::draw(const char *id)
 {
     ImGui::PushID(id);
 
-    const bool split = annotation_editor.has_earclick_selections();
-    if (!split || ImGui::BeginChild("##plotter", {-100, -1}, ImGuiChildFlags_ResizeX)) {
-        if (ImPlot::BeginAlignedPlots("##aligned_plots")) {
-            annotation_editor.draw_swallow_label_info();
-            annotation_editor.draw_swallow_apnea_info();
-            if (begin_data_plot("##flow")) {
-                draw_flow_plot();
-                annotation_editor.draw_apnea_selection();
-                ImPlot::EndPlot();
-            }
-            annotation_editor.draw_swallow_notes();
-
-            annotation_editor.draw_earclick_label_info();
-            if (begin_data_plot("##ear_audio")) {
-                ImPlot::SetupAxis(ImAxis_X1, "Time (s)");
-                draw_audio_plot();
-                annotation_editor.draw_earclick_selection();
-                ImPlot::EndPlot();
-            }
-            annotation_editor.draw_earclick_notes();
-
-            ImPlot::EndAlignedPlots();
-        }
-
-        if (ImPlot::BeginPlot("##summary", ImVec2(-1, 75), ImPlotFlags_CanvasOnly)) {
-            draw_summary_plot();
-            ImPlot::EndPlot();
-        }
+    if (ImGui::BeginChild("##plotter", {-100, -1}, ImGuiChildFlags_ResizeX)) {
+        draw_plots();
     }
-    if (split) {
-        ImGui::EndChild();
-        ImGui::SameLine();
-        if (ImGui::BeginChild("##earclick_selection_list", {-1, -1}, ImGuiChildFlags_Border)) {
-            ImGui::TextUnformatted("Ear click labels:");
-            annotation_editor.draw_earclick_selection_list();
-        }
-        ImGui::EndChild();
+    ImGui::EndChild();
+    ImGui::SameLine();
+    if (ImGui::BeginChild("##earclick_selection_list", {-1, -1}, ImGuiChildFlags_Border)) {
+        ImGui::TextUnformatted("Ear click labels:");
+        annotation_editor.draw_earclick_selection_list();
     }
+    ImGui::EndChild();
 
     ImGui::PopID();
+}
+
+void SwallowTaskPlotter::draw_plots()
+{
+    if (ImPlot::BeginAlignedPlots("##aligned_plots")) {
+        annotation_editor.draw_swallow_label_info();
+        annotation_editor.draw_swallow_apnea_info();
+        if (begin_data_plot("##flow")) {
+            draw_flow_plot();
+            annotation_editor.draw_apnea_selection();
+            ImPlot::EndPlot();
+        }
+        annotation_editor.draw_swallow_notes();
+
+        annotation_editor.draw_earclick_label_info();
+        if (begin_data_plot("##ear_audio")) {
+            ImPlot::SetupAxis(ImAxis_X1, "Time (s)");
+            draw_audio_plot();
+            annotation_editor.draw_earclick_selection();
+            ImPlot::EndPlot();
+        }
+        annotation_editor.draw_earclick_notes();
+
+        ImPlot::EndAlignedPlots();
+    }
+
+    if (ImPlot::BeginPlot("##summary", ImVec2(-1, 75), ImPlotFlags_CanvasOnly)) {
+        draw_summary_plot();
+        ImPlot::EndPlot();
+    }
 }
 
 void SwallowTaskPlotter::plot_event_digital() const
