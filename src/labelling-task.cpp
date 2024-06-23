@@ -39,6 +39,8 @@ using Json = nlohmann::json;
 
 namespace {
 
+constexpr int JsonIndentSize = 2;
+
 template <class T> T parse_json(std::istream& stream)
 {
     try {
@@ -130,6 +132,27 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
 AnnotationsMap load_swallow_annotation_json(std::istream& stream)
 {
     return parse_json<AnnotationsMap>(stream);
+}
+
+void dump_swallow_annotations_json(std::ostream& os, const AnnotationsMap& map)
+{
+    os << Json(map).dump(JsonIndentSize) << '\n';
+    if (!os.good()) {
+        throw std::runtime_error("Error writing JSON to stream");
+    }
+}
+
+class AnnotationsMapJsonWriter {
+public:
+    explicit AnnotationsMapJsonWriter(const AnnotationsMap& map) : map(map) {}
+
+private:
+    const AnnotationsMap& map;
+};
+
+std::unique_ptr<AnnotationsMapJsonWriter> annotations_map_to_json(const AnnotationsMap& map)
+{
+    return std::make_unique<AnnotationsMapJsonWriter>(map);
 }
 
 }; // namespace labelling_task

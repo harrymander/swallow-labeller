@@ -1,5 +1,6 @@
 #include "gui.hpp"
 
+#include "annotation-manager.hpp"
 #include "data.hpp"
 #include "labelling-task.hpp"
 #include "plotter.hpp"
@@ -29,18 +30,18 @@ namespace recap::labeller::gui {
 using namespace labelling_task;
 using plot::SwallowTaskData;
 using namespace recap::labeller::plotter;
+using namespace recap::labeller::annotation_manager;
 
 namespace {
 
 class TaskManager {
 public:
-    TaskManager(const std::vector<SwallowTaskInfo>& all_tasks, const AnnotationsMap& annotations)
+    TaskManager(const std::vector<SwallowTaskInfo>& all_tasks, AnnotationManager& annotation_mgr)
     {
         std::vector<TaskStrWrapper> annotated;
         std::vector<TaskStrWrapper> unannotated;
         for (auto task : all_tasks) {
-            const auto found_annotated = annotations.find(task.get_id());
-            if (found_annotated != annotations.end()) {
+            if (annotation_mgr.get_annotation(task.get_id()) != nullptr) {
                 annotated.emplace_back(std::move(task), true);
             } else {
                 unannotated.emplace_back(std::move(task), false);
@@ -228,13 +229,12 @@ class Gui::Impl {
 public:
     Impl(
         std::vector<SwallowTaskInfo> tasks_,
-        AnnotationsMap annotations,
+        AnnotationManager& annotation_mgr,
         std::filesystem::path data_dir,
         bool shuffle
     ) :
         data_dir(std::move(data_dir)),
-        annotations(std::move(annotations)),
-        task_manager(shuffle ? shuffled_vector(std::move(tasks_)) : tasks_, this->annotations),
+        task_manager(shuffle ? shuffled_vector(std::move(tasks_)) : tasks_, annotation_mgr),
         task_view(load_current_task())
     {
         spdlog::debug("Setting up ImGui and ImPlot...");
@@ -396,20 +396,17 @@ private:
     bool show_debug_info = true;
 
     std::filesystem::path data_dir;
-    AnnotationsMap annotations;
     TaskManager task_manager;
     TaskView task_view;
 };
 
 Gui::Gui(
     std::vector<SwallowTaskInfo> tasks,
-    AnnotationsMap annotations,
+    AnnotationManager& annotation_mgr,
     std::filesystem::path data_dir,
     bool shuffle
 ) :
-    pimpl(std::make_unique<Impl>(
-        std::move(tasks), std::move(annotations), std::move(data_dir), shuffle
-    ))
+    pimpl(std::make_unique<Impl>(std::move(tasks), annotation_mgr, std::move(data_dir), shuffle))
 {}
 
 Gui::~Gui() = default;

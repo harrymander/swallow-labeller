@@ -18,6 +18,7 @@ if(BUILD_TESTS)
 endif()
 
 add_executable(implot-rects
+    src/annotation-manager.cpp
     src/data.cpp
     src/gui.cpp
     src/drag-range.cpp

@@ -4,6 +4,7 @@
 #include <istream>
 #include <map>
 #include <optional>
+#include <ostream>
 #include <string>
 #include <vector>
 
@@ -24,6 +25,8 @@ struct LabellingDataFile {
 struct TimeRange {
     double start;
     double end;
+
+    bool operator==(const TimeRange&) const = default;
 };
 
 struct SwallowTaskInfo {
@@ -52,6 +55,8 @@ struct SwallowApneaLabel {
     TimeRange time;
     SRCPattern pattern;
     bool is_ambiguous;
+
+    bool operator==(const SwallowApneaLabel&) const = default;
 };
 
 enum class SwallowLabelInfo {
@@ -75,11 +80,20 @@ struct SwallowAnnotation {
     std::vector<TimeRange> ear_clicks;
     EarClickLabelInfo ear_click_info;
     std::optional<std::string> ear_click_notes;
+
+    bool operator==(const SwallowAnnotation&) const = default;
 };
 
 using AnnotationsMap = std::map<std::string, SwallowAnnotation>;
 
 AnnotationsMap load_swallow_annotation_json(std::istream& stream);
+
+/**
+ * Writes the map JSON to os
+ *
+ * Raises std::runtime_error or subclass thereof on write error.
+ */
+void dump_swallow_annotations_json(std::ostream& os, const AnnotationsMap& map);
 
 }; // namespace labelling_task
 
