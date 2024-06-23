@@ -41,9 +41,9 @@ public:
         for (auto task : all_tasks) {
             const auto found_annotated = annotations.find(task.get_id());
             if (found_annotated != annotations.end()) {
-                annotated.emplace_back(TaskStrWrapper(std::move(task), true));
+                annotated.emplace_back(std::move(task), true);
             } else {
-                unannotated.emplace_back(TaskStrWrapper(std::move(task), false));
+                unannotated.emplace_back(std::move(task), false);
             }
         }
 
