@@ -145,7 +145,7 @@ void draw_plot_hovered(const double *x, size_t n, const double *y)
 
 void plot_line(const char *id, const std::vector<double>& x, const std::vector<double>& y)
 {
-    ImPlot::PlotLine(id, x.data(), y.data(), y.size());
+    ImPlot::PlotLine(id, x.data(), y.data(), static_cast<int>(y.size()));
 }
 
 template <class T> struct RadioButtonField {
@@ -250,7 +250,9 @@ void SwallowTaskPlotter::draw(const char *id)
 
 void SwallowTaskPlotter::plot_event_digital() const
 {
-    ImPlot::PlotDigital("##event", data.flow_time.data(), event.data(), event.size());
+    ImPlot::PlotDigital(
+        "##event", data.flow_time.data(), event.data(), static_cast<int>(event.size())
+    );
 }
 
 void SwallowTaskPlotter::plot_data(
