@@ -52,7 +52,7 @@ ImPlotRange initial_range(const std::vector<double>& time, const std::vector<uin
 bool begin_data_plot(const char *id)
 {
     return ImPlot::BeginPlot(
-        id, {}, ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus
+        id, {-1, 0}, ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus
     );
 }
 
@@ -224,19 +224,20 @@ void SwallowTaskPlotter::draw(const char *id)
 {
     ImGui::PushID(id);
 
-    radio_button_swallow_label_info("##swallow_label_info", annotation.swallow_info);
-    radio_button_earclick_label_info("##earclick_label_info", annotation.ear_click_info);
-    if (ImPlot::BeginSubplots("##subplot", 2, 1, {-1, 600})) {
+    if (ImPlot::BeginAlignedPlots("##aligned_plots")) {
+        radio_button_swallow_label_info("##swallow_label_info", annotation.swallow_info);
         if (begin_data_plot("##flow")) {
             draw_flow_plot();
             ImPlot::EndPlot();
         }
+
+        radio_button_earclick_label_info("##earclick_label_info", annotation.ear_click_info);
         if (begin_data_plot("##ear_audio")) {
             ImPlot::SetupAxis(ImAxis_X1, "Time (s)");
             draw_audio_plot();
             ImPlot::EndPlot();
         }
-        ImPlot::EndSubplots();
+        ImPlot::EndAlignedPlots();
     }
 
     if (ImPlot::BeginPlot("##summary", ImVec2(-1, 75), ImPlotFlags_CanvasOnly)) {
