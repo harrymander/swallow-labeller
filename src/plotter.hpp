@@ -6,6 +6,8 @@
 #include "labelling-task.hpp"
 #include "selector.hpp"
 
+#include "imgui.h"
+
 #include <cmath>
 #include <vector>
 
@@ -19,12 +21,25 @@ public:
     void draw_swallow_apnea_info();
     void draw_swallow_notes();
 
+    void draw_apnea_selection();
+
     void draw_earclick_label_info();
     void draw_earclick_notes();
 
 private:
+    static constexpr ImColor ApneaLabelColor = ImColor(1.0F, 1.0F, 0.0F, 0.2F);
+
+    [[nodiscard]] bool draw_apnea_selector();
+
+    ImPlotRange apnea_range = {NAN, NAN};
+    plot::PlotXSelector apnea_selector;
+
+    std::vector<ImPlotRange> earclick_ranges = {};
+    plot::PlotXSelector earclick_selector;
+
     labelling_task::SwallowAnnotation annotation;
-    labelling_task::SwallowApneaLabel swallow_apnea;
+    labelling_task::SRCPattern src_pattern;
+    bool is_ambiguous;
     std::string swallow_notes;
     std::string ear_click_notes;
 };

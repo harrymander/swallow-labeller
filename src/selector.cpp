@@ -69,7 +69,7 @@ bool PlotXSelector::draw(
             );
             std::tie(xmin_px, xmax_px) = std::minmax(clicked_pos, position_clamped);
             ImGui::ClearActiveID();
-        } else {
+        } else if (!ImGui::IsMouseDown(mouse_button)) {
             selecting = false;
         }
     } else if (key_down && ImPlot::IsPlotHovered() && ImGui::IsMouseDown(mouse_button)) {

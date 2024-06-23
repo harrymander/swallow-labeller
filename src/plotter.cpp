@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <iterator>
 #include <optional>
 #include <vector>
@@ -229,14 +230,34 @@ void text_input_trim(const char *label, std::string& text, std::optional<std::st
     }
 }
 
+bool range_isnan(const ImPlotRange& range)
+{
+    return std::isnan(range.Min) && std::isnan(range.Max);
+}
+
 }; // namespace
 
-SwallowAnnotationEditor::SwallowAnnotationEditor(SwallowAnnotation annotation) :
-    annotation(std::move(annotation)),
-    swallow_apnea(util::value_or_default(annotation.swallow_apnea)),
+SwallowAnnotationEditor::SwallowAnnotationEditor(SwallowAnnotation annotation_) :
+    annotation(std::move(annotation_)),
+    src_pattern(
+        annotation.swallow_apnea.has_value() ? annotation.swallow_apnea->pattern : SRCPattern{}
+    ),
+    is_ambiguous(
+        annotation.swallow_apnea.has_value() ? annotation.swallow_apnea->is_ambiguous : false
+    ),
     swallow_notes(util::value_or_default(annotation.swallow_notes)),
     ear_click_notes(util::value_or_default(annotation.ear_click_notes))
-{}
+{
+    if (annotation.swallow_apnea.has_value()) {
+        const auto& region = annotation.swallow_apnea->time;
+        std::tie(apnea_range.Min, apnea_range.Max) = std::minmax(region.start, region.end);
+    }
+
+    for (const auto& region : annotation.ear_clicks) {
+        const auto [start, end] = std::minmax(region.start, region.end);
+        earclick_ranges.emplace_back(start, end);
+    }
+}
 
 void SwallowAnnotationEditor::draw_swallow_label_info()
 {
@@ -246,9 +267,9 @@ void SwallowAnnotationEditor::draw_swallow_label_info()
 void SwallowAnnotationEditor::draw_swallow_apnea_info()
 {
     ImGui::BeginDisabled(annotation.swallow_info != SwallowLabelInfo::Ok);
-    radio_button_src_patterns("##src_pattern", swallow_apnea.pattern);
+    radio_button_src_patterns("##src_pattern", src_pattern);
     ImGui::SameLine();
-    ImGui::Checkbox("Ambiguous swallow", &swallow_apnea.is_ambiguous);
+    ImGui::Checkbox("Ambiguous swallow", &is_ambiguous);
     ImGui::EndDisabled();
 }
 
@@ -267,6 +288,23 @@ void SwallowAnnotationEditor::draw_swallow_notes()
     text_input_trim("Swallow notes", swallow_notes, annotation.swallow_notes);
 }
 
+bool SwallowAnnotationEditor::draw_apnea_selector()
+{
+    return apnea_selector.draw(
+        0, apnea_range, ApneaLabelColor, 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl
+    );
+}
+
+void SwallowAnnotationEditor::draw_apnea_selection()
+{
+    if (annotation.swallow_info != SwallowLabelInfo::Ok) {
+        return;
+    }
+    if (!(apnea_selector.is_selecting() || range_isnan(apnea_range)) || draw_apnea_selector()) {
+        plot::drag_xrange(0, apnea_range, ApneaLabelColor);
+    }
+}
+
 SwallowTaskPlotter::SwallowTaskPlotter(SwallowTaskData data_) :
     data(std::move(data_)),
     event(data.event.begin(), data.event.end()),
@@ -282,6 +320,7 @@ void SwallowTaskPlotter::draw(const char *id)
         annotation_editor.draw_swallow_apnea_info();
         if (begin_data_plot("##flow")) {
             draw_flow_plot();
+            annotation_editor.draw_apnea_selection();
             ImPlot::EndPlot();
         }
         annotation_editor.draw_swallow_notes();
