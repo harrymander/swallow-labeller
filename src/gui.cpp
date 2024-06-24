@@ -217,33 +217,36 @@ public:
         if (error_str) {
             ImGui::Text("Error: %s", error_str->c_str());
         } else {
-            ImGui::TextUnformatted(path_str.c_str());
-            auto& plotter = std::get<SwallowTaskPlotter>(error_or_plotter);
-            ImGui::BeginDisabled(!plotter.valid_annotation());
-            bool update_annotation = ImGui::Button(new_annotation ? "Submit" : "Update");
-            ImGui::EndDisabled();
-            if (update_annotation) {
-                update_annotation =
-                    annotation_mgr.add_annotation(task.get_id(), plotter.annotation());
-                task_list.set_current_task_annotated();
-            }
-            plotter.draw("#task_plot");
-
-            if (update_annotation) {
-                try {
-                    annotation_mgr.sync_to_file();
-                } catch (const std::runtime_error& e) {
-                    std::stringstream ss;
-                    ss << "Error updating annotation file: " << e.what();
-                    const auto error = ss.str();
-                    spdlog::error("{}", error);
-                    error_or_plotter.emplace<std::string>(error);
-                }
-            }
+            draw_plotter(std::get<SwallowTaskPlotter>(error_or_plotter));
         }
     }
 
 private:
+    void draw_plotter(SwallowTaskPlotter& plotter)
+    {
+        ImGui::TextUnformatted(path_str.c_str());
+        ImGui::BeginDisabled(!plotter.valid_annotation());
+        bool update_annotation = ImGui::Button(new_annotation ? "Submit" : "Update");
+        ImGui::EndDisabled();
+        if (update_annotation) {
+            update_annotation = annotation_mgr.add_annotation(task.get_id(), plotter.annotation());
+            task_list.set_current_task_annotated();
+        }
+        plotter.draw("#task_plot");
+
+        if (update_annotation) {
+            try {
+                annotation_mgr.sync_to_file();
+            } catch (const std::runtime_error& e) {
+                std::stringstream ss;
+                ss << "Error updating annotation file: " << e.what();
+                const auto error = ss.str();
+                spdlog::error("{}", error);
+                error_or_plotter.emplace<std::string>(error);
+            }
+        }
+    }
+
     const SwallowTaskInfo& task;
     TaskList& task_list;
     AnnotationManager& annotation_mgr;
