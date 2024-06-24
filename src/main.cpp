@@ -94,11 +94,11 @@ load_labelling_tasks(const argparse::ArgumentParser& program)
     return std::nullopt;
 }
 
-std::optional<AnnotationsMap> load_annotations(const std::string& path)
+std::optional<AnnotationsMap> load_annotations(const std::filesystem::path& path)
 {
     std::ifstream stream(path);
     if (!stream) {
-        spdlog::critical("Could not open annotations file: {}", path);
+        spdlog::critical("Could not open annotations file: {}", path.string());
         return std::nullopt;
     }
     try {
@@ -116,7 +116,7 @@ std::optional<AnnotationsMap> load_annotations(const std::string& path)
 std::optional<AnnotationManager> make_annotations_mgr(const argparse::ArgumentParser& parser)
 {
     auto existing_path = parser.present("--existing-annotations");
-    std::filesystem::path annotations_path(parser.get("--annotations"));
+    auto annotations_path = std::filesystem::path(parser.get("--annotations")).make_preferred();
     AnnotationsMap annotations;
     if (existing_path.has_value()) {
         spdlog::info(
@@ -124,7 +124,7 @@ std::optional<AnnotationManager> make_annotations_mgr(const argparse::ArgumentPa
             *existing_path,
             annotations_path.string()
         );
-        auto opt = load_annotations(*existing_path);
+        auto opt = load_annotations(std::filesystem::path(*existing_path).make_preferred());
         if (!opt.has_value()) {
             return std::nullopt;
         }
