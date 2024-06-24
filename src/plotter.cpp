@@ -461,11 +461,9 @@ private:
 
     void update_apnea_label()
     {
-        // TODO: should we check this?
         if (!valid_apnea_label()) {
             return;
         }
-
         if (annotation_.swallow_info == SwallowLabelInfo::Ok) {
             TimeRange time_range{apnea_range.Min, apnea_range.Max};
             annotation_.swallow_apnea.emplace(time_range, src_pattern, is_ambiguous);
