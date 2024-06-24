@@ -10,7 +10,8 @@
                 "BUILD_SHARED_LIBS": "OFF",
                 "ZLIB_USE_STATIC_LIBS": "ON",
                 "FETCH_GTEST": "ON",
-                "BUILD_TESTS": "ON"
+                "BUILD_TESTS": "ON",
+                "ENABLE_LINTING": "OFF"
             }
         }
     ]
