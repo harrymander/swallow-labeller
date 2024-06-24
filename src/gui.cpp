@@ -241,7 +241,7 @@ private:
 
         static const char *delete_button_str = "Delete";
         float update_button_width = -1;
-        if (new_annotation) {
+        if (!new_annotation) {
             const float del_button_width =
                 ImGui::CalcTextSize(delete_button_str).x + ImGui::GetStyle().ItemInnerSpacing.x * 4;
             update_button_width = ImGui::GetContentRegionAvail().x - del_button_width;
