@@ -225,15 +225,29 @@ private:
     void draw_plotter(SwallowTaskPlotter& plotter)
     {
         ImGui::TextUnformatted(path_str.c_str());
+        constexpr float ButtonHeightFactor = 2.5;
+        const float button_height = ButtonHeightFactor * ImGui::GetFrameHeight();
+        const float padding_y = 2 * ImGui::GetStyle().FramePadding.y;
+        if (ImGui::BeginChild(
+                "##task_plot_container",
+                {-1, ImGui::GetContentRegionAvail().y - button_height - padding_y},
+                0,
+                ImGuiWindowFlags_AlwaysAutoResize
+            ))
+        {
+            plotter.draw("##task_plot");
+        }
+        ImGui::EndChild();
+
         ImGui::BeginDisabled(!plotter.valid_annotation());
-        bool update_annotation = ImGui::Button(new_annotation ? "Submit" : "Update");
-        ImGui::EndDisabled();
+        bool update_annotation =
+            ImGui::Button(new_annotation ? "Submit" : "Update", {-1, button_height});
         if (update_annotation) {
             update_annotation = annotation_mgr.add_annotation(task.get_id(), plotter.annotation());
             task_list.set_current_task_annotated();
+            new_annotation = false;
         }
-        plotter.draw("#task_plot");
-
+        ImGui::EndDisabled();
         if (update_annotation) {
             try {
                 annotation_mgr.sync_to_file();
