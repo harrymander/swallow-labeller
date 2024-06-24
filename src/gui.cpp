@@ -220,10 +220,11 @@ public:
             ImGui::TextUnformatted(path_str.c_str());
             auto& plotter = std::get<SwallowTaskPlotter>(error_or_plotter);
             ImGui::BeginDisabled(!plotter.valid_annotation());
-            const bool update_annotation = ImGui::Button(new_annotation ? "Submit" : "Update");
+            bool update_annotation = ImGui::Button(new_annotation ? "Submit" : "Update");
             ImGui::EndDisabled();
             if (update_annotation) {
-                annotation_mgr.add_annotation(task.get_id(), plotter.annotation());
+                update_annotation =
+                    annotation_mgr.add_annotation(task.get_id(), plotter.annotation());
                 task_list.set_current_task_annotated();
             }
             plotter.draw("#task_plot");

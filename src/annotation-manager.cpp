@@ -46,22 +46,23 @@ const SwallowAnnotation *AnnotationManager::get_annotation(const std::string& id
     return &it->second;
 }
 
-void AnnotationManager::add_annotation(const std::string& id, SwallowAnnotation annotation)
+bool AnnotationManager::add_annotation(const std::string& id, SwallowAnnotation annotation)
 {
     normalise_annotation(annotation);
     const auto it = annotations.find(id);
     if (it != annotations.end()) {
         const auto& existing = it->second;
         if (existing == annotation) {
-            spdlog::debug("Annotation for id={}, unchanged; doing nothing", id);
-            return;
+            spdlog::debug("Annotation for id={} unchanged", id);
+            return false;
         }
 
-        spdlog::debug("Annotation for id={} changed, writing to file", id);
+        spdlog::debug("Annotation for id={} changed", id);
     } else {
-        spdlog::debug("New annotation for id={}, writing to file", id);
+        spdlog::debug("New annotation for id={}", id);
     }
     annotations[id] = annotation;
+    return true;
 }
 
 void AnnotationManager::sync_to_file() const

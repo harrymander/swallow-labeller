@@ -20,9 +20,10 @@ public:
     ) const;
 
     /**
-     * Adds or updates annotation with given id.
+     * Adds or updates annotation with given id. Returns true if annotation added or updated.
      */
-    void add_annotation(const std::string& id, labelling_task::SwallowAnnotation annotation);
+    [[nodiscard]] bool
+    add_annotation(const std::string& id, labelling_task::SwallowAnnotation annotation);
 
     /**
      * Writes annotations to file.
