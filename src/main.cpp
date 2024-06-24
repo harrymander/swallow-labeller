@@ -48,13 +48,15 @@ int parse_args(argparse::ArgumentParser& program, int argc, const char **argv)
 {
     program.add_argument("--log").help("file to log to");
     program.add_argument("--tasks", "-t").required().help("path to labelling tasks JSON");
+    program.add_argument("--data-dir", "-d").required().help("directory containing data files");
     program.add_argument("--annotations", "-a")
         .required()
-        .help("path to write annotations to; if exists and --existing-annotations not passed, "
-              "reads existing annotations from this file");
+        .help("path to write annotations to; if exists and --existing-annotations\n"
+              "not passed, reads existing annotations from this file");
     program.add_argument("--existing-annotations", "-e")
-        .help("reads existing annotations from this file rather than file passed to --annotations");
-    program.add_argument("--data-dir", "-d").required().help("directory containing data files");
+        .help("reads existing annotations from this file rather than file passed to\n"
+              "--annotations; WARNING: this will cause any existing annotations in\n"
+              "file passed to --annotations to be overwritten!");
     program.add_argument("--no-shuffle").flag().help("do not display tasks in random order");
 
     try {
