@@ -489,13 +489,12 @@ private:
 public:
     explicit AnnotationEditor(SwallowAnnotation annotation = {}) :
         annotation_(std::move(annotation)),
-        src_pattern(
-            annotation_.swallow_apnea.has_value() ? annotation_.swallow_apnea->pattern :
-                                                    SRCPattern{}
-        ),
-        is_ambiguous(
-            annotation_.swallow_apnea.has_value() ? annotation_.swallow_apnea->is_ambiguous : false
-        ),
+        src_pattern(optutil::map_or(
+            annotation_.swallow_apnea, [](const auto& a) { return a.pattern; }, SRCPattern{}
+        )),
+        is_ambiguous(optutil::map_or(
+            annotation_.swallow_apnea, [](const auto& a) { return a.is_ambiguous; }, false
+        )),
         swallow_notes(optutil::value_or_default(annotation_.swallow_notes)),
         ear_click_notes(optutil::value_or_default(annotation_.ear_click_notes)),
         earclick_selections(
