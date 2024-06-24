@@ -2,7 +2,6 @@
 #define INCLUDE_RECAP_LABELLER_GUI_HPP
 
 #include "annotation-manager.hpp"
-#include "data.hpp"
 #include "labelling-task.hpp"
 
 #include <filesystem>
