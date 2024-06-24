@@ -13,7 +13,7 @@ namespace recap::labeller::gui {
 
 class Gui {
 public:
-    Gui(std::vector<labelling_task::SwallowTaskInfo> tasks,
+    Gui(std::vector<recap::labeller::task::SwallowTaskInfo> tasks,
         annotation_manager::AnnotationManager& annotation_mgr,
         std::filesystem::path data_dir,
         bool shuffle = true);

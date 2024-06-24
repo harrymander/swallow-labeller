@@ -8,7 +8,7 @@
 #include <string_view>
 #include <vector>
 
-using namespace labelling_task;
+using namespace recap::labeller::task;
 
 static void load_from_path(const char *path, std::vector<SwallowTaskInfo>& tasks)
 {

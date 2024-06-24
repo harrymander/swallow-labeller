@@ -22,7 +22,7 @@ namespace {
 
 namespace platform = recap::labeller::platform;
 using namespace recap::labeller::gui;
-using namespace labelling_task;
+using namespace recap::labeller::task;
 using recap::labeller::annotation_manager::AnnotationManager;
 
 void setup_logging(std::optional<std::string>&& logfile)

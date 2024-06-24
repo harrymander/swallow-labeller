@@ -5,7 +5,7 @@
 
 #include <stdexcept>
 
-using namespace plot;
+using namespace recap::labeller::data;
 
 static SwallowTaskData load_data(const std::string& path)
 {

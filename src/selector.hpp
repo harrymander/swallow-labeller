@@ -4,7 +4,7 @@
 #include "imgui.h"
 #include "implot.h"
 
-namespace plot {
+namespace recap::plot {
 
 using PlotSelectorFlags = unsigned int;
 
@@ -38,6 +38,6 @@ private:
     bool selecting = false;
 };
 
-}; // namespace plot
+}; // namespace recap::plot
 
 #endif // INCLUDE_PLOT_SELECTOR_HPP

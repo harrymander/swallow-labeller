@@ -10,7 +10,7 @@
 #include <cmath>
 #include <tuple>
 
-namespace plot {
+namespace recap::plot {
 
 static bool key_down_or_none(ImGuiKey key)
 {
@@ -106,4 +106,4 @@ bool PlotXSelector::is_selecting() const
     return selecting;
 }
 
-}; // namespace plot
+}; // namespace recap::plot

@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace labelling_task {
+namespace recap::labeller::task {
 
 enum class SwallowTestType {
     TidalBreathing,
@@ -95,6 +95,6 @@ AnnotationsMap load_swallow_annotation_json(std::istream& stream);
  */
 void dump_swallow_annotations_json(std::ostream& os, const AnnotationsMap& map);
 
-}; // namespace labelling_task
+}; // namespace recap::labeller::task
 
 #endif // INCLUDE_LABELLING_TASK_HPP

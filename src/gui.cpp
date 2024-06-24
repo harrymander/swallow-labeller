@@ -26,10 +26,10 @@
 
 namespace recap::labeller::gui {
 
-using namespace labelling_task;
-using plot::SwallowTaskData;
-using namespace recap::labeller::plotter;
 using namespace recap::labeller::annotation_manager;
+using namespace recap::labeller::plotter;
+using namespace recap::labeller::task;
+using recap::labeller::data::SwallowTaskData;
 
 namespace {
 

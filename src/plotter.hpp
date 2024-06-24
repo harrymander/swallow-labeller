@@ -17,7 +17,8 @@ namespace recap::labeller::plotter {
 class SwallowTaskPlotter {
 public:
     explicit SwallowTaskPlotter(
-        plot::SwallowTaskData data, labelling_task::SwallowAnnotation annotation = {}
+        recap::labeller::data::SwallowTaskData data,
+        recap::labeller::task::SwallowAnnotation annotation = {}
     );
     ~SwallowTaskPlotter() noexcept;
     SwallowTaskPlotter(SwallowTaskPlotter&&) noexcept;
@@ -28,7 +29,7 @@ public:
 
     void draw(const char *id);
 
-    [[nodiscard]] const labelling_task::SwallowAnnotation& annotation() const;
+    [[nodiscard]] const recap::labeller::task::SwallowAnnotation& annotation() const;
 
     [[nodiscard]] bool valid_annotation() const;
 
@@ -48,14 +49,14 @@ private:
     void plot_flow_line();
     void plot_event_digital() const;
 
-    plot::PlotXSelector summary_selector = {};
-    plot::PlotXSelector selector = {};
+    recap::plot::PlotXSelector summary_selector = {};
+    recap::plot::PlotXSelector selector = {};
     ImPlotRange selector_range = {};
     ImPlotRange last_selector_range = {NAN, NAN};
 
     class AnnotationEditor;
 
-    plot::SwallowTaskData data;
+    recap::labeller::data::SwallowTaskData data;
     std::vector<double> event;
     ImPlotRange summary_range;
     std::unique_ptr<AnnotationEditor> annotation_editor;

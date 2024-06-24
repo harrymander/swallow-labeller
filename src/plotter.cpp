@@ -27,8 +27,8 @@
 
 namespace recap::labeller::plotter {
 
-using plot::SwallowTaskData;
-using namespace labelling_task;
+using recap::labeller::data::SwallowTaskData;
+using namespace recap::labeller::task;
 
 namespace util = recap::util;
 namespace strutil = recap::strutil;
@@ -290,7 +290,7 @@ private:
     SelectionRanges ranges;
     std::vector<std::string> labels;
 
-    plot::PlotXSelector selector;
+    recap::plot::PlotXSelector selector;
     ImPlotRange next_range = {NAN, NAN};
     std::optional<std::size_t> selected_index = std::nullopt;
     std::optional<std::size_t> hovered_index = std::nullopt;
@@ -361,12 +361,12 @@ public:
 
         for (std::size_t i = 0; i < ranges.size(); i++) {
             const bool selected = optutil::value_and_equal(selected_index, i);
-            plot::drag_xrange(
+            recap::plot::drag_xrange(
                 static_cast<ImGuiID>(i) + 1,
                 ranges.plot_ranges()[i],
                 selected ? selected_color :
                            (optutil::value_and_equal(hovered_index, i) ? hovered_color : color),
-                selected && !selector.is_selecting() ? 0 : plot::DragXRangeFlag::NoInput
+                selected && !selector.is_selecting() ? 0 : recap::plot::DragXRangeFlag::NoInput
             );
         }
         ImGui::PopID();
@@ -376,12 +376,12 @@ public:
     {
         for (std::size_t i = 0; i < ranges.size(); i++) {
             const bool selected = optutil::value_and_equal(selected_index, i);
-            plot::drag_xrange(
+            recap::plot::drag_xrange(
                 static_cast<ImGuiID>(i) + start_id,
                 ranges.plot_ranges()[i],
                 selected ? selected_color :
                            (optutil::value_and_equal(hovered_index, i) ? hovered_color : color),
-                plot::DragXRangeFlag::NoInput
+                recap::plot::DragXRangeFlag::NoInput
             );
         }
     }
@@ -437,10 +437,10 @@ private:
     static constexpr ImColor EarclickLabelColorSelected = ImColor(0.0F, 1.0F, 0.0F, 0.4F);
 
     ImPlotRange apnea_range = {NAN, NAN};
-    plot::PlotXSelector apnea_selector;
+    recap::plot::PlotXSelector apnea_selector;
 
-    labelling_task::SwallowAnnotation annotation_;
-    labelling_task::SRCPattern src_pattern;
+    SwallowAnnotation annotation_;
+    SRCPattern src_pattern;
     bool is_ambiguous;
     std::string swallow_notes;
     std::string ear_click_notes;
@@ -573,7 +573,7 @@ public:
             changed = draw_apnea_selector();
         }
         if (apnea_selected()) {
-            if (plot::drag_xrange(0, apnea_range, ApneaLabelColorSelected)) {
+            if (recap::plot::drag_xrange(0, apnea_range, ApneaLabelColorSelected)) {
                 changed = true;
             }
         }
@@ -606,8 +606,8 @@ public:
     void draw_regions_readonly()
     {
         if (annotation_.swallow_info == SwallowLabelInfo::Ok) {
-            plot::drag_xrange(
-                0, apnea_range, ApneaLabelColorSelecting, plot::DragXRangeFlag::NoInput
+            recap::plot::drag_xrange(
+                0, apnea_range, ApneaLabelColorSelecting, recap::plot::DragXRangeFlag::NoInput
             );
         }
 
@@ -753,10 +753,10 @@ void SwallowTaskPlotter::draw_summary_plot()
 
     constexpr ImColor summary_color = {.5F, .5F, .5F, .6F};
     summary_selector.draw(
-        0, summary_range, summary_color, plot::PlotXSelector::NoCursor, ImGuiMouseButton_Left
+        0, summary_range, summary_color, recap::plot::PlotXSelector::NoCursor, ImGuiMouseButton_Left
     );
     if (!summary_selector.is_selecting()) {
-        plot::drag_xrange(0, summary_range, summary_color);
+        recap::plot::drag_xrange(0, summary_range, summary_color);
     }
 
     plot_line("##summary_flow_plot_line", data.flow_time, data.flow);

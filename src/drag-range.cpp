@@ -12,7 +12,7 @@
 #include <cmath>
 #include <tuple>
 
-namespace plot {
+namespace recap::plot {
 
 using namespace recap::util;
 
@@ -31,7 +31,7 @@ static bool drag_xrange(
     ImGuiID id,
     float& x0,
     float& x1,
-    plot::DragXRangeFlags flags,
+    recap::plot::DragXRangeFlags flags,
     const ImRect& limits,
     bool& clicked,
     bool& hovered,
@@ -187,7 +187,7 @@ bool drag_xrange(
     ImGuiID id,
     ImPlotRange& xrange,
     const ImColor& color,
-    plot::DragXRangeFlags flags,
+    recap::plot::DragXRangeFlags flags,
     bool *out_clicked,
     bool *out_hovered,
     bool *held
@@ -196,4 +196,4 @@ bool drag_xrange(
     return drag_xrange(id, xrange.Min, xrange.Max, color, flags, out_clicked, out_hovered, held);
 }
 
-}; // namespace plot
+}; // namespace recap::plot

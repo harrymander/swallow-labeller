@@ -10,21 +10,24 @@ namespace recap::labeller::annotation_manager {
 
 class AnnotationManager {
 public:
-    AnnotationManager(std::filesystem::path path, labelling_task::AnnotationsMap annotations);
+    AnnotationManager(
+        std::filesystem::path path, recap::labeller::task::AnnotationsMap annotations
+    );
 
     /**
      * Retrieves annotation with annotation_id and returns pointer to it, or nullptr if no
      * annotation with that ID
      */
-    [[nodiscard]] const labelling_task::SwallowAnnotation *
+    [[nodiscard]] const recap::labeller::task::SwallowAnnotation *
     get_annotation(const std::string& annotation_id) const;
 
     /**
      * Adds or updates annotation with given annotation_id. Returns true if annotation added or
      * updated.
      */
-    [[nodiscard]] bool
-    add_annotation(const std::string& annotation_id, labelling_task::SwallowAnnotation annotation);
+    [[nodiscard]] bool add_annotation(
+        const std::string& annotation_id, recap::labeller::task::SwallowAnnotation annotation
+    );
 
     void remove_annotation(const std::string& annotation_id);
 
@@ -37,7 +40,7 @@ public:
 
 private:
     std::filesystem::path path;
-    labelling_task::AnnotationsMap annotations;
+    recap::labeller::task::AnnotationsMap annotations;
     std::string path_str;
 };
 

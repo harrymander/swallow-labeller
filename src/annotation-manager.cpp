@@ -12,7 +12,7 @@
 
 namespace recap::labeller::annotation_manager {
 
-using namespace labelling_task;
+using namespace recap::labeller::task;
 
 namespace {
 

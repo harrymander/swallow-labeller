@@ -33,7 +33,7 @@ template <typename T> struct adl_serializer<std::optional<T>> {
 
 NLOHMANN_JSON_NAMESPACE_END
 
-namespace labelling_task {
+namespace recap::labeller::task {
 
 using Json = nlohmann::json;
 
@@ -155,4 +155,4 @@ std::unique_ptr<AnnotationsMapJsonWriter> annotations_map_to_json(const Annotati
     return std::make_unique<AnnotationsMapJsonWriter>(map);
 }
 
-}; // namespace labelling_task
+}; // namespace recap::labeller::task

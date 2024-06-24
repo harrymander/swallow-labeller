@@ -4,7 +4,7 @@
 #include "imgui.h"
 #include "implot.h"
 
-namespace plot {
+namespace recap::plot {
 
 using DragXRangeFlags = unsigned int;
 
@@ -40,7 +40,7 @@ bool drag_xrange(
     ImGuiID id,
     ImPlotRange& xrange,
     const ImColor& color,
-    plot::DragXRangeFlags flags = 0,
+    recap::plot::DragXRangeFlags flags = 0,
     bool *clicked = nullptr,
     bool *hovered = nullptr,
     bool *held = nullptr
@@ -51,12 +51,12 @@ bool drag_xrange(
     double& xmin,
     double& xmax,
     const ImColor& color,
-    plot::DragXRangeFlags flags = 0,
+    recap::plot::DragXRangeFlags flags = 0,
     bool *clicked = nullptr,
     bool *hovered = nullptr,
     bool *held = nullptr
 );
 
-} // namespace plot
+} // namespace recap::plot
 
 #endif // INCLUDE_PLOT_DRAG_RANGE_HPP
