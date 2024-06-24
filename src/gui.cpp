@@ -471,7 +471,7 @@ private:
     bool show_implot_demo = false;
     bool show_imgui_demo = false;
     bool show_imgui_metrics = false;
-    bool show_debug_info = true;
+    bool show_debug_info = false;
 
     std::filesystem::path data_dir;
     AnnotationManager& annotation_mgr;
