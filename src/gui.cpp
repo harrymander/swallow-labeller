@@ -402,9 +402,12 @@ private:
     static void draw_debug_info()
     {
         ImGuiIO& io = ImGui::GetIO();
-        ImGui::Text("Mouse Position: [%.0f,%.0f]", io.MousePos.x, io.MousePos.y);
         ImGui::Text(
-            "Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate
+            "Mouse Position: [%.0f,%.0f]. Application average: %.3f ms/frame (%.1f FPS).",
+            io.MousePos.x,
+            io.MousePos.y,
+            1000.0f / io.Framerate,
+            io.Framerate
         );
     }
 
