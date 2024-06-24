@@ -654,18 +654,25 @@ SwallowTaskPlotter& SwallowTaskPlotter::operator=(SwallowTaskPlotter&&) noexcept
 
 void SwallowTaskPlotter::draw(const char *id)
 {
+    constexpr ImGuiTableFlags TableFlags =
+        ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Resizable;
+
     ImGui::PushID(id);
 
-    if (ImGui::BeginChild("##plotter", {-100, -1}, ImGuiChildFlags_ResizeX)) {
+    if (ImGui::BeginTable("##table", 2, TableFlags)) {
+        ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch, 4);
+        ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch, 1);
+        ImGui::TableNextRow();
+
+        ImGui::TableNextColumn();
         draw_plots();
-    }
-    ImGui::EndChild();
-    ImGui::SameLine();
-    if (ImGui::BeginChild("##earclick_selection_list", {-1, -1}, ImGuiChildFlags_Border)) {
+
+        ImGui::TableNextColumn();
         ImGui::TextUnformatted("Ear click labels:");
         annotation_editor->draw_earclick_selection_list();
+
+        ImGui::EndTable();
     }
-    ImGui::EndChild();
 
     ImGui::PopID();
 }
