@@ -14,6 +14,8 @@
 
 namespace plot {
 
+using namespace recap::util;
+
 constexpr float EdgeWidthPx = 8;
 constexpr float HalfEdgeWidthPx = EdgeWidthPx / 2;
 
@@ -64,7 +66,7 @@ static bool drag_xrange(
     // Movement
     float *xmin;
     float *xmax;
-    std::tie(xmin, xmax) = util::minmax_pointers(&x0, &x1);
+    std::tie(xmin, xmax) = minmax_pointers(&x0, &x1);
     if (button_behaviour(*xmin + HalfEdgeWidthPx, *xmax - HalfEdgeWidthPx, ImGuiMouseCursor_Hand)) {
         const float delta = get_drag_delta(held);
         if (delta) {

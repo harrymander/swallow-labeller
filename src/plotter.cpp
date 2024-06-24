@@ -5,6 +5,8 @@
 #include "data.hpp"
 #include "drag-range.hpp"
 #include "labelling-task.hpp"
+#include "optutil.hpp"
+#include "strutil.hpp"
 #include "util.hpp"
 
 #include <imgui.h>
@@ -26,6 +28,10 @@ namespace recap::labeller::plotter {
 
 using plot::SwallowTaskData;
 using namespace labelling_task;
+
+namespace util = recap::util;
+namespace strutil = recap::strutil;
+namespace optutil = recap::optutil;
 
 namespace {
 
@@ -213,7 +219,7 @@ void text_input_trim(const char *label, std::string& text, std::optional<std::st
 {
     ImGui::InputText(label, &text);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
-        std::string trimmed = util::trimmed(text);
+        std::string trimmed = strutil::trimmed(text);
         if (trimmed.empty()) {
             spdlog::debug("Text input '{}' cleared", label);
             output = std::nullopt;
@@ -353,12 +359,12 @@ public:
         }
 
         for (std::size_t i = 0; i < ranges.size(); i++) {
-            const bool selected = util::has_value_and_equal(selected_index, i);
+            const bool selected = optutil::value_and_equal(selected_index, i);
             plot::drag_xrange(
                 static_cast<ImGuiID>(i) + 1,
                 ranges.plot_ranges()[i],
                 selected ? selected_color :
-                           (util::has_value_and_equal(hovered_index, i) ? hovered_color : color),
+                           (optutil::value_and_equal(hovered_index, i) ? hovered_color : color),
                 selected && !selector.is_selecting() ? 0 : plot::DragXRangeFlag::NoInput
             );
         }
@@ -368,12 +374,12 @@ public:
     void draw_regions_readonly(ImGuiID start_id)
     {
         for (std::size_t i = 0; i < ranges.size(); i++) {
-            const bool selected = util::has_value_and_equal(selected_index, i);
+            const bool selected = optutil::value_and_equal(selected_index, i);
             plot::drag_xrange(
                 static_cast<ImGuiID>(i) + start_id,
                 ranges.plot_ranges()[i],
                 selected ? selected_color :
-                           (util::has_value_and_equal(hovered_index, i) ? hovered_color : color),
+                           (optutil::value_and_equal(hovered_index, i) ? hovered_color : color),
                 plot::DragXRangeFlag::NoInput
             );
         }
@@ -393,7 +399,7 @@ public:
                 remove_selection(i);
             } else {
                 ImGui::SameLine();
-                const bool selected = util::has_value_and_equal(selected_index, i);
+                const bool selected = optutil::value_and_equal(selected_index, i);
                 if (ImGui::Selectable(labels[i].c_str(), selected)) {
                     if (selected) {
                         selected_index.reset();
@@ -490,8 +496,8 @@ public:
         is_ambiguous(
             annotation_.swallow_apnea.has_value() ? annotation_.swallow_apnea->is_ambiguous : false
         ),
-        swallow_notes(util::value_or_default(annotation_.swallow_notes)),
-        ear_click_notes(util::value_or_default(annotation_.ear_click_notes)),
+        swallow_notes(optutil::value_or_default(annotation_.swallow_notes)),
+        ear_click_notes(optutil::value_or_default(annotation_.ear_click_notes)),
         earclick_selections(
             "Ear click",
             EarclickLabelColor,
