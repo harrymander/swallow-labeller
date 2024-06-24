@@ -16,15 +16,16 @@ using namespace recap::labeller::task;
 
 namespace {
 
+void sort_time_ranges(std::vector<TimeRange>& ranges)
+{
+    std::sort(ranges.begin(), ranges.end(), [](const TimeRange& a, const TimeRange& b) {
+        return a.start < b.start ? true : a.end < b.end;
+    });
+}
+
 void normalise_annotation(SwallowAnnotation& annotation)
 {
-    std::sort(
-        annotation.ear_clicks.begin(),
-        annotation.ear_clicks.end(),
-        [](const TimeRange& a, const TimeRange& b) {
-            return a.start < b.start ? true : a.end < b.end;
-        }
-    );
+    sort_time_ranges(annotation.ear_clicks);
 }
 
 }; // namespace
