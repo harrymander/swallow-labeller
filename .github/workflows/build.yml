@@ -45,5 +45,5 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: implot-rects
-          path: build/${{ env.BUILD_TYPE }}/implot-rects*.exe
+          name: recap-labeller
+          path: build/${{ env.BUILD_TYPE }}/recap-labeller*.exe
