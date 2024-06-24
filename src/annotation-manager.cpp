@@ -65,6 +65,15 @@ bool AnnotationManager::add_annotation(const std::string& id, SwallowAnnotation 
     return true;
 }
 
+void AnnotationManager::remove_annotation(const std::string& id)
+{
+    const auto it = annotations.find(id);
+    if (it != annotations.end()) {
+        spdlog::debug("Removing annotation for id={}", id);
+        annotations.erase(it);
+    }
+}
+
 void AnnotationManager::sync_to_file() const
 {
     std::ofstream stream;

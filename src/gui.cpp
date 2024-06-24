@@ -239,15 +239,39 @@ private:
         }
         ImGui::EndChild();
 
+        static const char *delete_button_str = "Delete";
+        float update_button_width = -1;
+        if (new_annotation) {
+            const float del_button_width =
+                ImGui::CalcTextSize(delete_button_str).x + ImGui::GetStyle().ItemInnerSpacing.x * 4;
+            update_button_width = ImGui::GetContentRegionAvail().x - del_button_width;
+        }
+
         ImGui::BeginDisabled(!plotter.valid_annotation());
-        bool update_annotation =
-            ImGui::Button(new_annotation ? "Submit" : "Update", {-1, button_height});
+        bool update_annotation = ImGui::Button(
+            new_annotation ? "Submit" : "Update", {update_button_width, button_height}
+        );
         if (update_annotation) {
             update_annotation = annotation_mgr.add_annotation(task.get_id(), plotter.annotation());
             task_list.set_current_task_annotated();
             new_annotation = false;
         }
         ImGui::EndDisabled();
+        ImGui::SameLine();
+
+        if (!new_annotation) {
+            ImGui::PushStyleColor(ImGuiCol_Button, DeleteButtonColor);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, DeleteButtonColorHovered);
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, DeleteButtonColorActive);
+            if (ImGui::Button(delete_button_str, {0, button_height})) {
+                annotation_mgr.remove_annotation(task.get_id());
+                task_list.clear_current_task_annotated();
+                new_annotation = true;
+                update_annotation = true;
+            }
+            ImGui::PopStyleColor(3);
+        }
+
         if (update_annotation) {
             try {
                 annotation_mgr.sync_to_file();
@@ -260,6 +284,11 @@ private:
             }
         }
     }
+
+    // Red button:
+    const ImVec4 DeleteButtonColor = ImColor::HSV(0, 0.6F, 0.6F);
+    const ImVec4 DeleteButtonColorHovered = ImColor::HSV(0, 0.7F, 0.7F);
+    const ImVec4 DeleteButtonColorActive = ImColor::HSV(0, 0.8F, 0.8F);
 
     const SwallowTaskInfo& task;
     TaskList& task_list;
