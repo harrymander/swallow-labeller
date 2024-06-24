@@ -675,6 +675,11 @@ const SwallowAnnotation& SwallowTaskPlotter::annotation() const
     return annotation_editor->annotation();
 }
 
+bool SwallowTaskPlotter::valid_annotation() const
+{
+    return annotation_editor->is_valid();
+}
+
 void SwallowTaskPlotter::draw_plots()
 {
     if (ImPlot::BeginAlignedPlots("##aligned_plots")) {

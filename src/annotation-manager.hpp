@@ -20,9 +20,7 @@ public:
     ) const;
 
     /**
-     * Adds or updates annotation with given id and syncs to file.
-     *
-     * Raises std::runtime_error if there is an error writing to file.
+     * Adds or updates annotation with given id.
      */
     void add_annotation(const std::string& id, labelling_task::SwallowAnnotation annotation);
 
@@ -31,7 +29,7 @@ public:
      *
      * Raises std::runtime_error if there is an error writing to file.
      */
-    void sync_to_file();
+    void sync_to_file() const;
 
 private:
     std::filesystem::path path;

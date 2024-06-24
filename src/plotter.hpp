@@ -30,6 +30,8 @@ public:
 
     [[nodiscard]] const labelling_task::SwallowAnnotation& annotation() const;
 
+    [[nodiscard]] bool valid_annotation() const;
+
 private:
     static ImPlotRange
     initial_range(const std::vector<double>& time, const std::vector<uint8_t>& event);

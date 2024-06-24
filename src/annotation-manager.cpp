@@ -62,10 +62,9 @@ void AnnotationManager::add_annotation(const std::string& id, SwallowAnnotation 
         spdlog::debug("New annotation for id={}, writing to file", id);
     }
     annotations[id] = annotation;
-    sync_to_file();
 }
 
-void AnnotationManager::sync_to_file()
+void AnnotationManager::sync_to_file() const
 {
     std::ofstream stream;
     stream.exceptions(std::ios::badbit | std::ios::failbit);

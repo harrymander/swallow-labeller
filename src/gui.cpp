@@ -8,7 +8,6 @@
 #include <cnpy.h>
 #include <imgui.h>
 #include <implot.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/stopwatch.h>
 
@@ -34,9 +33,9 @@ using namespace recap::labeller::annotation_manager;
 
 namespace {
 
-class TaskManager {
+class TaskList {
 public:
-    TaskManager(const std::vector<SwallowTaskInfo>& all_tasks, AnnotationManager& annotation_mgr)
+    TaskList(const std::vector<SwallowTaskInfo>& all_tasks, const AnnotationManager& annotation_mgr)
     {
         std::vector<TaskStrWrapper> annotated;
         std::vector<TaskStrWrapper> unannotated;
@@ -100,7 +99,6 @@ public:
     [[nodiscard]] bool current_task_annotated() const { return index >= annotated_start_index; }
 
     // Moves task to front of annotated
-    // TODO: return to original position?
     void set_current_task_annotated()
     {
         if (current_task_annotated()) {
@@ -114,7 +112,6 @@ public:
     }
 
     // Moves task to front
-    // TODO: return to original position?
     void clear_current_task_annotated()
     {
         if (!current_task_annotated()) {
@@ -183,14 +180,34 @@ class TaskView {
 public:
     using Variant = std::variant<std::string, SwallowTaskPlotter>;
 
-    explicit TaskView(const std::filesystem::path& path) : path_str(path.string())
+    explicit TaskView(
+        const std::filesystem::path& data_dir,
+        TaskList& task_list,
+        AnnotationManager& annotation_mgr_
+    ) :
+        task(task_list.current_task()), task_list(task_list), annotation_mgr(annotation_mgr_)
     {
+        const auto path = (data_dir / std::filesystem::path(task.npz_file.path)).make_preferred();
+        path_str = path.string();
+        const SwallowAnnotation *annotation = annotation_mgr.get_annotation(task.get_id());
+        spdlog::debug(
+            "Task at path '{}' {} existing annotation",
+            path_str,
+            annotation != nullptr ? "has" : "does not have"
+        );
+        new_annotation = annotation == nullptr;
         try {
-            error_or_plotter.emplace<SwallowTaskPlotter>(load_swallow_task_data(path));
+            SwallowTaskData data = load_swallow_task_data(path);
+            error_or_plotter.emplace<SwallowTaskPlotter>(
+                data, annotation ? *annotation : SwallowAnnotation{}
+            );
         } catch (const std::exception& e) {
             const auto& what = e.what();
-            spdlog::error("Error loading task at path '{}': {}", path_str, what);
-            error_or_plotter = what;
+            std::stringstream ss;
+            ss << "Error loading task at path '" << path_str << "': " << what;
+            const auto error = ss.str();
+            spdlog::error("{}", error);
+            error_or_plotter = error;
         }
     }
 
@@ -198,15 +215,39 @@ public:
     {
         const std::string *error_str = std::get_if<std::string>(&error_or_plotter);
         if (error_str) {
-            ImGui::Text("Error loading task at path %s: %s", path_str.c_str(), error_str->c_str());
+            ImGui::Text("Error: %s", error_str->c_str());
         } else {
             ImGui::TextUnformatted(path_str.c_str());
-            std::get<SwallowTaskPlotter>(error_or_plotter).draw("#task_plot");
+            auto& plotter = std::get<SwallowTaskPlotter>(error_or_plotter);
+            ImGui::BeginDisabled(!plotter.valid_annotation());
+            const bool update_annotation = ImGui::Button(new_annotation ? "Submit" : "Update");
+            ImGui::EndDisabled();
+            if (update_annotation) {
+                annotation_mgr.add_annotation(task.get_id(), plotter.annotation());
+                task_list.set_current_task_annotated();
+            }
+            plotter.draw("#task_plot");
+
+            if (update_annotation) {
+                try {
+                    annotation_mgr.sync_to_file();
+                } catch (const std::runtime_error& e) {
+                    std::stringstream ss;
+                    ss << "Error updating annotation file: " << e.what();
+                    const auto error = ss.str();
+                    spdlog::error("{}", error);
+                    error_or_plotter.emplace<std::string>(error);
+                }
+            }
         }
     }
 
 private:
+    const SwallowTaskInfo& task;
+    TaskList& task_list;
+    AnnotationManager& annotation_mgr;
     std::string path_str;
+    bool new_annotation;
     Variant error_or_plotter;
 };
 
@@ -234,8 +275,9 @@ public:
         bool shuffle
     ) :
         data_dir(std::move(data_dir)),
-        task_manager(shuffle ? shuffled_vector(std::move(tasks_)) : tasks_, annotation_mgr),
-        task_view(load_current_task())
+        annotation_mgr(annotation_mgr),
+        task_list(shuffle ? shuffled_vector(std::move(tasks_)) : tasks_, this->annotation_mgr),
+        task_view(load_current_task_view())
     {
         spdlog::debug("Setting up ImGui and ImPlot...");
         IMGUI_CHECKVERSION();
@@ -336,35 +378,21 @@ private:
             if (show_debug_info) {
                 draw_debug_info();
             }
-
-            // TEMPORARY: this is just for testing
-            if (task_manager.current_task_annotated()) {
-                if (ImGui::Button("Clear annotation")) {
-                    task_manager.clear_current_task_annotated();
-                }
-            } else {
-                if (ImGui::Button("Set annotation")) {
-                    task_manager.set_current_task_annotated();
-                }
-            }
-
-            task_view.draw();
+            task_view->draw();
         }
         ImGui::EndChild();
     }
 
     void draw_sidebar()
     {
-        if (task_manager.draw("##tasklist")) {
-            task_view = load_current_task();
+        if (task_list.draw("##tasklist")) {
+            task_view = load_current_task_view();
         }
     }
 
-    [[nodiscard]] TaskView load_current_task() const
+    [[nodiscard]] std::unique_ptr<TaskView> load_current_task_view()
     {
-        auto path = data_dir / std::filesystem::path(task_manager.current_task().npz_file.path);
-        path.make_preferred();
-        return TaskView(path);
+        return std::make_unique<TaskView>(data_dir, task_list, annotation_mgr);
     }
 
     static void draw_debug_info()
@@ -396,8 +424,9 @@ private:
     bool show_debug_info = true;
 
     std::filesystem::path data_dir;
-    TaskManager task_manager;
-    TaskView task_view;
+    AnnotationManager& annotation_mgr;
+    TaskList task_list;
+    std::unique_ptr<TaskView> task_view;
 };
 
 Gui::Gui(
