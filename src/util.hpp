@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include <iterator>
-#include <optional>
 #include <utility>
 
 namespace recap::util {

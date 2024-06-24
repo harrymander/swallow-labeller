@@ -19,6 +19,7 @@
 #include <cmath>
 #include <cstddef>
 #include <iterator>
+#include <memory>
 #include <optional>
 #include <sstream>
 #include <string>

@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <string_view>
+#include <vector>
 
 namespace plot {
 

@@ -4,8 +4,6 @@
 #include "imgui.h"
 #include "implot.h"
 
-#include <optional>
-
 namespace plot {
 
 using PlotSelectorFlags = unsigned int;
