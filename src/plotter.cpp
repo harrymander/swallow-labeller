@@ -345,6 +345,7 @@ public:
 
             if (finished) {
                 spdlog::debug("{}: placed new label: [{}, {}]", id, next_range.Min, next_range.Max);
+                selected_index = ranges.size();
                 ranges.push_back(next_range);
                 set_labels();
                 next_range = {NAN, NAN};
