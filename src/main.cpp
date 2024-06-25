@@ -16,6 +16,7 @@
 #include <iostream>
 #include <optional>
 #include <stdexcept>
+#include <unordered_set>
 #include <vector>
 
 namespace {
@@ -70,6 +71,21 @@ int parse_args(argparse::ArgumentParser& program, int argc, const char **argv)
     return 0;
 }
 
+// TODO: this whole structure is a mess, need to encapsulate task management in a class...
+bool all_task_ids_unique(const std::vector<SwallowTaskInfo>& tasks)
+{
+    std::unordered_set<std::string> ids;
+    for (const auto& task : tasks) {
+        const auto& id = task.get_id();
+        if (ids.contains(id)) {
+            spdlog::error("Duplicate task ID: {}", id);
+            return false;
+        }
+        ids.insert(id);
+    }
+    return true;
+}
+
 std::optional<std::vector<SwallowTaskInfo>>
 load_labelling_tasks(const argparse::ArgumentParser& program)
 {
@@ -84,6 +100,10 @@ load_labelling_tasks(const argparse::ArgumentParser& program)
         auto tasks = load_swallow_task_info_json(stream);
         if (tasks.empty()) {
             spdlog::critical("Labelling tasks list is empty!");
+            return std::nullopt;
+        }
+        if (!all_task_ids_unique(tasks)) {
+            spdlog::critical("Got duplicate task IDs");
             return std::nullopt;
         }
         spdlog::debug("Loaded {} task info(s)", tasks.size());
