@@ -24,7 +24,7 @@ public:
     );
     [[nodiscard]] bool is_selecting() const;
 
-    enum {
+    enum : PlotSelectorFlags {
         // Disable cursor change when dragging
         NoCursor = 1 << 0,
 

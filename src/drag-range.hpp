@@ -8,7 +8,9 @@ namespace recap::plot {
 
 using DragXRangeFlags = unsigned int;
 
-enum DragXRangeFlag {
+enum DragXRangeFlag : DragXRangeFlags {
+    None = 0,
+
     // Disable cursors on hover
     NoCursor = 1 << 0,
 
