@@ -9,6 +9,7 @@
 #include <fmt/format.h>
 #include <imgui.h>
 #include <implot.h>
+#include <spdlog/fmt/std.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/stopwatch.h>
 
@@ -167,7 +168,7 @@ SwallowTaskData load_swallow_task_data(const std::filesystem::path& path)
     auto ret = SwallowTaskData::from_numpy(cnpy::npz_load(stream));
     spdlog::debug(
         "Data loaded from '{}' in {} ms:\n\t#flow samples: {}, #audio samples: {}",
-        path.string(),
+        path,
         stopwatch.elapsed_ms().count(),
         ret.flow.size(),
         ret.audio.size()
@@ -187,11 +188,10 @@ public:
         task(task_list.current_task()), task_list(task_list), annotation_mgr(annotation_mgr_)
     {
         const auto path = (data_dir / std::filesystem::path(task.npz_file.path)).make_preferred();
-        path_str = path.string();
         const SwallowAnnotation *annotation = annotation_mgr.get_annotation(task.get_id());
         spdlog::debug(
             "Task at path '{}' {} existing annotation",
-            path_str,
+            path,
             annotation != nullptr ? "has" : "does not have"
         );
         new_annotation = annotation == nullptr;
@@ -201,8 +201,7 @@ public:
                 data, annotation ? *annotation : SwallowAnnotation{}
             );
         } catch (const std::exception& e) {
-            std::string error =
-                fmt::format("Error loading task at path '{}': {}", path_str, e.what());
+            std::string error = fmt::format("Error loading task at path '{}': {}", path, e.what());
             spdlog::error(error);
             error_or_plotter = error;
         }

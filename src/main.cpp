@@ -4,6 +4,7 @@
 #include "platform.hpp"
 
 #include <argparse/argparse.hpp>
+#include <spdlog/fmt/std.h>
 #include <spdlog/logger.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -121,7 +122,7 @@ std::optional<AnnotationsMap> load_annotations(const std::filesystem::path& path
 {
     std::ifstream stream(path);
     if (!stream) {
-        spdlog::critical("Could not open annotations file: {}", path.string());
+        spdlog::critical("Could not open annotations file: {}", path);
         return std::nullopt;
     }
     try {
@@ -143,9 +144,7 @@ std::optional<AnnotationManager> make_annotations_mgr(const argparse::ArgumentPa
     AnnotationsMap annotations;
     if (existing_path.has_value()) {
         spdlog::info(
-            "Loading existing annotations from {} rather than {}",
-            *existing_path,
-            annotations_path.string()
+            "Loading existing annotations from {} rather than {}", *existing_path, annotations_path
         );
         auto opt = load_annotations(std::filesystem::path(*existing_path).make_preferred());
         if (!opt.has_value()) {
@@ -153,16 +152,14 @@ std::optional<AnnotationManager> make_annotations_mgr(const argparse::ArgumentPa
         }
         annotations = std::move(*opt);
     } else if (std::filesystem::exists(annotations_path)) {
-        spdlog::info("Path {} exists, trying to load annotations...", annotations_path.string());
+        spdlog::info("Path {} exists, trying to load annotations...", annotations_path);
         auto opt = load_annotations(annotations_path);
         if (!opt.has_value()) {
             return std::nullopt;
         }
         annotations = std::move(*opt);
     } else {
-        spdlog::info(
-            "No existing annotations, creating annotations file at {}", annotations_path.string()
-        );
+        spdlog::info("No existing annotations, creating annotations file at {}", annotations_path);
     }
 
     AnnotationManager manager(annotations_path, annotations);
@@ -189,7 +186,7 @@ int main(int argc, const char *argv[])
 
     const std::filesystem::path data_dir = program.get("--data-dir");
     if (!std::filesystem::is_directory(data_dir)) {
-        spdlog::critical("Data directory does not exist: {}", data_dir.string());
+        spdlog::critical("Data directory does not exist: {}", data_dir);
         return 1;
     }
 

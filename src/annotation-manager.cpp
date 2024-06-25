@@ -2,6 +2,7 @@
 
 #include "labelling-task.hpp"
 
+#include <spdlog/fmt/std.h>
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
@@ -31,7 +32,7 @@ void normalise_annotation(SwallowAnnotation& annotation)
 }; // namespace
 
 AnnotationManager::AnnotationManager(std::filesystem::path path, AnnotationsMap annotations) :
-    path(std::move(path)), annotations(std::move(annotations)), path_str(this->path.string())
+    path(std::move(path)), annotations(std::move(annotations))
 {
     for (auto& item : this->annotations) {
         normalise_annotation(item.second);
@@ -81,7 +82,7 @@ void AnnotationManager::sync_to_file() const
     stream.exceptions(std::ios::badbit | std::ios::failbit);
     stream.open(path);
     dump_swallow_annotations_json(stream, annotations);
-    spdlog::debug("Wrote {} annotations to {}", annotations.size(), path_str);
+    spdlog::debug("Wrote {} annotations to {}", annotations.size(), path);
 }
 
 }; // namespace recap::labeller::annotation_manager
