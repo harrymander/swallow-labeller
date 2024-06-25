@@ -31,6 +31,7 @@ target_compile_features(recap-labeller PRIVATE cxx_std_20)
 target_link_libraries(recap-labeller PRIVATE
     argparse
     cnpy::cnpy
+    fmt::fmt
     imgui::demo
     imgui::imgui
     implot::demo

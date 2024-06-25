@@ -6,20 +6,18 @@
 #include "plotter.hpp"
 
 #include <cnpy.h>
+#include <fmt/format.h>
 #include <imgui.h>
 #include <implot.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/stopwatch.h>
 
 #include <algorithm>
-#include <cstddef>
-#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <memory>
 #include <random>
-#include <sstream>
 #include <stdexcept>
 #include <variant>
 #include <vector>
@@ -126,16 +124,17 @@ public:
 private:
     class TaskStrWrapper {
     public:
-        TaskStrWrapper(SwallowTaskInfo info, bool annotated) : info_(std::move(info))
-        {
-            std::stringstream ss;
-            if (annotated) {
-                ss << "[annotated] ";
-            }
-            ss << "Subject #" << info_.subject << ", " << swallow_test_type_string(info_.test_type)
-               << "\nRepeat #" << info_.repeatnum << ", swallow #" << info_.swallownum;
-            str_ = ss.str();
-        }
+        TaskStrWrapper(SwallowTaskInfo info, bool annotated) :
+            info_(std::move(info)),
+            str_(fmt::format(
+                "{}Subject #{}, {}\nRepeat #{}, swallow #{}",
+                annotated ? "[annotated] " : "",
+                info_.subject,
+                swallow_test_type_string(info_.test_type),
+                info_.repeatnum,
+                info_.swallownum
+            ))
+        {}
 
         [[nodiscard]] const SwallowTaskInfo& info() const { return info_; }
 
@@ -202,11 +201,9 @@ public:
                 data, annotation ? *annotation : SwallowAnnotation{}
             );
         } catch (const std::exception& e) {
-            const auto& what = e.what();
-            std::stringstream ss;
-            ss << "Error loading task at path '" << path_str << "': " << what;
-            const auto error = ss.str();
-            spdlog::error("{}", error);
+            std::string error =
+                fmt::format("Error loading task at path '{}': {}", path_str, e.what());
+            spdlog::error(error);
             error_or_plotter = error;
         }
     }
@@ -276,10 +273,8 @@ private:
             try {
                 annotation_mgr.sync_to_file();
             } catch (const std::runtime_error& e) {
-                std::stringstream ss;
-                ss << "Error updating annotation file: " << e.what();
-                const auto error = ss.str();
-                spdlog::error("{}", error);
+                std::string error = fmt::format("Error updating annotation file: {}", e.what());
+                spdlog::error(error);
                 error_or_plotter.emplace<std::string>(error);
             }
         }

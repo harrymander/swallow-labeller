@@ -1,6 +1,18 @@
 include(FetchContent)
 
 fetchcontent_declare(
+    fmt
+    GIT_REPOSITORY https://github.com/fmtlib/fmt
+    GIT_TAG e69e5f977d458f2650bb346dadf2ad30c5320281 # 10.2.1
+)
+fetchcontent_getproperties(fmt)
+if(NOT fmt_POPULATED)
+    fetchcontent_populate(fmt)
+    add_subdirectory(${fmt_SOURCE_DIR} ${fmt_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+
+set(SPDLOG_FMT_EXTERNAL ON)
+fetchcontent_declare(
     spdlog
     GIT_REPOSITORY https://github.com/gabime/spdlog
     GIT_TAG 27cb4c76708608465c413f6d0e6b8d99a4d84302 # 1.14.1

@@ -9,6 +9,7 @@
 #include "strutil.hpp"
 #include "util.hpp"
 
+#include <fmt/format.h>
 #include <imgui.h>
 #include <imgui_stdlib.h>
 #include <implot.h>
@@ -21,7 +22,6 @@
 #include <iterator>
 #include <memory>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -313,9 +313,7 @@ private:
 
     [[nodiscard]] std::string label_str(std::size_t i) const
     {
-        std::stringstream ss;
-        ss << name << " #" << i + 1;
-        return ss.str();
+        return fmt::format("{} #{}", name, i + 1);
     }
 
     void set_labels()
