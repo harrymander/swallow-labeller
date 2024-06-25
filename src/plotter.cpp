@@ -18,7 +18,6 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <cstddef>
 #include <iterator>
 #include <memory>
 #include <optional>
@@ -99,15 +98,14 @@ void add_plot_vline(ImDrawList *draw_list, double xplot, double yplot, const ImV
     draw_list->AddLine(top, bottom, ImColor(128, 128, 128));
 
     const float xend = plot_pos.x + plot_size.x;
-    char xtext[20];
-    (void) std::snprintf(xtext, sizeof(xtext), "x=%lg", xplot);
     add_text_autoalign(
-        draw_list, xtext, bottom.x, bottom.y - ImGui::GetTextLineHeightWithSpacing(), xend
+        draw_list,
+        fmt::format("x={:g}", xplot).c_str(),
+        bottom.x,
+        bottom.y - ImGui::GetTextLineHeightWithSpacing(),
+        xend
     );
-
-    char ytext[20];
-    (void) std::snprintf(ytext, sizeof(ytext), "y=%lg", yplot);
-    add_text_autoalign(draw_list, ytext, top.x, top.y, xend);
+    add_text_autoalign(draw_list, fmt::format("y={:g}", yplot).c_str(), top.x, top.y, xend);
 }
 
 void draw_plot_cursor(double xplot, double yplot)
