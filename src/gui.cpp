@@ -191,8 +191,9 @@ public:
         path_str = path.string();
         const SwallowAnnotation *annotation = annotation_mgr.get_annotation(task.get_id());
         spdlog::debug(
-            "Task at path '{}' {} existing annotation",
+            "Task at path '{}' (id={}) {} existing annotation",
             path,
+            task.get_id(),
             annotation != nullptr ? "has" : "does not have"
         );
         new_annotation = annotation == nullptr;
@@ -285,7 +286,7 @@ private:
     const ImVec4 DeleteButtonColorHovered = ImColor::HSV(0, 0.7F, 0.7F);
     const ImVec4 DeleteButtonColorActive = ImColor::HSV(0, 0.8F, 0.8F);
 
-    const SwallowTaskInfo& task;
+    SwallowTaskInfo task;
     TaskList& task_list;
     AnnotationManager& annotation_mgr;
     std::string path_str;
