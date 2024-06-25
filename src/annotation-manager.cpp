@@ -74,7 +74,7 @@ void AnnotationManager::remove_annotation(const std::string& id)
         spdlog::debug("Removing annotation for id={}", id);
         annotations.erase(it);
     } else {
-        spdlog::debug("No annotation for id={}", id);
+        spdlog::warn("No annotation for id={} - nothing to remove!", id);
     }
 }
 
