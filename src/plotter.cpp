@@ -26,12 +26,8 @@
 
 namespace recap::labeller::plotter {
 
-using recap::labeller::data::SwallowTaskData;
-using namespace recap::labeller::task;
-
-namespace util = recap::util;
-namespace strutil = recap::strutil;
-namespace optutil = recap::optutil;
+using labeller::data::SwallowTaskData;
+using namespace labeller::task;
 
 namespace {
 
@@ -288,7 +284,7 @@ private:
     SelectionRanges ranges;
     std::vector<std::string> labels;
 
-    recap::plot::PlotXSelector selector;
+    plot::PlotXSelector selector;
     ImPlotRange next_range = {NAN, NAN};
     std::optional<std::size_t> selected_index = std::nullopt;
     std::optional<std::size_t> hovered_index = std::nullopt;
@@ -357,12 +353,13 @@ public:
 
         for (std::size_t i = 0; i < ranges.size(); i++) {
             const bool selected = optutil::value_and_equal(selected_index, i);
-            recap::plot::drag_xrange(
+            plot::drag_xrange(
                 static_cast<ImGuiID>(i) + 1,
                 ranges.plot_ranges()[i],
                 selected ? selected_color :
                            (optutil::value_and_equal(hovered_index, i) ? hovered_color : color),
-                selected && !selector.is_selecting() ? 0 : recap::plot::DragXRangeFlag::NoInput
+                selected && !selector.is_selecting() ? plot::DragXRangeFlag::None :
+                                                       plot::DragXRangeFlag::NoInput
             );
         }
         ImGui::PopID();
@@ -372,12 +369,12 @@ public:
     {
         for (std::size_t i = 0; i < ranges.size(); i++) {
             const bool selected = optutil::value_and_equal(selected_index, i);
-            recap::plot::drag_xrange(
+            plot::drag_xrange(
                 static_cast<ImGuiID>(i) + start_id,
                 ranges.plot_ranges()[i],
                 selected ? selected_color :
                            (optutil::value_and_equal(hovered_index, i) ? hovered_color : color),
-                recap::plot::DragXRangeFlag::NoInput
+                plot::DragXRangeFlag::NoInput
             );
         }
     }
@@ -433,7 +430,7 @@ private:
     static constexpr ImColor EarclickLabelColorSelected = ImColor(0.0F, 1.0F, 0.0F, 0.4F);
 
     ImPlotRange apnea_range = {NAN, NAN};
-    recap::plot::PlotXSelector apnea_selector;
+    plot::PlotXSelector apnea_selector;
 
     SwallowAnnotation annotation_;
     SRCPattern src_pattern;
@@ -569,7 +566,7 @@ public:
             changed = draw_apnea_selector();
         }
         if (apnea_selected()) {
-            if (recap::plot::drag_xrange(0, apnea_range, ApneaLabelColorSelected)) {
+            if (plot::drag_xrange(0, apnea_range, ApneaLabelColorSelected)) {
                 changed = true;
             }
         }
@@ -602,8 +599,8 @@ public:
     void draw_regions_readonly()
     {
         if (annotation_.swallow_info == SwallowLabelInfo::Ok) {
-            recap::plot::drag_xrange(
-                0, apnea_range, ApneaLabelColorSelecting, recap::plot::DragXRangeFlag::NoInput
+            plot::drag_xrange(
+                0, apnea_range, ApneaLabelColorSelecting, plot::DragXRangeFlag::NoInput
             );
         }
 
@@ -749,10 +746,10 @@ void SwallowTaskPlotter::draw_summary_plot()
 
     constexpr ImColor summary_color = {.5F, .5F, .5F, .6F};
     summary_selector.draw(
-        0, summary_range, summary_color, recap::plot::PlotXSelector::NoCursor, ImGuiMouseButton_Left
+        0, summary_range, summary_color, plot::PlotXSelector::NoCursor, ImGuiMouseButton_Left
     );
     if (!summary_selector.is_selecting()) {
-        recap::plot::drag_xrange(0, summary_range, summary_color);
+        plot::drag_xrange(0, summary_range, summary_color);
     }
 
     plot_line("##summary_flow_plot_line", data.flow_time, data.flow);
