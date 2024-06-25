@@ -85,9 +85,8 @@ static bool drag_xrange(
     }
 
     // Resizing
-    float *edges[] = {&x0, &x1};
-    for (int i = 0; i < 2; i++) {
-        float& x = *edges[i];
+    for (float *xp : {&x0, &x1}) {
+        float& x = *xp;
         if (button_behaviour(x - HalfEdgeWidthPx, x + HalfEdgeWidthPx, ImGuiMouseCursor_ResizeEW)) {
             const float delta = get_drag_delta(held);
             if (delta) {
