@@ -188,6 +188,7 @@ public:
         task(task_list.current_task()), task_list(task_list), annotation_mgr(annotation_mgr_)
     {
         const auto path = (data_dir / std::filesystem::path(task.npz_file.path)).make_preferred();
+        path_str = path.string();
         const SwallowAnnotation *annotation = annotation_mgr.get_annotation(task.get_id());
         spdlog::debug(
             "Task at path '{}' {} existing annotation",
