@@ -386,6 +386,7 @@ public:
         static const ImVec4 DeleteButtonColorHovered = ImColor::HSV(0, 0.7F, 0.7F);
         static const ImVec4 DeleteButtonColorActive = ImColor::HSV(0, 0.8F, 0.8F);
         static const char *remove_button_str = "Remove";
+        constexpr float DeleteButtonCornerRadius = 5;
 
         const float label_height = ImGui::GetTextLineHeightWithSpacing();
         const float label_width = ImGui::GetContentRegionAvail().x
@@ -396,6 +397,7 @@ public:
         for (std::size_t i = 0; i < ranges.size(); i++) {
             ImGui::PushID(static_cast<int>(i));
             ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, {0, 0.5});
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, DeleteButtonCornerRadius);
             ImGui::PushStyleColor(ImGuiCol_Button, DeleteButtonColor);
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, DeleteButtonColorHovered);
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, DeleteButtonColorActive);
@@ -430,7 +432,7 @@ public:
             }
 
             ImGui::PopStyleColor(3);
-            ImGui::PopStyleVar();
+            ImGui::PopStyleVar(2);
             ImGui::PopID();
         }
     }
