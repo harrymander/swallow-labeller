@@ -382,41 +382,57 @@ public:
 
     void draw_list(const char *id)
     {
+        static const ImVec4 DeleteButtonColor = ImColor::HSV(0, 0.6F, 0.6F);
+        static const ImVec4 DeleteButtonColorHovered = ImColor::HSV(0, 0.7F, 0.7F);
+        static const ImVec4 DeleteButtonColorActive = ImColor::HSV(0, 0.8F, 0.8F);
+        static const char *remove_button_str = "Remove";
+
+        const float label_height = ImGui::GetTextLineHeightWithSpacing();
+        const float label_width = ImGui::GetContentRegionAvail().x
+            - (ImGui::CalcTextSize(remove_button_str).x + 2 * ImGui::GetStyle().ItemSpacing.x);
+
         ImGui::PushID(id);
         hovered_index.reset();
         for (std::size_t i = 0; i < ranges.size(); i++) {
             ImGui::PushID(static_cast<int>(i));
-            const bool remove = ImGui::Button("Remove");
+            ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, {0, 0.5});
+            ImGui::PushStyleColor(ImGuiCol_Button, DeleteButtonColor);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, DeleteButtonColorHovered);
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, DeleteButtonColorActive);
+
+            const bool selected = optutil::value_and_equal(selected_index, i);
+            if (ImGui::Selectable(labels[i].c_str(), selected, 0, {label_width, label_height})) {
+                if (selected) {
+                    selected_index.reset();
+                } else {
+                    selected_index = i;
+                }
+                const auto& range = ranges.plot_ranges()[i];
+                spdlog::debug(
+                    "{}: {} label #{} [{}, {}]",
+                    name,
+                    selected ? "deselected" : "selected",
+                    i + 1,
+                    range.Min,
+                    range.Max
+                );
+            }
             if (ImGui::IsItemHovered()) {
                 hovered_index = i;
             }
-            if (remove) {
+
+            ImGui::SameLine();
+            if (ImGui::Button(remove_button_str)) {
                 remove_selection(i);
-            } else {
-                ImGui::SameLine();
-                const bool selected = optutil::value_and_equal(selected_index, i);
-                if (ImGui::Selectable(labels[i].c_str(), selected)) {
-                    if (selected) {
-                        selected_index.reset();
-                    } else {
-                        selected_index = i;
-                    }
-                    const auto& range = ranges.plot_ranges()[i];
-                    spdlog::debug(
-                        "{}: {} label #{} [{}, {}]",
-                        name,
-                        selected ? "deselected" : "selected",
-                        i + 1,
-                        range.Min,
-                        range.Max
-                    );
-                }
-                if (ImGui::IsItemHovered()) {
-                    hovered_index = i;
-                }
             }
+            if (ImGui::IsItemHovered()) {
+                hovered_index = i;
+            }
+
+            ImGui::PopStyleColor(3);
+            ImGui::PopStyleVar();
+            ImGui::PopID();
         }
-        ImGui::PopID();
     }
 };
 
