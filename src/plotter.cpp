@@ -4,6 +4,7 @@
 
 #include "data.hpp"
 #include "drag-range.hpp"
+#include "imgui-util.hpp"
 #include "labelling-task.hpp"
 #include "optutil.hpp"
 #include "strutil.hpp"
@@ -28,6 +29,7 @@ namespace recap::labeller::plotter {
 
 using labeller::data::SwallowTaskData;
 using namespace labeller::task;
+using namespace imgui_util;
 
 namespace {
 
@@ -137,7 +139,7 @@ template <class T> struct RadioButtonField {
 template <class T>
 bool radio_button_enums(const char *id, T& value, const RadioButtonField<T> *options, std::size_t n)
 {
-    ImGui::PushID(id);
+    ScopedImID scoped_id(id);
     bool changed = false;
     for (std::size_t i = 0; i < n; i++) {
         if (i > 0) {
@@ -151,7 +153,7 @@ bool radio_button_enums(const char *id, T& value, const RadioButtonField<T> *opt
             spdlog::debug("Radio buttons {}: changed to '{}'", id, options[i].label);
         }
     }
-    ImGui::PopID();
+
     return changed;
 }
 
@@ -338,7 +340,7 @@ public:
 
     void draw_plot_selection(const char *id)
     {
-        ImGui::PushID(id);
+        ScopedImID scoped_id(id);
         if (selector.is_selecting() || range_isnan(next_range)) {
             const bool finished =
                 selector.draw(0, next_range, color, 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl);
@@ -363,7 +365,6 @@ public:
                                                        plot::DragXRangeFlag::NoInput
             );
         }
-        ImGui::PopID();
     }
 
     void draw_regions_readonly(ImGuiID start_id)
@@ -382,26 +383,22 @@ public:
 
     void draw_list(const char *id)
     {
-        static const ImVec4 DeleteButtonColor = ImColor::HSV(0, 0.6F, 0.6F);
-        static const ImVec4 DeleteButtonColorHovered = ImColor::HSV(0, 0.7F, 0.7F);
-        static const ImVec4 DeleteButtonColorActive = ImColor::HSV(0, 0.8F, 0.8F);
         static const char *remove_button_str = "Remove";
-        constexpr float DeleteButtonCornerRadius = 5;
+        constexpr float ButtonCornerRadius = 5;
+        constexpr ImVec2 SelectableTextAlign = {0, 0.5};
+        ScopedImStyle styles{
+            {ImGuiStyleVar_SelectableTextAlign, SelectableTextAlign},
+            {ImGuiStyleVar_FrameRounding, ButtonCornerRadius},
+        };
 
         const float label_height = ImGui::GetTextLineHeightWithSpacing();
         const float label_width = ImGui::GetContentRegionAvail().x
             - (ImGui::CalcTextSize(remove_button_str).x + 2 * ImGui::GetStyle().ItemSpacing.x);
 
-        ImGui::PushID(id);
+        ScopedImID scoped_id(id);
         hovered_index.reset();
         for (std::size_t i = 0; i < ranges.size(); i++) {
-            ImGui::PushID(static_cast<int>(i));
-            ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, {0, 0.5});
-            ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, DeleteButtonCornerRadius);
-            ImGui::PushStyleColor(ImGuiCol_Button, DeleteButtonColor);
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, DeleteButtonColorHovered);
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, DeleteButtonColorActive);
-
+            ScopedImID task_id(static_cast<int>(i));
             const bool selected = optutil::value_and_equal(selected_index, i);
             if (ImGui::Selectable(labels[i].c_str(), selected, 0, {label_width, label_height})) {
                 if (selected) {
@@ -424,16 +421,12 @@ public:
             }
 
             ImGui::SameLine();
-            if (ImGui::Button(remove_button_str)) {
+            if (ButtonRed(remove_button_str)) {
                 remove_selection(i);
             }
             if (ImGui::IsItemHovered()) {
                 hovered_index = i;
             }
-
-            ImGui::PopStyleColor(3);
-            ImGui::PopStyleVar(2);
-            ImGui::PopID();
         }
     }
 };
@@ -579,7 +572,7 @@ public:
             return;
         }
 
-        ImGui::PushID("##apnea_selection");
+        ScopedImID scoped_id("##apnea_selection");
         bool changed = false;
         if (apnea_selector.is_selecting() || !apnea_selected()) {
             changed = draw_apnea_selector();
@@ -592,7 +585,6 @@ public:
         if (changed) {
             update_apnea_label();
         }
-        ImGui::PopID();
     }
 
     void draw_earclick_selection()
@@ -670,7 +662,7 @@ SwallowTaskPlotter& SwallowTaskPlotter::operator=(SwallowTaskPlotter&&) noexcept
 
 void SwallowTaskPlotter::draw(const char *id)
 {
-    ImGui::PushID(id);
+    ScopedImID scoped_id(id);
 
     if (ImGui::BeginChild("##plotter", {-100, -1}, ImGuiChildFlags_ResizeX)) {
         draw_plots();
@@ -682,8 +674,6 @@ void SwallowTaskPlotter::draw(const char *id)
         annotation_editor->draw_earclick_selection_list();
     }
     ImGui::EndChild();
-
-    ImGui::PopID();
 }
 
 const SwallowAnnotation& SwallowTaskPlotter::annotation() const

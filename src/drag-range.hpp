@@ -1,8 +1,8 @@
 #ifndef INCLUDE_PLOT_DRAG_RANGE_HPP
 #define INCLUDE_PLOT_DRAG_RANGE_HPP
 
-#include "imgui.h"
-#include "implot.h"
+#include <imgui.h>
+#include <implot.h>
 
 namespace recap::plot {
 

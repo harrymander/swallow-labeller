@@ -1,10 +1,12 @@
 #include "selector.hpp"
 
 #include "drag-range.hpp"
-#include "imgui.h"
-#include "imgui_internal.h"
-#include "implot.h"
-#include "implot_internal.h"
+#include "imgui-util.hpp"
+
+#include <imgui.h>
+#include <imgui_internal.h>
+#include <implot.h>
+#include <implot_internal.h>
 
 #include <algorithm>
 #include <cmath>
@@ -42,7 +44,7 @@ bool PlotXSelector::draw(
     const ImPlotAxis& x_axis = current_plot.XAxis(0);
     const ImPlotRect plot_limits = ImPlot::GetPlotLimits();
 
-    ImGui::PushID("#PLOT_DRAG_XSELECTOR");
+    imgui_util::ScopedImID scoped_id("#PLOT_DRAG_XSELECTOR");
     ImGuiID id = ImGui::GetCurrentWindow()->GetID(caller_id);
     const auto set_active = [id]() {
         ImGui::KeepAliveID(id);
@@ -97,7 +99,6 @@ bool PlotXSelector::draw(
         }
     }
 
-    ImGui::PopID();
     return !cancelled && last_selecting && !selecting;
 }
 

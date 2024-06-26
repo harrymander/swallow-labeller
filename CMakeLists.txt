@@ -20,8 +20,9 @@ endif()
 add_executable(recap-labeller
     src/annotation-manager.cpp
     src/data.cpp
-    src/gui.cpp
     src/drag-range.cpp
+    src/gui.cpp
+    src/imgui-util.cpp
     src/labelling-task.cpp
     src/main.cpp
     src/plotter.cpp

@@ -2,6 +2,7 @@
 
 #include "annotation-manager.hpp"
 #include "data.hpp"
+#include "imgui-util.hpp"
 #include "labelling-task.hpp"
 #include "plotter.hpp"
 
@@ -28,6 +29,7 @@ namespace recap::labeller::gui {
 using namespace recap::labeller::annotation_manager;
 using namespace recap::labeller::plotter;
 using namespace recap::labeller::task;
+using namespace imgui_util;
 using recap::labeller::data::SwallowTaskData;
 
 namespace {
@@ -54,7 +56,7 @@ public:
     // Return true if task changed
     bool draw(const char *id)
     {
-        ImGui::PushID(id);
+        ScopedImID scoped_id(id);
         filter.Draw("##filter");
         ImGui::SameLine();
         auto new_index = index;
@@ -87,7 +89,7 @@ public:
             }
             ImGui::EndListBox();
         }
-        ImGui::PopID();
+
         bool changed = new_index != index;
         index = new_index;
         return changed;
@@ -258,16 +260,12 @@ private:
         ImGui::SameLine();
 
         if (!new_annotation) {
-            ImGui::PushStyleColor(ImGuiCol_Button, DeleteButtonColor);
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, DeleteButtonColorHovered);
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, DeleteButtonColorActive);
-            if (ImGui::Button(delete_button_str, {0, button_height})) {
+            if (ButtonRed(delete_button_str, {0, button_height})) {
                 annotation_mgr.remove_annotation(task.get_id());
                 task_list.clear_current_task_annotated();
                 new_annotation = true;
                 update_annotation = true;
             }
-            ImGui::PopStyleColor(3);
         }
 
         if (update_annotation) {
@@ -280,11 +278,6 @@ private:
             }
         }
     }
-
-    // Red button:
-    const ImVec4 DeleteButtonColor = ImColor::HSV(0, 0.6F, 0.6F);
-    const ImVec4 DeleteButtonColorHovered = ImColor::HSV(0, 0.7F, 0.7F);
-    const ImVec4 DeleteButtonColorActive = ImColor::HSV(0, 0.8F, 0.8F);
 
     SwallowTaskInfo task;
     TaskList& task_list;

@@ -2,11 +2,13 @@
 
 #include "drag-range.hpp"
 
-#include "imgui.h"
-#include "imgui_internal.h"
-#include "implot.h"
-#include "implot_internal.h"
+#include "imgui-util.hpp"
 #include "util.hpp"
+
+#include <imgui.h>
+#include <imgui_internal.h>
+#include <implot.h>
+#include <implot_internal.h>
 
 #include <algorithm>
 #include <cmath>
@@ -129,7 +131,7 @@ bool drag_xrange(
     IM_ASSERT_USER_ERROR(
         current_plot != nullptr, "drag_xrect needs to be called between BeginPlot and EndPlot"
     );
-    ImGui::PushID("#PLOT_DRAG_XRANGE");
+    imgui_util::ScopedImID scoped_id("#PLOT_DRAG_XRANGE");
     ImPlot::SetupLock();
 
     float xmin_px = current_plot->XAxis(0).PlotToPixels(xmin);
@@ -178,7 +180,6 @@ bool drag_xrange(
     draw_plot_vspan(xmin_px, xmax_px, color);
     ImPlot::PopPlotClipRect();
 
-    ImGui::PopID();
     return modified;
 }
 
