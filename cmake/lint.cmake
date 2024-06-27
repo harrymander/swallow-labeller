@@ -20,16 +20,18 @@ find_program(CLANG_FORMAT clang-format)
 if(CLANG_FORMAT STREQUAL CLANG_FORMAT-NOTFOUND)
     message(WARNING "clang-format not found, disabling lint and format targets")
 else()
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
     set(
         CLANG_FORMAT_CMD
-        ${CLANG_FORMAT} -Werror
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/*
-            ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp
+        ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/run-clang-format.py
+        --recursive
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests
     )
 
     add_custom_target(
         lint
-        COMMAND ${CLANG_FORMAT_CMD} --dry-run
+        COMMAND ${CLANG_FORMAT_CMD}
         COMMENT "Linting source code with clang-format"
     )
     if(TARGET check)
@@ -38,7 +40,7 @@ else()
 
     add_custom_target(
         format
-        COMMAND ${CLANG_FORMAT_CMD} -i
+        COMMAND ${CLANG_FORMAT_CMD} --in-place
         COMMENT "Formatting source code with clang-format"
     )
 endif()

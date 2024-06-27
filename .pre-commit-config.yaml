@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: clang-format
+        name: clang-format
+        entry: scripts/run-clang-format.py
+        args: ["--in-place"]
+        language: system
+        files: "^(src|tests)/.*\\.(c|h|cpp|hpp)$"
