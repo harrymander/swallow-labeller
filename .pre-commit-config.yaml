@@ -6,4 +6,9 @@ repos:
         entry: scripts/run-clang-format.py
         args: ["--in-place"]
         language: system
-        files: "^(src|tests)/.*\\.(c|h|cpp|hpp)$"
+        files: "^(src|tests)/"
+        types: [c, c++]
+  - repo: https://github.com/cmake-lint/cmake-lint
+    rev: "1.4.3"
+    hooks:
+      - id: cmakelint
