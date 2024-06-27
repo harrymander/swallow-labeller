@@ -25,8 +25,8 @@ else()
         CLANG_FORMAT_CMD
         ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/run-clang-format.py
         --recursive
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${CMAKE_CURRENT_SOURCE_DIR}/tests
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/tests
     )
 
     add_custom_target(
