@@ -116,7 +116,7 @@ int recap::labeller::platform::run(recap::labeller::gui::Gui& gui)
     }
 
     // Show the window
-    ::ShowWindow(hwnd, SW_SHOWDEFAULT);
+    ::ShowWindow(hwnd, SW_SHOWMAXIMIZED);
     ::UpdateWindow(hwnd);
 
     const float scale_factor = GetDPIScalingFactor();
