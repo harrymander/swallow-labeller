@@ -7,6 +7,7 @@
 #include "labelling-task.hpp"
 #include "plotter.hpp"
 
+#include <IconsFontAwesome6.h>
 #include <cnpy.h>
 #include <fmt/format.h>
 #include <imgui.h>
@@ -134,7 +135,7 @@ private:
             info_(std::move(info)),
             str_(fmt::format(
                 "{}Subject #{}, {}\nRepeat #{}, swallow #{}",
-                annotated ? "[annotated] " : "",
+                annotated ? ICON_FA_SQUARE_CHECK "  " : "",
                 info_.subject,
                 swallow_test_type_string(info_.test_type),
                 info_.repeatnum,
@@ -242,7 +243,7 @@ private:
         }
         ImGui::EndChild();
 
-        static const char *delete_button_str = "Delete";
+        static const char *delete_button_str = "  " ICON_FA_TRASH_CAN "  ";
         float update_button_width = -1;
         if (!new_annotation) {
             const float del_button_width =

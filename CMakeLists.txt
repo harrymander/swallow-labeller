@@ -23,6 +23,14 @@ imgui_compressed_c_array(
     ${SOURCE_SANS_CPP_FILE}
     adobe_source_sans
 )
+
+set(FONTAWESOME_CPP_FILE ${CMAKE_CURRENT_BINARY_DIR}/gen/fontawesome.cpp)
+imgui_compressed_c_array(
+    ${FONTAWESOME_FREE_SOLID_OTF}
+    ${FONTAWESOME_CPP_FILE}
+    fontawesome_free_solid
+)
+
 add_executable(recap-labeller
     src/annotation-manager.cpp
     src/data.cpp
@@ -34,6 +42,7 @@ add_executable(recap-labeller
     src/main.cpp
     src/plotter.cpp
     src/selector.cpp
+    ${FONTAWESOME_CPP_FILE}
     ${SOURCE_SANS_CPP_FILE}
 )
 target_compile_features(recap-labeller PRIVATE cxx_std_20)
@@ -41,6 +50,7 @@ target_link_libraries(recap-labeller PRIVATE
     argparse
     cnpy::cnpy
     fmt::fmt
+    IconFontCppHeaders
     imgui::demo
     imgui::imgui
     implot::demo

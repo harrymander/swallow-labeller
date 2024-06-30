@@ -10,6 +10,7 @@
 #include "strutil.hpp"
 #include "util.hpp"
 
+#include <IconsFontAwesome6.h>
 #include <fmt/format.h>
 #include <imgui.h>
 #include <imgui_stdlib.h>
@@ -383,7 +384,7 @@ public:
 
     void draw_list(const char *id)
     {
-        static const char *remove_button_str = "Remove";
+        static const char *remove_button_str = ICON_FA_TRASH_CAN;
         constexpr float ButtonCornerRadius = 5;
         constexpr ImVec2 SelectableTextAlign = {0, 0.5};
         ScopedImStyle styles{

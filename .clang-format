@@ -73,7 +73,7 @@ IncludeCategories:
   - Regex: "^<(config|recap)/.*"
     Priority: 2
     CaseSensitive: false
-  - Regex: "^<((backends|fmt|gtest|argparse|spdlog|nlohmann)/|imgui|implot|cnpy).*"  # 3rd part includes
+  - Regex: "^<((backends|fmt|gtest|argparse|spdlog|nlohmann)/|imgui|implot|cnpy|IconsFont).*"  # 3rd part includes
     Priority: 3
     CaseSensitive: false
   - Regex: "^<.+\\..*>$" # other <> includes that use .h,.hpp etc. (i.e. non std)
