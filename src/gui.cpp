@@ -71,6 +71,8 @@ public:
             new_index = (index + 1) % static_cast<decltype(new_index)>(tasks.size());
         }
 
+        const auto num_annotated = tasks.size() - annotated_start_index;
+        ImGui::Text("Annotated: %zu out of %zu", num_annotated, tasks.size());
         if (ImGui::Button(only_show_annotated ? "Show all" : "Show annotated only")) {
             only_show_annotated = !only_show_annotated;
         }
