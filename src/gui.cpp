@@ -226,7 +226,7 @@ private:
     void draw_plotter(SwallowTaskPlotter& plotter)
     {
         ImGui::TextUnformatted(path_str.c_str());
-        constexpr float ButtonHeightFactor = 2.5;
+        constexpr float ButtonHeightFactor = 1.5;
         const float button_height = ButtonHeightFactor * ImGui::GetFrameHeight();
         const float padding_y = 2 * ImGui::GetStyle().FramePadding.y;
         if (ImGui::BeginChild(
