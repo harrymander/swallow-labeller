@@ -81,7 +81,10 @@ if(WIN32 AND MSVC)
     add_library(imgui::backend::win32-native ALIAS imgui-win32-native)
 endif()
 
-add_executable(imgui-binary-to-compressed-c binary_to_compressed_c.cpp)
+add_executable(
+    imgui-binary-to-compressed-c EXCLUDE_FROM_ALL
+    binary_to_compressed_c.cpp
+)
 macro(imgui_compressed_c_array INPUT OUTPUT ARRAY_NAME)
     string(MAKE_C_IDENTIFIER ${ARRAY_NAME} c_symbol)
     get_filename_component(dirname ${OUTPUT} DIRECTORY)
