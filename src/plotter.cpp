@@ -665,7 +665,8 @@ void SwallowTaskPlotter::draw(const char *id)
 {
     ScopedImID scoped_id(id);
 
-    if (ImGui::BeginChild("##plotter", {-100, -1}, ImGuiChildFlags_ResizeX)) {
+    const float plotter_width = ImGui::GetContentRegionAvail().x / 6;
+    if (ImGui::BeginChild("##plotter", {-plotter_width, -1}, ImGuiChildFlags_ResizeX)) {
         draw_plots();
     }
     ImGui::EndChild();

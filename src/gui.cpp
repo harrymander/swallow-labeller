@@ -405,7 +405,7 @@ private:
     {
         if (ImGui::BeginChild(
                 "##sidebar",
-                {ImGui::GetWindowSize().x / 5, 0},
+                {ImGui::GetContentRegionAvail().x / 6, 0},
                 ImGuiChildFlags_Border | ImGuiChildFlags_ResizeX,
                 WindowFlags
             ))
