@@ -17,16 +17,24 @@ if(BUILD_TESTS)
     add_subdirectory(tests)
 endif()
 
+set(SOURCE_SANS_CPP_FILE ${CMAKE_CURRENT_BINARY_DIR}/gen/source-sans.cpp)
+imgui_compressed_c_array(
+    ${source_sans_SOURCE_DIR}/TTF/SourceSans3-Regular.ttf
+    ${SOURCE_SANS_CPP_FILE}
+    adobe_source_sans
+)
 add_executable(recap-labeller
     src/annotation-manager.cpp
     src/data.cpp
     src/drag-range.cpp
+    src/font.cpp
     src/gui.cpp
     src/imgui-util.cpp
     src/labelling-task.cpp
     src/main.cpp
     src/plotter.cpp
     src/selector.cpp
+    ${SOURCE_SANS_CPP_FILE}
 )
 target_compile_features(recap-labeller PRIVATE cxx_std_20)
 target_link_libraries(recap-labeller PRIVATE

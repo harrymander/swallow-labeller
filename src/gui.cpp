@@ -2,6 +2,7 @@
 
 #include "annotation-manager.hpp"
 #include "data.hpp"
+#include "font.hpp"
 #include "imgui-util.hpp"
 #include "labelling-task.hpp"
 #include "plotter.hpp"
@@ -321,6 +322,8 @@ public:
         ImPlot::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
+        font::setup_fonts();
     }
 
     Impl(const Impl&) = delete;

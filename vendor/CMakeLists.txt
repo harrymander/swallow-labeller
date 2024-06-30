@@ -46,3 +46,4 @@ fetchcontent_makeavailable(argparse)
 
 include(imgui.cmake)
 include(implot.cmake)
+include(source_sans.cmake)
