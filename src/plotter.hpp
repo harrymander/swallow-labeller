@@ -31,6 +31,8 @@ public:
 
     [[nodiscard]] const recap::labeller::task::SwallowAnnotation& annotation() const;
 
+    void reset_annotation();
+
     [[nodiscard]] bool valid_annotation() const;
 
 private:

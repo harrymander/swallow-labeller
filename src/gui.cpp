@@ -284,6 +284,7 @@ private:
             if (ButtonRed(delete_button_str, {0, button_height})) {
                 annotation_mgr.remove_annotation(task.get_id());
                 task_list.clear_task_annotated(task_index);
+                plotter.reset_annotation();
                 new_annotation = true;
                 update_annotation = true;
             }

@@ -740,6 +740,11 @@ const SwallowAnnotation& SwallowTaskPlotter::annotation() const
     return annotation_editor->annotation();
 }
 
+void SwallowTaskPlotter::reset_annotation()
+{
+    annotation_editor = std::make_unique<AnnotationEditor>();
+}
+
 bool SwallowTaskPlotter::valid_annotation() const
 {
     return annotation_editor->is_valid();
