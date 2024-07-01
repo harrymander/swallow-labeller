@@ -430,7 +430,8 @@ public:
 
     bool draw()
     {
-        static const char *const UnsavedModalId = "Unsaved annotation";
+        static const char *const UnsavedModalId =
+            ICON_FA_TRIANGLE_EXCLAMATION "  Unsaved annotation";
 
         if (next_task_index.has_value() && !unsaved_modal_open) {
             ImGui::OpenPopup(UnsavedModalId);
