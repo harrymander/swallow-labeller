@@ -502,7 +502,8 @@ private:
     {
         ImGuiIO& io = ImGui::GetIO();
         ImGui::Text(
-            "Mouse Position: [%.0f,%.0f]. Application average: %.3f ms/frame (%.1f FPS).",
+            ICON_FA_GEAR
+            "  Mouse Position: [%.0f,%.0f]. Application average: %.3f ms/frame (%.1f FPS).",
             io.MousePos.x,
             io.MousePos.y,
             1000.0f / io.Framerate,
