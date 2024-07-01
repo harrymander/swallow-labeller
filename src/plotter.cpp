@@ -430,14 +430,6 @@ public:
             }
         }
     }
-
-    void handle_keyboard_delete()
-    {
-        if (selected_index.has_value() && ImGui::IsKeyPressed(ImGuiKey_Delete)) {
-            spdlog::debug("Delete key pressed - deleting selection #{}", *selected_index + 1);
-            remove_selection(*selected_index);
-        }
-    }
 };
 
 }; // namespace
@@ -610,7 +602,7 @@ public:
         ImGui::BeginDisabled(annotation_.ear_click_info != EarClickLabelInfo::Ok);
         if (ImGui::BeginListBox("##earclick_selection_list", {-1, -1})) {
             earclick_selections.draw_list("##earclick_selection_list_items");
-            earclick_selections.handle_keyboard_delete();
+
             ImGui::EndListBox();
         }
         ImGui::EndDisabled();
