@@ -17,6 +17,7 @@
 #include <spdlog/stopwatch.h>
 
 #include <algorithm>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -327,6 +328,32 @@ private:
     int style_id = 0;
 };
 
+std::optional<std::string> get_custom_ini_path()
+{
+    const char *const env = std::getenv("RECAP_LABELLER_IMGUI_INI_PATH");
+    if (env) {
+        std::filesystem::path path(env);
+        if (std::filesystem::is_directory(path)) {
+            spdlog::error("Invalid ImGui INI path: '{}' is a directory", path);
+        } else if (!std::filesystem::is_directory(path.parent_path())) {
+            spdlog::error(
+                "Invalid ImGui INI path: parent directory '{}' does not exist or not a directory",
+                path.parent_path()
+            );
+        } else {
+            std::string path_str = path.make_preferred().string();
+            spdlog::info("Custom ImGui INI path: {}", path_str);
+            return path_str;
+        }
+
+        spdlog::warn("Ignoring RECAP_LABELLER_IMGUI_INI_PATH, using default ImGui INI path");
+    } else {
+        spdlog::debug("RECAP_LABELLER_IMGUI_INI_PATH not set, using default ImGui INI path");
+    }
+
+    return std::nullopt;
+}
+
 }; // namespace
 
 class Gui::Impl {
@@ -346,8 +373,14 @@ public:
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImPlot::CreateContext();
+
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+        auto custom_ini_path = get_custom_ini_path();
+        if (custom_ini_path) {
+            ini_path = std::move(*custom_ini_path);
+            io.IniFilename = ini_path.c_str();
+        }
 
         font::setup_fonts();
     }
@@ -496,6 +529,7 @@ private:
     bool show_imgui_metrics = false;
     bool show_debug_info = false;
     ColorSchemeSelector color_scheme_selector;
+    std::string ini_path;
 
     std::filesystem::path data_dir;
     AnnotationManager& annotation_mgr;
