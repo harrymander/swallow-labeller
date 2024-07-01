@@ -66,11 +66,11 @@ public:
 
         // FIXME: currently this steps through all tasks, even if not displayed
         if (ImGui::ArrowButton("Prev task", ImGuiDir_Left)) {
-            new_index = index ? index - 1 : static_cast<decltype(new_index)>(tasks.size()) - 1;
+            new_index = index ? index - 1 : tasks.size() - 1;
         }
         ImGui::SameLine();
         if (ImGui::ArrowButton("Next task", ImGuiDir_Right)) {
-            new_index = (index + 1) % static_cast<decltype(new_index)>(tasks.size());
+            new_index = (index + 1) % tasks.size();
         }
 
         const auto num_annotated = tasks.size() - annotated_start_index;
@@ -79,8 +79,8 @@ public:
             only_show_annotated = !only_show_annotated;
         }
         if (ImGui::BeginListBox("##listbox", {-1, -1})) {
-            decltype(index) i = only_show_annotated ? annotated_start_index : 0;
-            for (; i < static_cast<decltype(index)>(tasks.size()); i++) {
+            std::size_t i = only_show_annotated ? annotated_start_index : 0;
+            for (; i < tasks.size(); i++) {
                 const bool is_selected = (index == i);
                 const char *str = tasks[i].c_str();
                 if (filter.PassFilter(str)) {
@@ -95,14 +95,12 @@ public:
             ImGui::EndListBox();
         }
 
-        bool changed = new_index != index;
+        const bool changed = index != new_index;
         index = new_index;
         return changed;
     }
 
     [[nodiscard]] const SwallowTaskInfo& current_task() const { return tasks[index].info(); }
-
-    [[nodiscard]] bool current_task_annotated() const { return index >= annotated_start_index; }
 
     // Moves task to front of annotated
     void set_current_task_annotated()
@@ -111,9 +109,12 @@ public:
             return;
         }
 
-        tasks.insert(tasks.begin() + annotated_start_index, {current_task(), true});
+        tasks.insert(
+            tasks.begin() + static_cast<decltype(tasks)::difference_type>(annotated_start_index),
+            {current_task(), true}
+        );
         annotated_start_index -= 1;
-        tasks.erase(tasks.begin() + index);
+        tasks.erase(tasks.begin() + static_cast<decltype(tasks)::difference_type>(index));
         index = annotated_start_index;
     }
 
@@ -124,12 +125,14 @@ public:
             return;
         }
         tasks.insert(tasks.begin(), {current_task(), false});
-        tasks.erase(tasks.begin() + index + 1);
+        tasks.erase(tasks.begin() + static_cast<decltype(tasks)::difference_type>(index) + 1);
         annotated_start_index += 1;
         index = 0;
     }
 
 private:
+    [[nodiscard]] bool current_task_annotated() const { return index >= annotated_start_index; }
+
     class TaskStrWrapper {
     public:
         TaskStrWrapper(SwallowTaskInfo info, bool annotated) :
@@ -155,10 +158,10 @@ private:
 
     bool only_show_annotated = false;
     ImGuiTextFilter filter;
-    std::vector<TaskStrWrapper>::difference_type index = 0;
+    std::size_t index = 0;
 
     std::vector<TaskStrWrapper> tasks;
-    decltype(index) annotated_start_index;
+    std::size_t annotated_start_index;
 };
 
 SwallowTaskData load_swallow_task_data(const std::filesystem::path& path)
