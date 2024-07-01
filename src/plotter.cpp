@@ -151,10 +151,15 @@ void plot_line(const char *id, const std::vector<double>& x, const std::vector<d
 template <class T> struct RadioButtonField {
     const char *label;
     T value;
+    ImGuiKey key;
+
+    RadioButtonField(const char *label, T value, ImGuiKey key = ImGuiKey_None) :
+        label(label), value(value), key(key)
+    {}
 };
 
 template <class T>
-bool radio_button_enums(const char *id, T& value, const RadioButtonField<T> *options, std::size_t n)
+bool radio_button_enums(const char *id, T& value, const RadioButtonField<T> *fields, std::size_t n)
 {
     ScopedImID scoped_id(id);
     bool changed = false;
@@ -162,12 +167,19 @@ bool radio_button_enums(const char *id, T& value, const RadioButtonField<T> *opt
         if (i > 0) {
             ImGui::SameLine();
         }
-
-        const bool enabled = options[i].value == value;
-        if (ImGui::RadioButton(options[i].label, enabled) && !enabled) {
-            value = options[i].value;
-            changed = true;
-            spdlog::debug("Radio buttons {}: changed to '{}'", id, options[i].label);
+        const RadioButtonField<T>& field = fields[i];
+        const bool enabled = field.value == value;
+        bool pressed = ImGui::RadioButton(field.label, enabled);
+        if (!enabled) {
+            if (!pressed && field.key != ImGuiKey_None
+                && !(ImGui::GetItemFlags() & ImGuiItemFlags_Disabled)) {
+                pressed = ImGui::Shortcut(field.key);
+            }
+            if (pressed) {
+                value = field.value;
+                changed = true;
+                spdlog::debug("Radio buttons {}: changed to '{}'", id, field.label);
+            }
         }
     }
 
@@ -200,10 +212,10 @@ bool radio_button_src_patterns(const char *id, SRCPattern& pattern)
 {
     using enum SRCPattern;
     static std::array<RadioButtonField<SRCPattern>, 4> fields = {{
-        {src_pattern_str(ExEx), ExEx},
-        {src_pattern_str(ExIn), ExIn},
-        {src_pattern_str(InEx), InEx},
-        {src_pattern_str(InIn), InIn},
+        {"ex-ex [1]", ExEx, ImGuiKey_1},
+        {"ex-in [2]", ExIn, ImGuiKey_2},
+        {"in-ex [3]", InEx, ImGuiKey_3},
+        {"in-in [4]", InIn, ImGuiKey_4},
     }};
     return radio_button_enums(id, pattern, fields);
 }
@@ -222,8 +234,8 @@ bool radio_button_swallow_label_info(const char *id, SwallowLabelInfo& info)
 bool radio_button_earclick_label_info(const char *id, EarClickLabelInfo& info)
 {
     static std::array<RadioButtonField<EarClickLabelInfo>, 3> fields = {{
-        {"Ok", EarClickLabelInfo::Ok},
-        {"No ear click", EarClickLabelInfo::NoEarClick},
+        {"Ok [e]", EarClickLabelInfo::Ok, ImGuiKey_E},
+        {"No ear click [w]", EarClickLabelInfo::NoEarClick, ImGuiKey_W},
         {"Audio error", EarClickLabelInfo::AudioError},
     }};
     return radio_button_enums(id, info, fields);
