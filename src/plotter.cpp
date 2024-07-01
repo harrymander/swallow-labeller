@@ -27,6 +27,9 @@
 #include <string>
 #include <vector>
 
+#define ERROR_ICON ICON_FA_TRIANGLE_EXCLAMATION
+#define PLOT_HELP_ICON ICON_FA_LIGHTBULB
+
 namespace recap::labeller::plotter {
 
 using labeller::data::SwallowTaskData;
@@ -555,6 +558,12 @@ public:
         if (radio_button_swallow_label_info("##swallow_label_info", annotation_.swallow_info)) {
             update_apnea_label();
         }
+        if (annotation_.swallow_info == SwallowLabelInfo::FlowError
+            && !annotation_.swallow_notes.has_value())
+        {
+            ImGui::SameLine();
+            ImGui::TextUnformatted(ERROR_ICON "  Please add note explaining error!");
+        }
     }
 
     void draw_swallow_apnea_info()
@@ -562,7 +571,8 @@ public:
         if (can_edit_apnea_label()) {
             const bool invalid = !apnea_selected();
             if (invalid) {
-                ImGui::TextUnformatted("Error: apnea label is required!");
+                ImGui::SameLine();
+                ImGui::TextUnformatted(ERROR_ICON "  Error: apnea label is required!");
             }
             ImGui::BeginDisabled(invalid);
         } else {
@@ -583,6 +593,12 @@ public:
     void draw_earclick_label_info()
     {
         radio_button_earclick_label_info("##earclick_label_info", annotation_.ear_click_info);
+        if (annotation_.ear_click_info == EarClickLabelInfo::AudioError
+            && !annotation_.ear_click_notes.has_value())
+        {
+            ImGui::SameLine();
+            ImGui::TextUnformatted(ERROR_ICON "  Please add note explaining error!");
+        }
     }
 
     void draw_earclick_notes()
@@ -725,7 +741,8 @@ void SwallowTaskPlotter::draw_plots()
             draw_flow_plot();
             annotation_editor->draw_apnea_selection();
             if (annotation_editor->can_add_apnea_label()) {
-                add_plot_text("Hold Ctrl and left click and drag to add apnea label");
+                add_plot_text(PLOT_HELP_ICON
+                              "  Hold Ctrl and left click and drag to add apnea label");
             }
             ImPlot::EndPlot();
         }
@@ -737,7 +754,8 @@ void SwallowTaskPlotter::draw_plots()
             draw_audio_plot();
             annotation_editor->draw_earclick_selection();
             if (annotation_editor->can_add_earclick_labels()) {
-                add_plot_text("Hold Ctrl and left click and drag to add ear click label(s)");
+                add_plot_text(PLOT_HELP_ICON
+                              "  Hold Ctrl and left click and drag to add ear click label(s)");
             }
             ImPlot::EndPlot();
         }
