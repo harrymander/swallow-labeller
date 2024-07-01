@@ -482,9 +482,11 @@ private:
         ImGui::TextUnformatted("Task has unsaved changes!");
 
         if (ButtonRed(close_button_str, {button_width, 0})) {
-            spdlog::debug("Discarding changes");
+            spdlog::info("Discarding changes");
             close_popup = true;
-            set_task_index(*next_task_index);
+            if (*next_task_index != task_index) {
+                set_task_index(*next_task_index);
+            }
             gui_ready_to_close = gui_closing;
         }
 
@@ -501,8 +503,8 @@ private:
         ImGui::SetItemDefaultFocus();
 
         if (close_popup) {
-            unsaved_modal_open = false;
             next_task_index.reset();
+            unsaved_modal_open = false;
             ImGui::CloseCurrentPopup();
         }
     }
