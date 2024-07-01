@@ -414,7 +414,18 @@ public:
         ImGui::DestroyContext();
     }
 
-    void stop() { to_close = true; }
+    void stop()
+    {
+        if (annotation_unsaved()) {
+            spdlog::info(
+                "Application close requested, but there are unsaved changes. Prompting user."
+            );
+            gui_closing = true;
+            next_task_index = task_index;
+        } else {
+            gui_ready_to_close = true;
+        }
+    }
 
     bool draw()
     {
@@ -449,7 +460,7 @@ public:
             draw_window_contents();
         }
         ImGui::End();
-        return !to_close;
+        return !gui_ready_to_close;
     }
 
     static void set_scaling_factor(float scaling_factor)
@@ -467,23 +478,29 @@ private:
         const float button_width =
             ImGui::CalcTextSize(close_button_str).x + 2 * ImGui::GetStyle().ItemInnerSpacing.x;
 
-        bool close = false;
+        bool close_popup = false;
         ImGui::TextUnformatted("Task has unsaved changes!");
 
         if (ButtonRed(close_button_str, {button_width, 0})) {
             spdlog::debug("Discarding changes");
-            close = true;
+            close_popup = true;
             set_task_index(*next_task_index);
+            gui_ready_to_close = gui_closing;
         }
 
         ImGui::SameLine();
         if (ImGui::Button("Cancel", {button_width, 0})) {
             spdlog::debug("Cancel task close");
-            close = true;
+            close_popup = true;
+
+            if (gui_closing) {
+                spdlog::info("GUI close cancelled");
+                gui_closing = false;
+            }
         }
         ImGui::SetItemDefaultFocus();
 
-        if (close) {
+        if (close_popup) {
             unsaved_modal_open = false;
             next_task_index.reset();
             ImGui::CloseCurrentPopup();
@@ -620,7 +637,8 @@ private:
         }
     }
 
-    bool to_close = false;
+    bool gui_ready_to_close = false;
+    bool gui_closing = false;
     bool show_implot_demo = false;
     bool show_imgui_demo = false;
     bool show_imgui_metrics = false;
