@@ -304,6 +304,29 @@ template <class T> std::vector<T> shuffled_vector(std::vector<T> v)
     return shuffled_vector(std::move(v), rng);
 }
 
+class ColorSchemeSelector {
+public:
+    void draw()
+    {
+        if (ImGui::Combo("Colour scheme", &style_id, "Dark\0Light\0Classic\0")) {
+            switch (style_id) {
+            case 0:
+                ImGui::StyleColorsDark();
+                break;
+            case 1:
+                ImGui::StyleColorsLight();
+                break;
+            case 2:
+                ImGui::StyleColorsClassic();
+                break;
+            }
+        }
+    }
+
+private:
+    int style_id = 0;
+};
+
 }; // namespace
 
 class Gui::Impl {
@@ -380,6 +403,11 @@ private:
                 spdlog::info("Quit requested from menu bar");
                 stop();
             }
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("View")) {
+            color_scheme_selector.draw();
             ImGui::EndMenu();
         }
 
@@ -467,6 +495,7 @@ private:
     bool show_imgui_demo = false;
     bool show_imgui_metrics = false;
     bool show_debug_info = false;
+    ColorSchemeSelector color_scheme_selector;
 
     std::filesystem::path data_dir;
     AnnotationManager& annotation_mgr;
