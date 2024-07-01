@@ -56,21 +56,20 @@ public:
         tasks.insert(tasks.end(), annotated.begin(), annotated.end());
     }
 
-    // Return true if task changed
-    bool draw(const char *id)
+    // Return new index
+    std::size_t draw(const char *id, std::size_t index)
     {
         ScopedImID scoped_id(id);
         filter.Draw("##filter");
         ImGui::SameLine();
-        auto new_index = index;
 
         // FIXME: currently this steps through all tasks, even if not displayed
         if (ImGui::ArrowButton("Prev task", ImGuiDir_Left)) {
-            new_index = index ? index - 1 : tasks.size() - 1;
+            index = index ? index - 1 : tasks.size() - 1;
         }
         ImGui::SameLine();
         if (ImGui::ArrowButton("Next task", ImGuiDir_Right)) {
-            new_index = (index + 1) % tasks.size();
+            index = (index + 1) % tasks.size();
         }
 
         const auto num_annotated = tasks.size() - annotated_start_index;
@@ -85,7 +84,7 @@ public:
                 const char *str = tasks[i].c_str();
                 if (filter.PassFilter(str)) {
                     if (ImGui::Selectable(str, is_selected)) {
-                        new_index = i;
+                        index = i;
                     }
                     if (is_selected) {
                         ImGui::SetItemDefaultFocus();
@@ -95,43 +94,45 @@ public:
             ImGui::EndListBox();
         }
 
-        const bool changed = index != new_index;
-        index = new_index;
-        return changed;
+        return index;
     }
 
-    [[nodiscard]] const SwallowTaskInfo& current_task() const { return tasks[index].info(); }
-
-    // Moves task to front of annotated
-    void set_current_task_annotated()
+    [[nodiscard]] const SwallowTaskInfo& task_at(std::size_t index) const
     {
-        if (current_task_annotated()) {
+        return tasks[index].info();
+    }
+
+    void set_task_annotated(std::size_t& index)
+    {
+        if (task_annotated(index)) {
             return;
         }
 
         tasks.insert(
             tasks.begin() + static_cast<decltype(tasks)::difference_type>(annotated_start_index),
-            {current_task(), true}
+            {task_at(index), true}
         );
         annotated_start_index -= 1;
         tasks.erase(tasks.begin() + static_cast<decltype(tasks)::difference_type>(index));
         index = annotated_start_index;
     }
 
-    // Moves task to front
-    void clear_current_task_annotated()
+    void clear_task_annotated(std::size_t& index)
     {
-        if (!current_task_annotated()) {
+        if (!task_annotated(index)) {
             return;
         }
-        tasks.insert(tasks.begin(), {current_task(), false});
+        tasks.insert(tasks.begin(), {task_at(index), false});
         tasks.erase(tasks.begin() + static_cast<decltype(tasks)::difference_type>(index) + 1);
         annotated_start_index += 1;
         index = 0;
     }
 
 private:
-    [[nodiscard]] bool current_task_annotated() const { return index >= annotated_start_index; }
+    [[nodiscard]] bool task_annotated(std::size_t index) const
+    {
+        return index >= annotated_start_index;
+    }
 
     class TaskStrWrapper {
     public:
@@ -158,7 +159,6 @@ private:
 
     bool only_show_annotated = false;
     ImGuiTextFilter filter;
-    std::size_t index = 0;
 
     std::vector<TaskStrWrapper> tasks;
     std::size_t annotated_start_index;
@@ -192,25 +192,29 @@ public:
 
     explicit TaskView(
         const std::filesystem::path& data_dir,
+        std::size_t& task_index,
         TaskList& task_list,
         AnnotationManager& annotation_mgr_
     ) :
-        task(task_list.current_task()), task_list(task_list), annotation_mgr(annotation_mgr_)
+        task_index(task_index),
+        task(task_list.task_at(task_index)),
+        task_list(task_list),
+        annotation_mgr(annotation_mgr_)
     {
         const auto path = (data_dir / std::filesystem::path(task.npz_file.path)).make_preferred();
         path_str = path.string();
-        const SwallowAnnotation *annotation = annotation_mgr.get_annotation(task.get_id());
+        const SwallowAnnotation *annotation_ = annotation_mgr.get_annotation(task.get_id());
         spdlog::debug(
             "Task at path '{}' (id={}) {} existing annotation",
             path,
             task.get_id(),
-            annotation != nullptr ? "has" : "does not have"
+            annotation_ != nullptr ? "has" : "does not have"
         );
-        new_annotation = annotation == nullptr;
+        new_annotation = annotation_ == nullptr;
         try {
             SwallowTaskData data = load_swallow_task_data(path);
             error_or_plotter.emplace<SwallowTaskPlotter>(
-                data, annotation ? *annotation : SwallowAnnotation{}
+                data, annotation_ ? *annotation_ : SwallowAnnotation{}
             );
         } catch (const std::exception& e) {
             std::string error = fmt::format("Error loading task at path '{}': {}", path, e.what());
@@ -227,6 +231,15 @@ public:
         } else {
             draw_plotter(std::get<SwallowTaskPlotter>(error_or_plotter));
         }
+    }
+
+    [[nodiscard]] const SwallowAnnotation *annotation() const
+    {
+        const auto *plotter = std::get_if<SwallowTaskPlotter>(&error_or_plotter);
+        if (plotter && (!new_annotation || plotter->valid_annotation())) {
+            return &plotter->annotation();
+        }
+        return nullptr;
     }
 
 private:
@@ -261,7 +274,7 @@ private:
         );
         if (update_annotation) {
             update_annotation = annotation_mgr.add_annotation(task.get_id(), plotter.annotation());
-            task_list.set_current_task_annotated();
+            task_list.set_task_annotated(task_index);
             new_annotation = false;
         }
         ImGui::EndDisabled();
@@ -270,7 +283,7 @@ private:
         if (!new_annotation) {
             if (ButtonRed(delete_button_str, {0, button_height})) {
                 annotation_mgr.remove_annotation(task.get_id());
-                task_list.clear_current_task_annotated();
+                task_list.clear_task_annotated(task_index);
                 new_annotation = true;
                 update_annotation = true;
             }
@@ -287,6 +300,7 @@ private:
         }
     }
 
+    std::size_t& task_index;
     SwallowTaskInfo task;
     TaskList& task_list;
     AnnotationManager& annotation_mgr;
@@ -404,6 +418,21 @@ public:
 
     bool draw()
     {
+        static const char *const UnsavedModalId = "Unsaved annotation";
+
+        if (next_task_index.has_value() && !unsaved_modal_open) {
+            ImGui::OpenPopup(UnsavedModalId);
+            unsaved_modal_open = true;
+        }
+
+        ImGui::SetNextWindowPos(
+            ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f)
+        );
+        if (ImGui::BeginPopupModal(UnsavedModalId, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            draw_unsaved_modal();
+            ImGui::EndPopup();
+        }
+
         ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
         ImGui::SetNextWindowPos({0, 0});
         if (ImGui::Begin(
@@ -431,6 +460,35 @@ public:
 private:
     static constexpr ImGuiWindowFlags WindowFlags =
         (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove);
+
+    void draw_unsaved_modal()
+    {
+        static const char *close_button_str = "Close without saving";
+        const float button_width =
+            ImGui::CalcTextSize(close_button_str).x + 2 * ImGui::GetStyle().ItemInnerSpacing.x;
+
+        bool close = false;
+        ImGui::TextUnformatted("Task has unsaved changes!");
+
+        if (ButtonRed(close_button_str, {button_width, 0})) {
+            spdlog::debug("Discarding changes");
+            close = true;
+            set_task_index(*next_task_index);
+        }
+
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", {button_width, 0})) {
+            spdlog::debug("Cancel task close");
+            close = true;
+        }
+        ImGui::SetItemDefaultFocus();
+
+        if (close) {
+            unsaved_modal_open = false;
+            next_task_index.reset();
+            ImGui::CloseCurrentPopup();
+        }
+    }
 
     void draw_menu_bar()
     {
@@ -489,16 +547,51 @@ private:
         ImGui::EndChild();
     }
 
+    [[nodiscard]] bool annotation_unsaved() const
+    {
+        const auto *annotation = task_view->annotation();
+        if (annotation == nullptr) {
+            return false;
+        }
+
+        const auto *existing =
+            annotation_mgr.get_annotation(task_list.task_at(task_index).get_id());
+
+        if (existing) {
+            if (*existing != *annotation) {
+                spdlog::debug("Annotation has unsaved changes");
+                return true;
+            }
+            spdlog::debug("No unsaved changes for annotation");
+        } else {
+            spdlog::debug("No saved annotation for task");
+            return true;
+        }
+
+        return false;
+    }
+
     void draw_sidebar()
     {
-        if (task_list.draw("##tasklist")) {
-            task_view = load_current_task_view();
+        const std::size_t new_index = task_list.draw("##tasklist", task_index);
+        if (new_index != task_index) {
+            if (annotation_unsaved()) {
+                next_task_index = new_index;
+            } else {
+                set_task_index(new_index);
+            }
         }
+    }
+
+    void set_task_index(std::size_t index)
+    {
+        task_index = index;
+        task_view = load_current_task_view();
     }
 
     [[nodiscard]] std::unique_ptr<TaskView> load_current_task_view()
     {
-        return std::make_unique<TaskView>(data_dir, task_list, annotation_mgr);
+        return std::make_unique<TaskView>(data_dir, task_index, task_list, annotation_mgr);
     }
 
     static void draw_debug_info()
@@ -532,8 +625,11 @@ private:
     bool show_imgui_demo = false;
     bool show_imgui_metrics = false;
     bool show_debug_info = false;
+    bool unsaved_modal_open = false;
     ColorSchemeSelector color_scheme_selector;
     std::string ini_path;
+    std::size_t task_index = 0;
+    std::optional<std::size_t> next_task_index = std::nullopt;
 
     std::filesystem::path data_dir;
     AnnotationManager& annotation_mgr;
