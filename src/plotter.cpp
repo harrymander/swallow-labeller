@@ -486,6 +486,19 @@ private:
         return annotation_.swallow_info != SwallowLabelInfo::Ok || apnea_selected();
     }
 
+    [[nodiscard]] bool swallow_label_requires_note() const
+    {
+        using enum SwallowLabelInfo;
+        const auto info = annotation_.swallow_info;
+        return (info == FlowError || info == ApneaCutOff) && !annotation_.swallow_notes.has_value();
+    }
+
+    [[nodiscard]] bool earclick_label_requires_note() const
+    {
+        return annotation_.ear_click_info == EarClickLabelInfo::AudioError
+            && !annotation_.ear_click_notes.has_value();
+    }
+
     void update_apnea_label()
     {
         if (!valid_apnea_label()) {
@@ -534,7 +547,11 @@ public:
 
     [[nodiscard]] const SwallowAnnotation& annotation() const { return annotation_; }
 
-    [[nodiscard]] bool is_valid() const { return valid_apnea_label(); }
+    [[nodiscard]] bool is_valid() const
+    {
+        return valid_apnea_label() && !earclick_label_requires_note()
+            && !swallow_label_requires_note();
+    }
 
     [[nodiscard]] bool can_add_earclick_labels() const
     {
@@ -558,9 +575,7 @@ public:
         if (radio_button_swallow_label_info("##swallow_label_info", annotation_.swallow_info)) {
             update_apnea_label();
         }
-        if (annotation_.swallow_info == SwallowLabelInfo::FlowError
-            && !annotation_.swallow_notes.has_value())
-        {
+        if (swallow_label_requires_note()) {
             ImGui::SameLine();
             ImGui::TextUnformatted(ERROR_ICON "  Please add note explaining error!");
         }
@@ -593,9 +608,7 @@ public:
     void draw_earclick_label_info()
     {
         radio_button_earclick_label_info("##earclick_label_info", annotation_.ear_click_info);
-        if (annotation_.ear_click_info == EarClickLabelInfo::AudioError
-            && !annotation_.ear_click_notes.has_value())
-        {
+        if (earclick_label_requires_note()) {
             ImGui::SameLine();
             ImGui::TextUnformatted(ERROR_ICON "  Please add note explaining error!");
         }
