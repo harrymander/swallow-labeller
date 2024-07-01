@@ -15,6 +15,7 @@
 #include <imgui.h>
 #include <imgui_stdlib.h>
 #include <implot.h>
+#include <implot_internal.h>
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
@@ -33,6 +34,18 @@ using namespace labeller::task;
 using namespace imgui_util;
 
 namespace {
+
+// Add text in top left corner of plot
+void add_plot_text(const char *str)
+{
+    ImPlot::PushPlotClipRect();
+    ImPlot::GetPlotDrawList()->AddText(
+        ImPlot::GetPlotPos() + ImGui::GetStyle().ItemSpacing,
+        ImPlot::GetStyleColorU32(ImPlotCol_InlayText),
+        str
+    );
+    ImPlot::PopPlotClipRect();
+}
 
 bool begin_data_plot(const char *id)
 {
@@ -465,8 +478,6 @@ private:
         return new_label;
     }
 
-    [[nodiscard]] bool apnea_selected() const { return !range_isnan(apnea_range); }
-
     [[nodiscard]] bool valid_apnea_label() const
     {
         return annotation_.swallow_info != SwallowLabelInfo::Ok || apnea_selected();
@@ -477,7 +488,7 @@ private:
         if (!valid_apnea_label()) {
             return;
         }
-        if (annotation_.swallow_info == SwallowLabelInfo::Ok) {
+        if (can_edit_apnea_label()) {
             TimeRange time_range{apnea_range.Min, apnea_range.Max};
             annotation_.swallow_apnea.emplace(time_range, src_pattern, is_ambiguous);
             spdlog::debug(
@@ -522,6 +533,23 @@ public:
 
     [[nodiscard]] bool is_valid() const { return valid_apnea_label(); }
 
+    [[nodiscard]] bool can_add_earclick_labels() const
+    {
+        return annotation_.ear_click_info == EarClickLabelInfo::Ok;
+    }
+
+    [[nodiscard]] bool apnea_selected() const { return !range_isnan(apnea_range); }
+
+    [[nodiscard]] bool can_edit_apnea_label() const
+    {
+        return annotation_.swallow_info == SwallowLabelInfo::Ok;
+    }
+
+    [[nodiscard]] bool can_add_apnea_label() const
+    {
+        return can_edit_apnea_label() && !apnea_selected();
+    }
+
     void draw_swallow_label_info()
     {
         if (radio_button_swallow_label_info("##swallow_label_info", annotation_.swallow_info)) {
@@ -531,7 +559,7 @@ public:
 
     void draw_swallow_apnea_info()
     {
-        if (annotation_.swallow_info == SwallowLabelInfo::Ok) {
+        if (can_edit_apnea_label()) {
             const bool invalid = !apnea_selected();
             if (invalid) {
                 ImGui::TextUnformatted("Error: apnea label is required!");
@@ -569,7 +597,7 @@ public:
 
     void draw_apnea_selection()
     {
-        if (annotation_.swallow_info != SwallowLabelInfo::Ok) {
+        if (!can_edit_apnea_label()) {
             return;
         }
 
@@ -590,7 +618,7 @@ public:
 
     void draw_earclick_selection()
     {
-        if (annotation_.ear_click_info != EarClickLabelInfo::Ok) {
+        if (!can_add_earclick_labels()) {
             return;
         }
 
@@ -599,7 +627,7 @@ public:
 
     void draw_earclick_selection_list()
     {
-        ImGui::BeginDisabled(annotation_.ear_click_info != EarClickLabelInfo::Ok);
+        ImGui::BeginDisabled(!can_add_earclick_labels());
         if (ImGui::BeginListBox("##earclick_selection_list", {-1, -1})) {
             earclick_selections.draw_list("##earclick_selection_list_items");
 
@@ -610,7 +638,7 @@ public:
 
     void draw_regions_readonly()
     {
-        if (annotation_.swallow_info == SwallowLabelInfo::Ok) {
+        if (can_edit_apnea_label()) {
             plot::drag_xrange(
                 0, apnea_range, ApneaLabelColorSelecting, plot::DragXRangeFlag::NoInput
             );
@@ -696,6 +724,9 @@ void SwallowTaskPlotter::draw_plots()
         if (begin_data_plot("##flow")) {
             draw_flow_plot();
             annotation_editor->draw_apnea_selection();
+            if (annotation_editor->can_add_apnea_label()) {
+                add_plot_text("Hold Ctrl and left click and drag to add apnea label");
+            }
             ImPlot::EndPlot();
         }
         annotation_editor->draw_swallow_notes();
@@ -705,6 +736,9 @@ void SwallowTaskPlotter::draw_plots()
             ImPlot::SetupAxis(ImAxis_X1, "Time (s)");
             draw_audio_plot();
             annotation_editor->draw_earclick_selection();
+            if (annotation_editor->can_add_earclick_labels()) {
+                add_plot_text("Hold Ctrl and left click and drag to add ear click label(s)");
+            }
             ImPlot::EndPlot();
         }
         annotation_editor->draw_earclick_notes();
