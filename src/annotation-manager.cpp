@@ -48,6 +48,18 @@ const SwallowAnnotation *AnnotationManager::get_annotation(const std::string& id
     return &it->second;
 }
 
+bool AnnotationManager::annotation_saved(const std::string& id, const SwallowAnnotation& annotation)
+    const
+{
+    const SwallowAnnotation *existing = get_annotation(id);
+    if (existing) {
+        SwallowAnnotation normed = annotation;
+        normalise_annotation(normed);
+        return *existing == normed;
+    }
+    return false;
+}
+
 bool AnnotationManager::add_annotation(const std::string& id, SwallowAnnotation annotation)
 {
     normalise_annotation(annotation);

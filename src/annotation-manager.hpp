@@ -22,6 +22,14 @@ public:
     get_annotation(const std::string& annotation_id) const;
 
     /**
+     * Returns true if there is an existing annotation with the same id and it is identical to
+     * annotation, otherwise false.
+     */
+    [[nodiscard]] bool annotation_saved(
+        const std::string& id, const recap::labeller::task::SwallowAnnotation& annotation
+    ) const;
+
+    /**
      * Adds or updates annotation with given annotation_id. Returns true if annotation added or
      * updated.
      */

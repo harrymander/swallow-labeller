@@ -572,22 +572,9 @@ private:
         if (annotation == nullptr) {
             return false;
         }
-
-        const auto *existing =
-            annotation_mgr.get_annotation(task_list.task_at(task_index).get_id());
-
-        if (existing) {
-            if (*existing != *annotation) {
-                spdlog::debug("Annotation has unsaved changes");
-                return true;
-            }
-            spdlog::debug("No unsaved changes for annotation");
-        } else {
-            spdlog::debug("No saved annotation for task");
-            return true;
-        }
-
-        return false;
+        return !annotation_mgr.annotation_saved(
+            task_list.task_at(task_index).get_id(), *annotation
+        );
     }
 
     void draw_sidebar()
