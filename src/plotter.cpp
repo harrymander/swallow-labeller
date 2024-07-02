@@ -456,6 +456,11 @@ public:
             }
         }
     }
+
+    [[nodiscard]] const std::vector<ImPlotRange>& plot_ranges() const
+    {
+        return ranges.plot_ranges();
+    }
 };
 
 }; // namespace
@@ -467,6 +472,11 @@ private:
     static constexpr ImColor EarclickLabelColor = ImColor(0.0F, 1.0F, 0.0F, 0.1F);
     static constexpr ImColor EarclickLabelColorHovered = ImColor(0.0F, 1.0F, 0.0F, 0.25F);
     static constexpr ImColor EarclickLabelColorSelected = ImColor(0.0F, 1.0F, 0.0F, 0.4F);
+
+    static constexpr ImColor ApneaLabelSummaryColor = ApneaLabelColorSelected;
+    static constexpr ImColor EarclickLabelSummaryColor = EarclickLabelColorSelected;
+
+    static constexpr float LabelSummaryHeight = 8; // Same as default ImPlotStyle::DigitalBitHeight
 
     ImPlotRange apnea_range = {NAN, NAN};
     plot::PlotXSelector apnea_selector;
@@ -530,14 +540,17 @@ private:
         }
     }
 
-    static void draw_plot_vline(double x, const ImColor& color, float thickness)
+    static void draw_label_summary(const ImPlotRange& range, const ImColor& color)
     {
-        const ImVec2 pos_px = ImPlot::GetPlotPos();
-        const ImVec2 size_px = ImPlot::GetPlotSize();
-        const float x_px = ImPlot::GetCurrentPlot()->XAxis(0).PlotToPixels(x);
-        ImPlot::GetPlotDrawList()->AddLine(
-            {x_px, pos_px.y}, {x_px, pos_px.y + size_px.y}, color, thickness
+        const auto& xaxis = ImPlot::GetCurrentPlot()->XAxis(0);
+        const float y0 = ImPlot::GetPlotPos().y;
+        ImPlot::PushPlotClipRect();
+        ImPlot::GetPlotDrawList()->AddRectFilled(
+            {xaxis.PlotToPixels(range.Min), y0},
+            {xaxis.PlotToPixels(range.Max), y0 + LabelSummaryHeight},
+            color
         );
+        ImPlot::PopPlotClipRect();
     }
 
 public:
@@ -658,13 +671,19 @@ public:
         }
     }
 
-    void draw_apnea_start_end_lines() const
+    void draw_apnea_regions_summary() const
     {
-        constexpr float Thickness = 2;
-
         if (can_edit_apnea_label() && apnea_selected()) {
-            draw_plot_vline(apnea_range.Min, ApneaLabelColorSelected, Thickness);
-            draw_plot_vline(apnea_range.Max, ApneaLabelColorSelected, Thickness);
+            draw_label_summary(apnea_range, ApneaLabelSummaryColor);
+        }
+    }
+
+    void draw_earclick_regions_summary() const
+    {
+        if (can_add_earclick_labels()) {
+            for (const auto& range : earclick_selections.plot_ranges()) {
+                draw_label_summary(range, EarclickLabelSummaryColor);
+            }
         }
     }
 
@@ -785,6 +804,7 @@ void SwallowTaskPlotter::draw_plots()
                 add_plot_text(PLOT_HELP_ICON
                               "  Hold Ctrl and left click and drag to add apnea label");
             }
+            annotation_editor->draw_earclick_regions_summary();
             ImPlot::EndPlot();
         }
         annotation_editor->draw_swallow_notes();
@@ -798,7 +818,7 @@ void SwallowTaskPlotter::draw_plots()
                 add_plot_text(PLOT_HELP_ICON
                               "  Hold Ctrl and left click and drag to add ear click label(s)");
             }
-            annotation_editor->draw_apnea_start_end_lines();
+            annotation_editor->draw_apnea_regions_summary();
             ImPlot::EndPlot();
         }
         annotation_editor->draw_earclick_notes();
