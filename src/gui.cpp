@@ -251,9 +251,7 @@ private:
         const float padding_y = 2 * ImGui::GetStyle().FramePadding.y;
         if (ImGui::BeginChild(
                 "##task_plot_container",
-                {-1, ImGui::GetContentRegionAvail().y - button_height - padding_y},
-                0,
-                ImGuiWindowFlags_AlwaysAutoResize
+                {-1, ImGui::GetContentRegionAvail().y - button_height - padding_y}
             ))
         {
             plotter.draw("##task_plot");
