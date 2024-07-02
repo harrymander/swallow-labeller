@@ -5,6 +5,7 @@
 #include "data.hpp"
 #include "drag-range.hpp"
 #include "imgui-util.hpp"
+#include "implot-util.hpp"
 #include "labelling-task.hpp"
 #include "optutil.hpp"
 #include "strutil.hpp"
@@ -394,16 +395,15 @@ public:
         }
     }
 
-    void draw_regions_readonly(ImGuiID start_id)
+    void draw_regions_readonly() const
     {
         for (std::size_t i = 0; i < ranges.size(); i++) {
             const bool selected = optutil::value_and_equal(selected_index, i);
-            plot::drag_xrange(
-                static_cast<ImGuiID>(i) + start_id,
-                ranges.plot_ranges()[i],
+            const ImPlotRange& range = ranges.plot_ranges()[i];
+            implot_util::plot_vspan(
+                range,
                 selected ? selected_color :
-                           (optutil::value_and_equal(hovered_index, i) ? hovered_color : color),
-                plot::DragXRangeFlag::NoInput
+                           (optutil::value_and_equal(hovered_index, i) ? hovered_color : color)
             );
         }
     }
@@ -542,15 +542,7 @@ private:
 
     static void draw_label_summary(const ImPlotRange& range, const ImColor& color)
     {
-        const auto& xaxis = ImPlot::GetCurrentPlot()->XAxis(0);
-        const float y0 = ImPlot::GetPlotPos().y;
-        ImPlot::PushPlotClipRect();
-        ImPlot::GetPlotDrawList()->AddRectFilled(
-            {xaxis.PlotToPixels(range.Min), y0},
-            {xaxis.PlotToPixels(range.Max), y0 + LabelSummaryHeight},
-            color
-        );
-        ImPlot::PopPlotClipRect();
+        implot_util::plot_vspan(range.Min, range.Max, color, LabelSummaryHeight);
     }
 
 public:
@@ -707,16 +699,14 @@ public:
         ImGui::EndDisabled();
     }
 
-    void draw_regions_readonly()
+    void draw_regions_readonly() const
     {
         if (can_edit_apnea_label()) {
-            plot::drag_xrange(
-                0, apnea_range, ApneaLabelColorSelecting, plot::DragXRangeFlag::NoInput
-            );
+            implot_util::plot_vspan(apnea_range, ApneaLabelColorSelecting);
         }
 
-        if (annotation_.ear_click_info == EarClickLabelInfo::Ok) {
-            earclick_selections.draw_regions_readonly(1);
+        if (can_add_earclick_labels()) {
+            earclick_selections.draw_regions_readonly();
         }
     }
 };

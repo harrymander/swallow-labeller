@@ -2,6 +2,7 @@
 
 #include "drag-range.hpp"
 #include "imgui-util.hpp"
+#include "implot-util.hpp"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -85,13 +86,7 @@ bool PlotXSelector::draw(
         if (!(std::isnan(xmin_px) || std::isnan(xmax_px))) {
             range.Min = x_axis.PixelsToPlot(xmin_px);
             range.Max = x_axis.PixelsToPlot(xmax_px);
-            ImPlot::PushPlotClipRect();
-            ImPlot::GetPlotDrawList()->AddRectFilled(
-                ImPlot::PlotToPixels(range.Min, plot_limits.Y.Min),
-                ImPlot::PlotToPixels(range.Max, plot_limits.Y.Max),
-                color
-            );
-            ImPlot::PopPlotClipRect();
+            implot_util::plot_vspan(range, color);
         }
 
         if (!ImHasFlag(flags, NoCursor)) {

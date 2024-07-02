@@ -1,8 +1,7 @@
-#define IMGUI_DEFINE_MATH_OPERATORS
-
 #include "drag-range.hpp"
 
 #include "imgui-util.hpp"
+#include "implot-util.hpp"
 #include "util.hpp"
 
 #include <imgui.h>
@@ -102,20 +101,6 @@ static bool drag_xrange(
     return false;
 }
 
-static void draw_plot_vspan(float x0, float x1, const ImColor& color)
-{
-    const ImVec2 top_left = ImPlot::GetPlotPos();
-    const ImVec2 bottom_right = top_left + ImPlot::GetPlotSize();
-    const auto [xmin, xmax] = std::minmax(x0, x1);
-    if (x0 != x1) {
-        ImPlot::GetPlotDrawList()->AddRectFilled(
-            {std::clamp(xmin, top_left.x, bottom_right.x), top_left.y},
-            {std::clamp(xmax, top_left.x, bottom_right.x), bottom_right.y},
-            color
-        );
-    }
-}
-
 bool drag_xrange(
     ImGuiID caller_id,
     double& xmin,
@@ -177,7 +162,7 @@ bool drag_xrange(
     }
 
     ImPlot::PushPlotClipRect();
-    draw_plot_vspan(xmin_px, xmax_px, color);
+    implot_util::plot_vspan(xmin, xmax, color);
     ImPlot::PopPlotClipRect();
 
     return modified;

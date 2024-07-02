@@ -38,6 +38,7 @@ add_executable(recap-labeller
     src/font.cpp
     src/gui.cpp
     src/imgui-util.cpp
+    src/implot-util.cpp
     src/labelling-task.cpp
     src/main.cpp
     src/plotter.cpp
