@@ -260,64 +260,26 @@ bool range_isnan(const ImPlotRange& range)
     return std::isnan(range.Min) && std::isnan(range.Max);
 }
 
-std::vector<ImPlotRange> range_vector_from_time_ranges(const std::vector<TimeRange>& ranges)
-{
-    std::vector<ImPlotRange> result;
-    result.reserve(ranges.size());
-    for (const auto& range : ranges) {
-        const auto [start, end] = std::minmax(range.start, range.end);
-        result.emplace_back(start, end);
-    }
-    return result;
-}
-
-// Container for managing TimeRange/ImPlotRange
-class SelectionRanges {
-private:
-    std::vector<TimeRange>& time_ranges;
-    std::vector<ImPlotRange> plot_ranges_;
-
-public:
-    explicit SelectionRanges(std::vector<TimeRange>& time_ranges) :
-        time_ranges(time_ranges), plot_ranges_(range_vector_from_time_ranges(time_ranges))
-    {}
-
-    [[nodiscard]] const std::vector<ImPlotRange>& plot_ranges() const { return plot_ranges_; }
-
-    [[nodiscard]] std::vector<ImPlotRange>& plot_ranges() { return plot_ranges_; }
-
-    [[nodiscard]] std::size_t size() const { return time_ranges.size(); }
-
-    void push_back(const ImPlotRange& range)
-    {
-        time_ranges.emplace_back(range.Min, range.Max);
-        plot_ranges_.push_back(range);
-    }
-
-    void erase_at(std::size_t index)
-    {
-        time_ranges.erase(
-            time_ranges.begin() + static_cast<std::vector<TimeRange>::difference_type>(index)
-        );
-        plot_ranges_.erase(
-            plot_ranges_.begin() + static_cast<std::vector<ImPlotRange>::difference_type>(index)
-        );
-    }
-};
-
 class PlotSelectionsEditor {
 private:
     std::string name;
     ImColor color;
     ImColor hovered_color;
     ImColor selected_color;
-    SelectionRanges ranges;
+    std::vector<TimeRange>& time_ranges;
     std::vector<std::string> labels;
 
     plot::PlotXSelector selector;
-    ImPlotRange next_range = {NAN, NAN};
     std::optional<std::size_t> selected_index = std::nullopt;
     std::optional<std::size_t> hovered_index = std::nullopt;
+    ImPlotRange next_range = {NAN, NAN};
+    ImPlotRange current_range;
+
+    void set_selected_index(std::size_t index)
+    {
+        selected_index = index;
+        current_range = {time_ranges[index].start, time_ranges[index].end};
+    }
 
     void remove_selection(std::size_t i)
     {
@@ -325,13 +287,15 @@ private:
             if (*selected_index == i) {
                 selected_index.reset();
             } else if (i < *selected_index) {
-                *selected_index -= 1;
+                set_selected_index(*selected_index - 1);
             }
         }
 
-        const auto& range = ranges.plot_ranges()[i];
-        spdlog::debug("{}: removing label [{}, {}] (#{})", name, range.Min, range.Max, i + 1);
-        ranges.erase_at(i);
+        const auto& range = time_ranges[i];
+        spdlog::debug("{}: removing label [{}, {}] (#{})", name, range.start, range.end, i + 1);
+        time_ranges.erase(
+            time_ranges.begin() + static_cast<std::vector<TimeRange>::difference_type>(i)
+        );
         set_labels();
     }
 
@@ -343,8 +307,8 @@ private:
     void set_labels()
     {
         labels.clear();
-        labels.reserve(ranges.size());
-        for (std::size_t i = 0; i < ranges.size(); i++) {
+        labels.reserve(time_ranges.size());
+        for (std::size_t i = 0; i < time_ranges.size(); i++) {
             labels.push_back(label_str(i));
         }
     }
@@ -361,7 +325,7 @@ public:
         color(color),
         hovered_color(hovered_color),
         selected_color(selected_color),
-        ranges(time_ranges)
+        time_ranges(time_ranges)
     {
         set_labels();
     }
@@ -374,34 +338,53 @@ public:
                 selector.draw(0, next_range, color, 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl);
 
             if (finished) {
-                spdlog::debug("{}: placed new label: [{}, {}]", id, next_range.Min, next_range.Max);
-                selected_index = ranges.size();
-                ranges.push_back(next_range);
-                set_labels();
+                spdlog::debug(
+                    "Placed new label: {} #{} [{}, {}]",
+                    name,
+                    time_ranges.size() + 1,
+                    next_range.Min,
+                    next_range.Max
+                );
+                time_ranges.push_back({next_range.Min, next_range.Max});
+                set_selected_index(time_ranges.size() - 1);
                 next_range = {NAN, NAN};
+                set_labels();
             }
         }
 
-        for (std::size_t i = 0; i < ranges.size(); i++) {
+        for (std::size_t i = 0; i < time_ranges.size(); i++) {
             const bool selected = optutil::value_and_equal(selected_index, i);
-            plot::drag_xrange(
-                static_cast<ImGuiID>(i) + 1,
-                ranges.plot_ranges()[i],
-                selected ? selected_color :
-                           (optutil::value_and_equal(hovered_index, i) ? hovered_color : color),
-                selected && !selector.is_selecting() ? plot::DragXRangeFlag::None :
-                                                       plot::DragXRangeFlag::NoInput
-            );
+            if (selected) {
+                const bool range_changed =
+                    plot::drag_xrange(static_cast<ImGuiID>(i) + 1, current_range, selected_color);
+                if (range_changed) {
+                    spdlog::debug(
+                        "Changed label: {} #{}: [{}, {}]",
+                        name,
+                        i + 1,
+                        current_range.Min,
+                        current_range.Max
+                    );
+                    time_ranges[i] = {current_range.Min, current_range.Max};
+                }
+            } else {
+                const TimeRange& range = time_ranges[i];
+                implot_util::plot_vspan(
+                    range.start,
+                    range.end,
+                    optutil::value_and_equal(hovered_index, i) ? hovered_color : color
+                );
+            }
         }
     }
 
     void draw_regions_readonly() const
     {
-        for (std::size_t i = 0; i < ranges.size(); i++) {
+        for (std::size_t i = 0; i < time_ranges.size(); i++) {
             const bool selected = optutil::value_and_equal(selected_index, i);
-            const ImPlotRange& range = ranges.plot_ranges()[i];
             implot_util::plot_vspan(
-                range,
+                time_ranges[i].start,
+                time_ranges[i].end,
                 selected ? selected_color :
                            (optutil::value_and_equal(hovered_index, i) ? hovered_color : color)
             );
@@ -424,23 +407,23 @@ public:
 
         ScopedImID scoped_id(id);
         hovered_index.reset();
-        for (std::size_t i = 0; i < ranges.size(); i++) {
+        for (std::size_t i = 0; i < time_ranges.size(); i++) {
             ScopedImID task_id(static_cast<int>(i));
             const bool selected = optutil::value_and_equal(selected_index, i);
             if (ImGui::Selectable(labels[i].c_str(), selected, 0, {label_width, label_height})) {
                 if (selected) {
                     selected_index.reset();
                 } else {
-                    selected_index = i;
+                    set_selected_index(i);
                 }
-                const auto& range = ranges.plot_ranges()[i];
+                const auto& range = time_ranges[i];
                 spdlog::debug(
                     "{}: {} label #{} [{}, {}]",
                     name,
                     selected ? "deselected" : "selected",
                     i + 1,
-                    range.Min,
-                    range.Max
+                    range.start,
+                    range.end
                 );
             }
             if (ImGui::IsItemHovered()) {
@@ -455,11 +438,6 @@ public:
                 hovered_index = i;
             }
         }
-    }
-
-    [[nodiscard]] const std::vector<ImPlotRange>& plot_ranges() const
-    {
-        return ranges.plot_ranges();
     }
 };
 
@@ -542,7 +520,12 @@ private:
 
     static void draw_label_summary(const ImPlotRange& range, const ImColor& color)
     {
-        implot_util::plot_vspan(range.Min, range.Max, color, LabelSummaryHeight);
+        implot_util::plot_vspan(range, color, LabelSummaryHeight);
+    }
+
+    static void draw_label_summary(const TimeRange& range, const ImColor& color)
+    {
+        implot_util::plot_vspan(range.start, range.end, color, LabelSummaryHeight);
     }
 
 public:
@@ -673,7 +656,7 @@ public:
     void draw_earclick_regions_summary() const
     {
         if (can_add_earclick_labels()) {
-            for (const auto& range : earclick_selections.plot_ranges()) {
+            for (const auto& range : annotation_.ear_clicks) {
                 draw_label_summary(range, EarclickLabelSummaryColor);
             }
         }
