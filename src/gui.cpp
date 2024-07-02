@@ -269,9 +269,9 @@ private:
         }
 
         ImGui::BeginDisabled(!plotter.valid_annotation());
-        bool update_annotation = ImGui::Button(
-            new_annotation ? "Submit" : "Update", {update_button_width, button_height}
-        );
+        const char *button_str = new_annotation ? "Submit [Ctrl+Space]" : "Update [Ctrl+Space]";
+        bool update_annotation = ImGui::Button(button_str, {update_button_width, button_height})
+            || (!item_disabled() && ImGui::Shortcut(ImGuiKey_Space | ImGuiMod_Ctrl));
         if (update_annotation) {
             update_annotation = annotation_mgr.add_annotation(task.get_id(), plotter.annotation());
             task_list.set_task_annotated(task_index);
