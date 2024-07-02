@@ -530,6 +530,16 @@ private:
         }
     }
 
+    static void draw_plot_vline(double x, const ImColor& color, float thickness)
+    {
+        const ImVec2 pos_px = ImPlot::GetPlotPos();
+        const ImVec2 size_px = ImPlot::GetPlotSize();
+        const float x_px = ImPlot::GetCurrentPlot()->XAxis(0).PlotToPixels(x);
+        ImPlot::GetPlotDrawList()->AddLine(
+            {x_px, pos_px.y}, {x_px, pos_px.y + size_px.y}, color, thickness
+        );
+    }
+
 public:
     explicit AnnotationEditor(SwallowAnnotation annotation = {}) :
         annotation_(std::move(annotation)),
@@ -645,6 +655,16 @@ public:
         }
         if (changed) {
             update_apnea_label();
+        }
+    }
+
+    void draw_apnea_start_end_lines() const
+    {
+        constexpr float Thickness = 2;
+
+        if (can_edit_apnea_label() && apnea_selected()) {
+            draw_plot_vline(apnea_range.Min, ApneaLabelColorSelected, Thickness);
+            draw_plot_vline(apnea_range.Max, ApneaLabelColorSelected, Thickness);
         }
     }
 
@@ -778,6 +798,7 @@ void SwallowTaskPlotter::draw_plots()
                 add_plot_text(PLOT_HELP_ICON
                               "  Hold Ctrl and left click and drag to add ear click label(s)");
             }
+            annotation_editor->draw_apnea_start_end_lines();
             ImPlot::EndPlot();
         }
         annotation_editor->draw_earclick_notes();
