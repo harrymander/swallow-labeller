@@ -181,4 +181,21 @@ bool drag_xrange(
     return drag_xrange(id, xrange.Min, xrange.Max, color, flags, out_clicked, out_hovered, held);
 }
 
+DragXRangeWrapper::DragXRangeWrapper(ImPlotRange& xrange) : range(xrange) {}
+
+bool DragXRangeWrapper::draw(ImGuiID id, const ImColor& color, recap::plot::DragXRangeFlags flags)
+{
+    bool held = false;
+    if (drag_xrange(id, range, color, flags, nullptr, nullptr, &held)) {
+        m_modified = true;
+    }
+
+    if (m_modified && !held) {
+        m_modified = false;
+        return true;
+    }
+
+    return false;
+}
+
 }; // namespace recap::plot

@@ -59,6 +59,21 @@ bool drag_xrange(
     bool *held = nullptr
 );
 
+class DragXRangeWrapper {
+public:
+    explicit DragXRangeWrapper(ImPlotRange& xrange);
+
+    /**
+     * Same as calling drag_xrange on the range passed at construction, but only returns true when
+     * the range has been modified *and mouse button has been released*.
+     */
+    bool draw(ImGuiID id, const ImColor& color, recap::plot::DragXRangeFlags flags = 0);
+
+private:
+    ImPlotRange& range;
+    bool m_modified = false;
+};
+
 } // namespace recap::plot
 
 #endif // INCLUDE_PLOT_DRAG_RANGE_HPP

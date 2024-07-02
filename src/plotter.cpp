@@ -262,18 +262,19 @@ bool range_isnan(const ImPlotRange& range)
 
 class PlotSelectionsEditor {
 private:
+    plot::PlotXSelector selector;
+    std::optional<std::size_t> selected_index = std::nullopt;
+    std::optional<std::size_t> hovered_index = std::nullopt;
+    ImPlotRange next_range = {NAN, NAN};
+    ImPlotRange current_range;
+
     std::string name;
     ImColor color;
     ImColor hovered_color;
     ImColor selected_color;
     std::vector<TimeRange>& time_ranges;
     std::vector<std::string> labels;
-
-    plot::PlotXSelector selector;
-    std::optional<std::size_t> selected_index = std::nullopt;
-    std::optional<std::size_t> hovered_index = std::nullopt;
-    ImPlotRange next_range = {NAN, NAN};
-    ImPlotRange current_range;
+    plot::DragXRangeWrapper drag_xrange_wrapper;
 
     void set_selected_index(std::size_t index)
     {
@@ -325,7 +326,8 @@ public:
         color(color),
         hovered_color(hovered_color),
         selected_color(selected_color),
-        time_ranges(time_ranges)
+        time_ranges(time_ranges),
+        drag_xrange_wrapper(current_range)
     {
         set_labels();
     }
@@ -356,7 +358,7 @@ public:
             const bool selected = optutil::value_and_equal(selected_index, i);
             if (selected) {
                 const bool range_changed =
-                    plot::drag_xrange(static_cast<ImGuiID>(i) + 1, current_range, selected_color);
+                    drag_xrange_wrapper.draw(static_cast<ImGuiID>(i) + 1, selected_color);
                 if (range_changed) {
                     spdlog::debug(
                         "Changed label: {} #{}: [{}, {}]",
@@ -464,6 +466,7 @@ private:
     std::string swallow_notes;
     std::string ear_click_notes;
     PlotSelectionsEditor earclick_selections;
+    plot::DragXRangeWrapper apnea_drag_wrapper;
 
     [[nodiscard]] bool draw_apnea_selector()
     {
@@ -542,7 +545,8 @@ public:
             EarclickLabelColorHovered,
             EarclickLabelColorSelected,
             annotation_.ear_clicks
-        )
+        ),
+        apnea_drag_wrapper(apnea_range)
     {
         if (annotation_.swallow_apnea.has_value()) {
             const auto& region = annotation_.swallow_apnea->time;
@@ -636,10 +640,8 @@ public:
         if (apnea_selector.is_selecting() || !apnea_selected()) {
             changed = draw_apnea_selector();
         }
-        if (apnea_selected()) {
-            if (plot::drag_xrange(0, apnea_range, ApneaLabelColorSelected)) {
-                changed = true;
-            }
+        if (apnea_selected() && apnea_drag_wrapper.draw(0, ApneaLabelColorSelected)) {
+            changed = true;
         }
         if (changed) {
             update_apnea_label();
