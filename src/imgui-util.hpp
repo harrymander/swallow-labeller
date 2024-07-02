@@ -80,6 +80,8 @@ public:
 
 bool ButtonRed(const char *label, const ImVec2& size = {0, 0});
 
+[[nodiscard]] bool item_disabled();
+
 }; // namespace recap::imgui_util
 
 #endif // RECAP_LABELLER_IMGUI_UTIL_HPP_INCLUDE

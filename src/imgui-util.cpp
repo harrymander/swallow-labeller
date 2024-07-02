@@ -1,6 +1,7 @@
 #include "imgui-util.hpp"
 
 #include <imgui.h>
+#include <imgui_internal.h>
 
 #include <initializer_list>
 #include <variant>
@@ -102,6 +103,11 @@ bool ButtonRed(const char *label, const ImVec2& size)
         {ImGuiCol_ButtonActive, ColorActive},
     };
     return ImGui::Button(label, size);
+}
+
+bool item_disabled()
+{
+    return ImGui::GetItemFlags() & ImGuiItemFlags_Disabled;
 }
 
 }; // namespace recap::imgui_util

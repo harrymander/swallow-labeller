@@ -169,17 +169,14 @@ bool radio_button_enums(const char *id, T& value, const RadioButtonField<T> *fie
         }
         const RadioButtonField<T>& field = fields[i];
         const bool enabled = field.value == value;
-        bool pressed = ImGui::RadioButton(field.label, enabled);
-        if (!enabled) {
-            if (!pressed && field.key != ImGuiKey_None
-                && !(ImGui::GetItemFlags() & ImGuiItemFlags_Disabled)) {
-                pressed = ImGui::Shortcut(field.key);
-            }
-            if (pressed) {
-                value = field.value;
-                changed = true;
-                spdlog::debug("Radio buttons {}: changed to '{}'", id, field.label);
-            }
+        const bool pressed = ImGui::RadioButton(field.label, enabled);
+        if (!enabled
+            && (pressed
+                || (field.key != ImGuiKey_None && !item_disabled() && ImGui::Shortcut(field.key))))
+        {
+            value = field.value;
+            changed = true;
+            spdlog::debug("Radio buttons {}: changed to '{}'", id, field.label);
         }
     }
 
@@ -842,5 +839,4 @@ void SwallowTaskPlotter::draw_summary_plot()
     plot_line("##summary_flow_plot_line", data.flow_time, data.flow);
     plot_event_digital();
 }
-
 }; // namespace recap::labeller::plotter
