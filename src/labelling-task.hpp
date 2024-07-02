@@ -54,13 +54,13 @@ enum class SRCPattern {
 struct SwallowApneaLabel {
     TimeRange time;
     SRCPattern pattern;
-    bool is_ambiguous;
 
     bool operator==(const SwallowApneaLabel&) const = default;
 };
 
 enum class SwallowLabelInfo {
     Ok,
+    AmbiguousPattern,
     FlowError,
     NoSwallow,
     ApneaCutOff,

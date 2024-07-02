@@ -102,6 +102,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
     SwallowLabelInfo,
     {
         {SwallowLabelInfo::Ok, "ok"},
+        {SwallowLabelInfo::AmbiguousPattern, "ambiguous"},
         {SwallowLabelInfo::FlowError, "flow-error"},
         {SwallowLabelInfo::NoSwallow, "no-swallow"},
         {SwallowLabelInfo::ApneaCutOff, "apnea-cutoff"},
@@ -117,7 +118,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
     }
 );
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SwallowApneaLabel, time, pattern, is_ambiguous);
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SwallowApneaLabel, time, pattern);
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
     SwallowAnnotation,

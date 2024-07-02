@@ -222,8 +222,9 @@ bool radio_button_src_patterns(const char *id, SRCPattern& pattern)
 
 bool radio_button_swallow_label_info(const char *id, SwallowLabelInfo& info)
 {
-    static std::array<RadioButtonField<SwallowLabelInfo>, 4> fields = {{
+    static std::array<RadioButtonField<SwallowLabelInfo>, 5> fields = {{
         {"Ok", SwallowLabelInfo::Ok},
+        {"Ambiguous [a]", SwallowLabelInfo::AmbiguousPattern, ImGuiKey_A},
         {"No swallow", SwallowLabelInfo::NoSwallow},
         {"Apnoea cut-off", SwallowLabelInfo::ApneaCutOff},
         {"Flow error", SwallowLabelInfo::FlowError},
@@ -475,7 +476,6 @@ private:
 
     SwallowAnnotation annotation_;
     SRCPattern src_pattern;
-    bool is_ambiguous;
     std::string swallow_notes;
     std::string ear_click_notes;
     PlotSelectionsEditor earclick_selections;
@@ -495,7 +495,9 @@ private:
 
     [[nodiscard]] bool valid_apnea_label() const
     {
-        return annotation_.swallow_info != SwallowLabelInfo::Ok || apnea_selected();
+        using enum SwallowLabelInfo;
+        const SwallowLabelInfo info = annotation_.swallow_info;
+        return !(info == Ok || info == AmbiguousPattern) || apnea_selected();
     }
 
     [[nodiscard]] bool swallow_label_requires_note() const
@@ -518,13 +520,12 @@ private:
         }
         if (can_edit_apnea_label()) {
             TimeRange time_range{apnea_range.Min, apnea_range.Max};
-            annotation_.swallow_apnea.emplace(time_range, src_pattern, is_ambiguous);
+            annotation_.swallow_apnea.emplace(time_range, src_pattern);
             spdlog::debug(
-                "Updated swallow apnea label ({}, {}), pattern={}, ambiguous={}",
+                "Updated swallow apnea label ({}, {}), pattern={}",
                 time_range.start,
                 time_range.end,
-                src_pattern_str(src_pattern),
-                is_ambiguous
+                src_pattern_str(src_pattern)
             );
         } else {
             annotation_.swallow_apnea.reset();
@@ -537,9 +538,6 @@ public:
         annotation_(std::move(annotation)),
         src_pattern(optutil::map_or(
             annotation_.swallow_apnea, [](const auto& a) { return a.pattern; }, SRCPattern{}
-        )),
-        is_ambiguous(optutil::map_or(
-            annotation_.swallow_apnea, [](const auto& a) { return a.is_ambiguous; }, false
         )),
         swallow_notes(optutil::value_or_default(annotation_.swallow_notes)),
         ear_click_notes(optutil::value_or_default(annotation_.ear_click_notes)),
@@ -574,7 +572,9 @@ public:
 
     [[nodiscard]] bool can_edit_apnea_label() const
     {
-        return annotation_.swallow_info == SwallowLabelInfo::Ok;
+        using enum SwallowLabelInfo;
+        const SwallowLabelInfo info = annotation_.swallow_info;
+        return info == Ok || info == AmbiguousPattern;
     }
 
     [[nodiscard]] bool can_add_apnea_label() const
@@ -605,16 +605,10 @@ public:
         } else {
             ImGui::BeginDisabled();
         }
-        bool changed = radio_button_src_patterns("##src_pattern", src_pattern);
-        ImGui::SameLine();
-        if (ImGui::Checkbox("Ambiguous swallow", &is_ambiguous)) {
-            changed = true;
-        }
-        ImGui::EndDisabled();
-
-        if (changed) {
+        if (radio_button_src_patterns("##src_pattern", src_pattern)) {
             update_apnea_label();
         }
+        ImGui::EndDisabled();
     }
 
     void draw_earclick_label_info()
