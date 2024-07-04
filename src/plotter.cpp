@@ -355,7 +355,7 @@ public:
         }
 
         for (std::size_t i = 0; i < time_ranges.size(); i++) {
-            const bool selected = optutil::value_and_equal(selected_index, i);
+            const bool selected = optutil::has_value_and_equal(selected_index, i);
             if (selected) {
                 const bool range_changed =
                     drag_xrange_wrapper.draw(static_cast<ImGuiID>(i) + 1, selected_color);
@@ -374,7 +374,7 @@ public:
                 implot_util::plot_vspan(
                     range.start,
                     range.end,
-                    optutil::value_and_equal(hovered_index, i) ? hovered_color : color
+                    optutil::has_value_and_equal(hovered_index, i) ? hovered_color : color
                 );
             }
         }
@@ -383,12 +383,12 @@ public:
     void draw_regions_readonly() const
     {
         for (std::size_t i = 0; i < time_ranges.size(); i++) {
-            const bool selected = optutil::value_and_equal(selected_index, i);
+            const bool selected = optutil::has_value_and_equal(selected_index, i);
             implot_util::plot_vspan(
                 time_ranges[i].start,
                 time_ranges[i].end,
                 selected ? selected_color :
-                           (optutil::value_and_equal(hovered_index, i) ? hovered_color : color)
+                           (optutil::has_value_and_equal(hovered_index, i) ? hovered_color : color)
             );
         }
     }
@@ -411,7 +411,7 @@ public:
         hovered_index.reset();
         for (std::size_t i = 0; i < time_ranges.size(); i++) {
             ScopedImID task_id(static_cast<int>(i));
-            const bool selected = optutil::value_and_equal(selected_index, i);
+            const bool selected = optutil::has_value_and_equal(selected_index, i);
             if (ImGui::Selectable(labels[i].c_str(), selected, 0, {label_width, label_height})) {
                 if (selected) {
                     selected_index.reset();
