@@ -402,7 +402,7 @@ public:
         if (selector.is_selecting() || range_isnan(next_range)) {
             const bool finished =
                 selector.draw(0, next_range, color, 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl);
-
+            draw_plot_range_delta_text(next_range);
             if (finished) {
                 spdlog::debug(
                     "Placed new label: {} #{} [{}, {}]",
@@ -432,6 +432,9 @@ public:
                         current_range.Max
                     );
                     time_ranges[i] = {current_range.Min, current_range.Max};
+                }
+                if (drag_xrange_wrapper.is_editing()) {
+                    draw_plot_range_delta_text(current_range);
                 }
             } else {
                 const TimeRange& range = time_ranges[i];
