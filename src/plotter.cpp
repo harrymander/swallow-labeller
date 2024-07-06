@@ -502,6 +502,7 @@ public:
             ImGui::SameLine();
             if (ButtonRed(remove_button_str)) {
                 remove_selection(i);
+                break;
             }
             if (ImGui::IsItemHovered()) {
                 hovered_index = i;
