@@ -149,15 +149,7 @@ void plot_line(const char *id, const std::vector<double>& x, const std::vector<d
     ImPlot::PlotLine(id, x.data(), y.data(), static_cast<int>(y.size()));
 }
 
-template <class T> struct RadioButtonField {
-    const char *label;
-    T value;
-    ImGuiKey key;
-
-    RadioButtonField(const char *label, T value, ImGuiKey key = ImGuiKey_None) :
-        label(label), value(value), key(key)
-    {}
-};
+template <class T> class RadioButtonField;
 
 template <class T>
 bool radio_button_enums(const char *id, T& value, const RadioButtonField<T> *fields, std::size_t n)
@@ -183,6 +175,20 @@ bool radio_button_enums(const char *id, T& value, const RadioButtonField<T> *fie
 
     return changed;
 }
+
+template <class T> class RadioButtonField {
+public:
+    RadioButtonField(const char *label, T value, ImGuiKey key = ImGuiKey_None) :
+        label(label), value(std::move(value)), key(key)
+    {}
+
+private:
+    const char *label;
+    T value;
+    ImGuiKey key;
+
+    friend bool radio_button_enums<T>(const char *, T&, const RadioButtonField<T> *, std::size_t);
+};
 
 template <class T, class Container>
 bool radio_button_enums(const char *id, T& value, const Container& options)
