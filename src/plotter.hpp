@@ -2,6 +2,7 @@
 #define INCLUDE_RECAP_LABELLER_PLOTTER_HPP
 
 #include "data.hpp"
+#include "drag-range.hpp"
 #include "labelling-task.hpp"
 #include "selector.hpp"
 
@@ -61,6 +62,8 @@ private:
     recap::plot::PlotXSelector selector = {};
     ImPlotRange selector_range = {};
     ImPlotRange last_selector_range = {NAN, NAN};
+    ImPlotRange flow_time_delta_range = {};
+    plot::PlotXSelector flow_time_delta_selector;
 
     class AnnotationEditor;
 

@@ -844,26 +844,13 @@ void SwallowTaskPlotter::draw_plots()
         annotation_editor->draw_swallow_apnea_info();
         if (begin_data_plot("##flow")) {
             draw_flow_plot();
-            annotation_editor->draw_apnea_selection();
-            if (annotation_editor->can_add_apnea_label()) {
-                add_plot_text(PLOT_HELP_ICON
-                              "  Hold Ctrl and left click and drag to add apnea label");
-            }
-            annotation_editor->draw_earclick_regions_summary();
             ImPlot::EndPlot();
         }
         annotation_editor->draw_swallow_notes();
 
         annotation_editor->draw_earclick_label_info();
         if (begin_data_plot("##ear_audio")) {
-            ImPlot::SetupAxis(ImAxis_X1, "Time (s)");
             draw_audio_plot();
-            annotation_editor->draw_earclick_selection();
-            if (annotation_editor->can_add_earclick_labels()) {
-                add_plot_text(PLOT_HELP_ICON
-                              "  Hold Ctrl and left click and drag to add ear click label(s)");
-            }
-            annotation_editor->draw_apnea_regions_summary();
             ImPlot::EndPlot();
         }
         annotation_editor->draw_earclick_notes();
@@ -905,12 +892,32 @@ void SwallowTaskPlotter::plot_data(
 
 void SwallowTaskPlotter::draw_flow_plot()
 {
+    constexpr ImU32 flow_time_delta_selector_color = IM_COL32(120, 120, 120, 50);
+
     plot_data("##flow_plot_line", data.flow_time, data.flow, "Flow rate (L/min)", "{:g} L/min");
+    annotation_editor->draw_apnea_selection();
+    if (annotation_editor->can_add_apnea_label()) {
+        add_plot_text(PLOT_HELP_ICON "  Hold Ctrl and left click and drag to add apnea label");
+    }
+    annotation_editor->draw_earclick_regions_summary();
+
+    flow_time_delta_selector.draw(
+        0, flow_time_delta_range, flow_time_delta_selector_color, 0, ImGuiMouseButton_Right
+    );
+    if (flow_time_delta_selector.is_selecting()) {
+        draw_plot_range_delta_text(flow_time_delta_range);
+    }
 }
 
 void SwallowTaskPlotter::draw_audio_plot()
 {
+    ImPlot::SetupAxis(ImAxis_X1, "Time (s)");
     plot_data("##audio_plot_line", data.audio_time, data.audio, "Ear audio (V)", "{:g} V");
+    annotation_editor->draw_earclick_selection();
+    if (annotation_editor->can_add_earclick_labels()) {
+        add_plot_text(PLOT_HELP_ICON "  Hold Ctrl and left click and drag to add ear click labels");
+    }
+    annotation_editor->draw_apnea_regions_summary();
 }
 
 void SwallowTaskPlotter::draw_summary_plot()
