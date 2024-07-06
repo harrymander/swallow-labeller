@@ -5,6 +5,7 @@
 #include "labelling-task.hpp"
 #include "selector.hpp"
 
+#include <fmt/core.h>
 #include <imgui.h>
 #include <implot.h>
 
@@ -44,8 +45,13 @@ private:
     void draw_flow_plot();
     void draw_summary_plot();
 
-    void
-    plot_data(const char *, const std::vector<double>&, const std::vector<double>&, const char *);
+    void plot_data(
+        const char *id,
+        const std::vector<double>& x,
+        const std::vector<double>& y,
+        const char *ylabel,
+        fmt::format_string<double> yfmt
+    );
 
     void plot_audio_line();
     void plot_flow_line();

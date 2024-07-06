@@ -1,6 +1,5 @@
+#include "fmt/core.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
-
-#include "plotter.hpp"
 
 #include "data.hpp"
 #include "drag-range.hpp"
@@ -8,6 +7,7 @@
 #include "implot-util.hpp"
 #include "labelling-task.hpp"
 #include "optutil.hpp"
+#include "plotter.hpp"
 #include "strutil.hpp"
 #include "util.hpp"
 
@@ -66,7 +66,7 @@ void setup_axis_links(ImAxis axis, double *v1, double *v2)
     ImPlot::SetupAxisLinks(axis, vmin, vmax);
 }
 
-bool mouse_inside_plot()
+bool is_mouse_inside_plot()
 {
     if (!ImGui::IsMousePosValid()) {
         return false;
@@ -105,7 +105,14 @@ void add_text_autoalign(ImDrawList *draw_list, const char *text, float xp, float
     draw_list->AddText(ImVec2(xp, yp), ImGui::GetColorU32(ImGuiCol_Text), text);
 }
 
-void add_plot_vline(ImDrawList *draw_list, double xplot, double yplot, const ImVec2& pospx)
+void add_plot_vline(
+    ImDrawList *draw_list,
+    double xplot,
+    double yplot,
+    const ImVec2& pospx,
+    fmt::format_string<double> xfmt,
+    fmt::format_string<double> yfmt
+)
 {
     const ImVec2 plot_pos = ImPlot::GetPlotPos();
     const ImVec2 plot_size = ImPlot::GetPlotSize();
@@ -116,30 +123,32 @@ void add_plot_vline(ImDrawList *draw_list, double xplot, double yplot, const ImV
     const float xend = plot_pos.x + plot_size.x;
     add_text_autoalign(
         draw_list,
-        fmt::format("x={:g}", xplot).c_str(),
+        fmt::vformat(xfmt, fmt::make_format_args(xplot)).c_str(),
         bottom.x,
         bottom.y - ImGui::GetTextLineHeightWithSpacing(),
         xend
     );
-    add_text_autoalign(draw_list, fmt::format("y={:g}", yplot).c_str(), top.x, top.y, xend);
+    add_text_autoalign(
+        draw_list, fmt::vformat(yfmt, fmt::make_format_args(yplot)).c_str(), top.x, top.y, xend
+    );
 }
 
-void draw_plot_cursor(double xplot, double yplot)
+void draw_plot_cursor(double xplot, double yplot, fmt::format_string<double> yfmt)
 {
     ImDrawList *draw_list = ImPlot::GetPlotDrawList();
     const auto pospx = ImPlot::PlotToPixels(xplot, yplot);
-    add_plot_vline(draw_list, xplot, yplot, pospx);
+    add_plot_vline(draw_list, xplot, yplot, pospx, "t = {:g} s", yfmt);
     add_plot_marker(draw_list, pospx);
 }
 
-void draw_plot_hovered(const double *x, size_t n, const double *y)
+void draw_plot_hovered(const double *x, size_t n, const double *y, fmt::format_string<double> yfmt)
 {
     const auto mouse = ImPlot::GetPlotMousePos();
     if (mouse.x > x[0]) {
         const double *const end = x + n;
         const double *xclosest = util::binary_search_closest(x, end, mouse.x);
         if (xclosest != end) {
-            draw_plot_cursor(*xclosest, y[xclosest - x]);
+            draw_plot_cursor(*xclosest, y[xclosest - x], yfmt);
         }
     }
 }
@@ -822,7 +831,11 @@ void SwallowTaskPlotter::plot_event_digital() const
 }
 
 void SwallowTaskPlotter::plot_data(
-    const char *id, const std::vector<double>& x, const std::vector<double>& y, const char *ylabel
+    const char *id,
+    const std::vector<double>& x,
+    const std::vector<double>& y,
+    const char *ylabel,
+    fmt::format_string<double> yfmt
 )
 {
     ImPlot::SetupAxis(ImAxis_Y1, ylabel, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit);
@@ -830,19 +843,19 @@ void SwallowTaskPlotter::plot_data(
     setup_axis_links(ImAxis_X1, &summary_range.Min, &summary_range.Max);
     plot_line(id, x, y);
     plot_event_digital();
-    if (mouse_inside_plot()) {
-        draw_plot_hovered(x.data(), x.size(), y.data());
+    if (is_mouse_inside_plot()) {
+        draw_plot_hovered(x.data(), x.size(), y.data(), yfmt);
     }
 }
 
 void SwallowTaskPlotter::draw_flow_plot()
 {
-    plot_data("##flow_plot_line", data.flow_time, data.flow, "Flow rate (L/min)");
+    plot_data("##flow_plot_line", data.flow_time, data.flow, "Flow rate (L/min)", "{:g} L/min");
 }
 
 void SwallowTaskPlotter::draw_audio_plot()
 {
-    plot_data("##audio_plot_line", data.audio_time, data.audio, "Ear audio (V)");
+    plot_data("##audio_plot_line", data.audio_time, data.audio, "Ear audio (V)", "{:g} V");
 }
 
 void SwallowTaskPlotter::draw_summary_plot()
