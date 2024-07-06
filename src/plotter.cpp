@@ -1,5 +1,6 @@
-#include "fmt/core.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
+
+#include "plotter.hpp"
 
 #include "data.hpp"
 #include "drag-range.hpp"
@@ -7,11 +8,11 @@
 #include "implot-util.hpp"
 #include "labelling-task.hpp"
 #include "optutil.hpp"
-#include "plotter.hpp"
 #include "strutil.hpp"
 #include "util.hpp"
 
 #include <IconsFontAwesome6.h>
+#include <fmt/core.h>
 #include <fmt/format.h>
 #include <imgui.h>
 #include <imgui_stdlib.h>
@@ -88,19 +89,39 @@ void add_plot_marker(ImDrawList *draw_list, const ImVec2& pos)
     );
 }
 
+constexpr float TextAutoalignMargin = 15;
+constexpr float TextAutoalignPadding = 6;
+
 /**
- * Add text in position (xp, yp), automatically right-aligining text if it would be greater than
- * xend
+ * Add left-aligned text starting at (xp, yp), automatically right-aligning text if it would be
+ * extend past xend
  */
-void add_text_autoalign(ImDrawList *draw_list, const char *text, float xp, float yp, float xend)
+void add_text_autoalign_left(
+    ImDrawList *draw_list, const char *text, float xp, float yp, float xend
+)
 {
-    constexpr float align_margin = 15;
-    constexpr float padding = 6;
-    const auto text_size = ImGui::CalcTextSize(text);
-    if (xp + text_size.x + align_margin > xend) {
-        xp -= text_size.x + padding;
+    const float text_width = ImGui::CalcTextSize(text).x;
+    if (xp + text_width + TextAutoalignMargin > xend) {
+        xp -= text_width + TextAutoalignPadding;
     } else {
-        xp += padding;
+        xp += TextAutoalignPadding;
+    }
+    draw_list->AddText(ImVec2(xp, yp), ImGui::GetColorU32(ImGuiCol_Text), text);
+}
+
+/**
+ * Add right-aligned text ending at (xp, yp), automatically left-aligning text if it would extend
+ * before xstart
+ */
+void add_text_autoalign_right(
+    ImDrawList *draw_list, const char *text, float xp, float yp, float xstart
+)
+{
+    const float text_width = ImGui::CalcTextSize(text).x;
+    if (xp - text_width - TextAutoalignMargin < xstart) {
+        xp += TextAutoalignPadding;
+    } else {
+        xp -= text_width + TextAutoalignPadding;
     }
     draw_list->AddText(ImVec2(xp, yp), ImGui::GetColorU32(ImGuiCol_Text), text);
 }
@@ -121,14 +142,14 @@ void add_plot_vline(
     draw_list->AddLine(top, bottom, ImColor(128, 128, 128));
 
     const float xend = plot_pos.x + plot_size.x;
-    add_text_autoalign(
+    add_text_autoalign_left(
         draw_list,
         fmt::vformat(xfmt, fmt::make_format_args(xplot)).c_str(),
         bottom.x,
         bottom.y - ImGui::GetTextLineHeightWithSpacing(),
         xend
     );
-    add_text_autoalign(
+    add_text_autoalign_left(
         draw_list, fmt::vformat(yfmt, fmt::make_format_args(yplot)).c_str(), top.x, top.y, xend
     );
 }
@@ -156,6 +177,34 @@ void draw_plot_hovered(const double *x, size_t n, const double *y, fmt::format_s
 void plot_line(const char *id, const std::vector<double>& x, const std::vector<double>& y)
 {
     ImPlot::PlotLine(id, x.data(), y.data(), static_cast<int>(y.size()));
+}
+
+void draw_plot_range_delta_text(const ImPlotRange& range)
+{
+    const ImVec2 plot_pos = ImPlot::GetPlotPos();
+    const ImVec2 plot_size = ImPlot::GetPlotSize();
+    const float yp = plot_pos.y + plot_size.y / 2;
+    const std::string text = fmt::format("Δt = {:g} s", range.Size());
+    const double xmouse = ImPlot::GetPlotMousePos().x;
+    const auto [xmin, xmax] = std::minmax(range.Min, range.Max);
+    const double mid = (xmin + xmax) / 2;
+    if (xmouse < mid) {
+        add_text_autoalign_right(
+            ImPlot::GetPlotDrawList(),
+            text.c_str(),
+            ImPlot::GetCurrentPlot()->XAxis(0).PlotToPixels(xmin),
+            yp,
+            plot_pos.x
+        );
+    } else {
+        add_text_autoalign_left(
+            ImPlot::GetPlotDrawList(),
+            text.c_str(),
+            ImPlot::GetCurrentPlot()->XAxis(0).PlotToPixels(xmax),
+            yp,
+            plot_pos.x + plot_size.x
+        );
+    }
 }
 
 template <class T> class RadioButtonField;
@@ -483,19 +532,6 @@ private:
     PlotSelectionsEditor earclick_selections;
     plot::DragXRangeWrapper apnea_drag_wrapper;
 
-    [[nodiscard]] bool draw_apnea_selector()
-    {
-        const bool new_label = apnea_selector.draw(
-            0, apnea_range, ApneaLabelColorSelecting, 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl
-        );
-        if (new_label) {
-            spdlog::debug(
-                "Placed new swallow apnea label: [{}, {}]", apnea_range.Min, apnea_range.Max
-            );
-        }
-        return new_label;
-    }
-
     [[nodiscard]] bool valid_apnea_label() const
     {
         using enum SwallowLabelInfo;
@@ -653,13 +689,29 @@ public:
         ScopedImID scoped_id("##apnea_selection");
         bool changed = false;
         if (apnea_selector.is_selecting() || !apnea_selected()) {
-            changed = draw_apnea_selector();
+            changed = apnea_selector.draw(
+                0,
+                apnea_range,
+                ApneaLabelColorSelecting,
+                0,
+                ImGuiMouseButton_Left,
+                ImGuiKey_LeftCtrl
+            );
+            if (changed) {
+                spdlog::debug(
+                    "Placed new swallow apnea label: [{}, {}]", apnea_range.Min, apnea_range.Max
+                );
+            }
         }
         if (apnea_selected() && apnea_drag_wrapper.draw(0, ApneaLabelColorSelected)) {
             changed = true;
         }
         if (changed) {
             update_apnea_label();
+        }
+
+        if (apnea_drag_wrapper.is_editing() || apnea_selector.is_selecting()) {
+            draw_plot_range_delta_text(apnea_range);
         }
     }
 

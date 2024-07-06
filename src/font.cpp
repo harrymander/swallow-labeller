@@ -64,10 +64,13 @@ void setup_fonts()
     }
 
     const float font_size = get_font_size();
-    if (!ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF(
+    ImFontAtlas *atlas = ImGui::GetIO().Fonts;
+    if (!atlas->AddFontFromMemoryCompressedTTF(
             static_cast<const void *>(adobe_source_sans_compressed_data),
             static_cast<int>(adobe_source_sans_compressed_size),
-            font_size
+            font_size,
+            nullptr,
+            atlas->GetGlyphRangesGreek() // includes Basic Latin and Latin 1 Supplement
         ))
     {
         spdlog::error("Error adding font from memory, falling back to built-in font");

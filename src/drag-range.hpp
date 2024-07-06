@@ -69,6 +69,8 @@ public:
      */
     bool draw(ImGuiID id, const ImColor& color, recap::plot::DragXRangeFlags flags = 0);
 
+    [[nodiscard]] bool is_editing() const { return m_modified; }
+
 private:
     ImPlotRange& range;
     bool m_modified = false;
