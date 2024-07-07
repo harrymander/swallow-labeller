@@ -2,11 +2,13 @@
 #define RECAP_LABELLER_IMGUI_UTIL_HPP_INCLUDE
 
 #include <imgui.h>
+#include <implot.h>
+#include <implot_internal.h>
 
 #include <initializer_list>
 #include <variant>
 
-namespace recap::imgui_util {
+namespace recap::labeller::gui::widgets {
 
 /**
  * RAII wrappers for various ImGui functions that require pushing contexts and then popping them.
@@ -82,6 +84,16 @@ bool ButtonRed(const char *label, const ImVec2& size = {0, 0});
 
 [[nodiscard]] bool item_disabled();
 
-}; // namespace recap::imgui_util
+inline float plot_xaxis_to_pixels(double x)
+{
+    return ImPlot::GetCurrentPlot()->XAxis(0).PlotToPixels(x);
+}
+
+inline double plot_pixels_to_xaxis(float x)
+{
+    return ImPlot::GetCurrentPlot()->XAxis(0).PixelsToPlot(x);
+}
+
+}; // namespace recap::labeller::gui::widgets
 
 #endif // RECAP_LABELLER_IMGUI_UTIL_HPP_INCLUDE

@@ -1,4 +1,4 @@
-#include "imgui-util.hpp"
+#include "util.hpp"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -6,7 +6,7 @@
 #include <initializer_list>
 #include <variant>
 
-namespace recap::imgui_util {
+namespace recap::labeller::gui::widgets {
 
 namespace {
 
@@ -110,4 +110,4 @@ bool item_disabled()
     return ImGui::GetItemFlags() & ImGuiItemFlags_Disabled;
 }
 
-}; // namespace recap::imgui_util
+}; // namespace recap::labeller::gui::widgets
