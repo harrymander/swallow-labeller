@@ -447,16 +447,27 @@ public:
         }
     }
 
-    void draw_regions_readonly() const
+    void draw_regions_readonly(float height = 0, bool use_selected_color = false) const
     {
+        const PlotRange *selector_range = selector.range();
+        if (selector_range) {
+            draw_plot_range(*selector_range, use_selected_color ? selected_color : color, height);
+        }
+
         for (std::size_t i = 0; i < time_ranges.size(); i++) {
-            const bool selected = optutil::has_value_and_equal(selected_index, i);
-            draw_plot_range(
-                time_ranges[i].start,
-                time_ranges[i].end,
-                selected ? selected_color :
-                           (optutil::has_value_and_equal(hovered_index, i) ? hovered_color : color)
-            );
+            if (optutil::has_value_and_equal(selected_index, i)) {
+                draw_plot_range(current_range, selected_color, height);
+            } else {
+                const auto& range = time_ranges[i];
+                draw_plot_range(
+                    range.start,
+                    range.end,
+                    use_selected_color ?
+                        selected_color :
+                        (optutil::has_value_and_equal(hovered_index, i) ? hovered_color : color),
+                    height
+                );
+            }
         }
     }
 
@@ -576,14 +587,16 @@ private:
         }
     }
 
-    static void draw_label_summary(const PlotRange& range, const ImColor& color)
+    void draw_apnea_region_readonly(float height = 0, const ImColor *color = nullptr) const
     {
-        draw_plot_range(range, color, LabelSummaryHeight);
-    }
-
-    static void draw_label_summary(const TimeRange& range, const ImColor& color)
-    {
-        draw_plot_range(range.start, range.end, color, LabelSummaryHeight);
+        if (can_edit_apnea_label()) {
+            const PlotRange *selector_range = apnea_range_selector.range();
+            if (selector_range) {
+                draw_plot_range(*selector_range, color ? *color : ApneaLabelColorSelecting, height);
+            } else {
+                draw_plot_range(apnea_range, color ? *color : ApneaLabelColorSelected, height);
+            }
+        }
     }
 
 public:
@@ -727,17 +740,13 @@ public:
 
     void draw_apnea_regions_summary() const
     {
-        if (can_edit_apnea_label() && apnea_selected()) {
-            draw_label_summary(apnea_range, ApneaLabelSummaryColor);
-        }
+        draw_apnea_region_readonly(LabelSummaryHeight, &ApneaLabelColorSelected);
     }
 
     void draw_earclick_regions_summary() const
     {
         if (can_add_earclick_labels()) {
-            for (const auto& range : annotation_.ear_clicks) {
-                draw_label_summary(range, EarclickLabelSummaryColor);
-            }
+            earclick_selections.draw_regions_readonly(LabelSummaryHeight, true);
         }
     }
 
@@ -763,10 +772,7 @@ public:
 
     void draw_regions_readonly() const
     {
-        if (can_edit_apnea_label()) {
-            draw_plot_range(apnea_range, ApneaLabelColorSelecting);
-        }
-
+        draw_apnea_region_readonly();
         if (can_add_earclick_labels()) {
             earclick_selections.draw_regions_readonly();
         }
