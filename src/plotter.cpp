@@ -3,9 +3,10 @@
 #include "plotter.hpp"
 
 #include "data.hpp"
-#include "drag-range.hpp"
-#include "imgui-util.hpp"
-#include "implot-util.hpp"
+#include "gui/widgets/plot-range-dragger.hpp"
+#include "gui/widgets/plot-range-selector.hpp"
+#include "gui/widgets/plot-range.hpp"
+#include "gui/widgets/util.hpp"
 #include "labelling-task.hpp"
 #include "optutil.hpp"
 #include "strutil.hpp"
@@ -36,7 +37,7 @@ namespace recap::labeller::plotter {
 
 using labeller::data::SwallowTaskData;
 using namespace labeller::task;
-using namespace imgui_util;
+using namespace recap::labeller::gui::widgets;
 
 namespace {
 
@@ -179,14 +180,14 @@ void plot_line(const char *id, const std::vector<double>& x, const std::vector<d
     ImPlot::PlotLine(id, x.data(), y.data(), static_cast<int>(y.size()));
 }
 
-void draw_plot_range_delta_text(const ImPlotRange& range)
+void draw_plot_range_delta_text(const PlotRange& range)
 {
     const ImVec2 plot_pos = ImPlot::GetPlotPos();
     const ImVec2 plot_size = ImPlot::GetPlotSize();
     const float yp = plot_pos.y + plot_size.y / 2;
-    const std::string text = fmt::format("Δt = {:g} s", range.Size());
+    const std::string text = fmt::format("Δt = {:g} s", range.range());
     const double xmouse = ImPlot::GetPlotMousePos().x;
-    const auto [xmin, xmax] = std::minmax(range.Min, range.Max);
+    const auto [xmin, xmax] = std::minmax(range.start, range.end);
     const double mid = (xmin + xmax) / 2;
     if (xmouse < mid) {
         add_text_autoalign_right(
@@ -319,18 +320,17 @@ void text_input_trim(const char *label, std::string& text, std::optional<std::st
     }
 }
 
-bool range_isnan(const ImPlotRange& range)
+bool range_isnan(const PlotRange& range)
 {
-    return std::isnan(range.Min) && std::isnan(range.Max);
+    return std::isnan(range.start) && std::isnan(range.end);
 }
 
 class PlotSelectionsEditor {
 private:
-    plot::PlotXSelector selector;
+    PlotRangeSelector selector;
     std::optional<std::size_t> selected_index = std::nullopt;
     std::optional<std::size_t> hovered_index = std::nullopt;
-    ImPlotRange next_range = {NAN, NAN};
-    ImPlotRange current_range;
+    PlotRange current_range = {NAN, NAN};
 
     std::string name;
     ImColor color;
@@ -338,7 +338,7 @@ private:
     ImColor selected_color;
     std::vector<TimeRange>& time_ranges;
     std::vector<std::string> labels;
-    plot::DragXRangeWrapper drag_xrange_wrapper;
+    PlotRangeDragger drag_xrange_wrapper;
 
     void set_selected_index(std::size_t index)
     {
@@ -399,46 +399,47 @@ public:
     void draw_plot_selection(const char *id)
     {
         ScopedImID scoped_id(id);
-        if (selector.is_selecting() || range_isnan(next_range)) {
-            const bool finished =
-                selector.draw(0, next_range, color, 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl);
-            draw_plot_range_delta_text(next_range);
-            if (finished) {
-                spdlog::debug(
-                    "Placed new label: {} #{} [{}, {}]",
-                    name,
-                    time_ranges.size() + 1,
-                    next_range.Min,
-                    next_range.Max
-                );
-                time_ranges.push_back({next_range.Min, next_range.Max});
-                set_selected_index(time_ranges.size() - 1);
-                next_range = {NAN, NAN};
-                set_labels();
-            }
+        const PlotRange *range = selector.range();
+        if (range) {
+            draw_plot_range(*range, color);
+            draw_plot_range_delta_text(*range);
+        }
+
+        const auto new_range = selector.update(0, 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl);
+        if (new_range.has_value()) {
+            spdlog::debug(
+                "Placed new label: {} #{} [{}, {}]",
+                name,
+                time_ranges.size() + 1,
+                new_range->start,
+                new_range->end
+            );
+            time_ranges.push_back({new_range->start, new_range->end});
+            set_selected_index(time_ranges.size() - 1);
+            set_labels();
         }
 
         for (std::size_t i = 0; i < time_ranges.size(); i++) {
             const bool selected = optutil::has_value_and_equal(selected_index, i);
             if (selected) {
-                const bool range_changed =
-                    drag_xrange_wrapper.draw(static_cast<ImGuiID>(i) + 1, selected_color);
+                draw_plot_range(current_range, selected_color);
+                const bool range_changed = drag_xrange_wrapper.update(i + 1);
                 if (range_changed) {
                     spdlog::debug(
                         "Changed label: {} #{}: [{}, {}]",
                         name,
                         i + 1,
-                        current_range.Min,
-                        current_range.Max
+                        current_range.start,
+                        current_range.end
                     );
-                    time_ranges[i] = {current_range.Min, current_range.Max};
+                    time_ranges[i] = {current_range.start, current_range.end};
                 }
                 if (drag_xrange_wrapper.is_editing()) {
                     draw_plot_range_delta_text(current_range);
                 }
             } else {
                 const TimeRange& range = time_ranges[i];
-                implot_util::plot_vspan(
+                draw_plot_range(
                     range.start,
                     range.end,
                     optutil::has_value_and_equal(hovered_index, i) ? hovered_color : color
@@ -451,7 +452,7 @@ public:
     {
         for (std::size_t i = 0; i < time_ranges.size(); i++) {
             const bool selected = optutil::has_value_and_equal(selected_index, i);
-            implot_util::plot_vspan(
+            draw_plot_range(
                 time_ranges[i].start,
                 time_ranges[i].end,
                 selected ? selected_color :
@@ -526,15 +527,15 @@ private:
 
     static constexpr float LabelSummaryHeight = 8; // Same as default ImPlotStyle::DigitalBitHeight
 
-    ImPlotRange apnea_range = {NAN, NAN};
-    plot::PlotXSelector apnea_selector;
+    PlotRange apnea_range = {NAN, NAN};
+    PlotRangeSelector apnea_range_maker;
 
     SwallowAnnotation annotation_;
     SRCPattern src_pattern;
     std::string swallow_notes;
     std::string ear_click_notes;
     PlotSelectionsEditor earclick_selections;
-    plot::DragXRangeWrapper apnea_drag_wrapper;
+    PlotRangeDragger apnea_range_dragger;
 
     [[nodiscard]] bool valid_apnea_label() const
     {
@@ -562,7 +563,7 @@ private:
             return;
         }
         if (can_edit_apnea_label()) {
-            TimeRange time_range{apnea_range.Min, apnea_range.Max};
+            TimeRange time_range{apnea_range.start, apnea_range.end};
             annotation_.swallow_apnea.emplace(time_range, src_pattern);
             spdlog::debug(
                 "Updated swallow apnea label ({}, {}), pattern={}",
@@ -576,14 +577,14 @@ private:
         }
     }
 
-    static void draw_label_summary(const ImPlotRange& range, const ImColor& color)
+    static void draw_label_summary(const PlotRange& range, const ImColor& color)
     {
-        implot_util::plot_vspan(range, color, LabelSummaryHeight);
+        draw_plot_range(range, color, LabelSummaryHeight);
     }
 
     static void draw_label_summary(const TimeRange& range, const ImColor& color)
     {
-        implot_util::plot_vspan(range.start, range.end, color, LabelSummaryHeight);
+        draw_plot_range(range.start, range.end, color, LabelSummaryHeight);
     }
 
 public:
@@ -601,11 +602,11 @@ public:
             EarclickLabelColorSelected,
             annotation_.ear_clicks
         ),
-        apnea_drag_wrapper(apnea_range)
+        apnea_range_dragger(apnea_range)
     {
         if (annotation_.swallow_apnea.has_value()) {
             const auto& region = annotation_.swallow_apnea->time;
-            std::tie(apnea_range.Min, apnea_range.Max) = std::minmax(region.start, region.end);
+            std::tie(apnea_range.start, apnea_range.end) = std::minmax(region.start, region.end);
         }
     }
 
@@ -692,30 +693,37 @@ public:
 
         ScopedImID scoped_id("##apnea_selection");
         bool changed = false;
-        if (apnea_selector.is_selecting() || !apnea_selected()) {
-            changed = apnea_selector.draw(
-                0,
-                apnea_range,
-                ApneaLabelColorSelecting,
-                0,
-                ImGuiMouseButton_Left,
-                ImGuiKey_LeftCtrl
+
+        if (apnea_selected()) {
+            draw_plot_range(apnea_range, ApneaLabelColorSelected);
+            if (apnea_range_dragger.update("##apnea_dragger")) {
+                changed = true;
+            }
+            if (apnea_range_dragger.is_editing()) {
+                draw_plot_range_delta_text(apnea_range);
+            }
+        } else {
+            const PlotRange *range = apnea_range_maker.range();
+            if (range) {
+                draw_plot_range(*range, ApneaLabelColorSelecting);
+                if (apnea_range_maker.is_selecting()) {
+                    draw_plot_range_delta_text(*range);
+                }
+            }
+            const auto new_range = apnea_range_maker.update(
+                "##apnea_maker", 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl
             );
-            if (changed) {
+            if (new_range.has_value()) {
+                apnea_range = *new_range;
+                changed = true;
                 spdlog::debug(
-                    "Placed new swallow apnea label: [{}, {}]", apnea_range.Min, apnea_range.Max
+                    "Placed new swallow apnea label: [{}, {}]", apnea_range.start, apnea_range.end
                 );
             }
         }
-        if (apnea_selected() && apnea_drag_wrapper.draw(0, ApneaLabelColorSelected)) {
-            changed = true;
-        }
+
         if (changed) {
             update_apnea_label();
-        }
-
-        if (apnea_drag_wrapper.is_editing() || apnea_selector.is_selecting()) {
-            draw_plot_range_delta_text(apnea_range);
         }
     }
 
@@ -758,7 +766,7 @@ public:
     void draw_regions_readonly() const
     {
         if (can_edit_apnea_label()) {
-            implot_util::plot_vspan(apnea_range, ApneaLabelColorSelecting);
+            draw_plot_range(apnea_range, ApneaLabelColorSelecting);
         }
 
         if (can_add_earclick_labels()) {
@@ -767,7 +775,7 @@ public:
     }
 };
 
-ImPlotRange SwallowTaskPlotter::initial_range(
+PlotRange SwallowTaskPlotter::initial_range(
     const std::vector<double>& time, const std::vector<uint8_t>& event
 )
 {
@@ -883,7 +891,7 @@ void SwallowTaskPlotter::plot_data(
 {
     ImPlot::SetupAxis(ImAxis_Y1, ylabel, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, x[0], x.back());
-    setup_axis_links(ImAxis_X1, &summary_range.Min, &summary_range.Max);
+    setup_axis_links(ImAxis_X1, &summary_range.start, &summary_range.end);
     plot_line(id, x, y);
     plot_event_digital();
     if (is_mouse_inside_plot()) {
@@ -902,11 +910,11 @@ void SwallowTaskPlotter::draw_flow_plot()
     }
     annotation_editor->draw_earclick_regions_summary();
 
-    flow_time_delta_selector.draw(
-        0, flow_time_delta_range, flow_time_delta_selector_color, 0, ImGuiMouseButton_Right
-    );
-    if (flow_time_delta_selector.is_selecting()) {
-        draw_plot_range_delta_text(flow_time_delta_range);
+    (void) flow_time_delta_selector.update("##flow_time_delta_selector", 0, ImGuiMouseButton_Right);
+    const PlotRange *range = flow_time_delta_selector.range();
+    if (range) {
+        draw_plot_range(*range, flow_time_delta_selector_color);
+        draw_plot_range_delta_text(*range);
     }
 }
 
@@ -927,12 +935,15 @@ void SwallowTaskPlotter::draw_summary_plot()
     ImPlot::SetupAxes(nullptr, nullptr, ax_flags, ax_flags);
 
     constexpr ImColor summary_color = {.5F, .5F, .5F, .6F};
-    summary_selector.draw(
-        0, summary_range, summary_color, plot::PlotXSelector::NoCursor, ImGuiMouseButton_Left
-    );
-    if (!summary_selector.is_selecting()) {
-        plot::drag_xrange(0, summary_range, summary_color);
+    summary_selector.update("##summary_selector");
+    const PlotRange *selection = summary_selector.range();
+    if (selection) {
+        summary_range = *selection;
+    } else {
+        PlotRangeDragger dragger(summary_range);
+        dragger.update("##summary_dragger");
     }
+    draw_plot_range(summary_range, summary_color);
 
     plot_line("##summary_flow_plot_line", data.flow_time, data.flow);
     plot_event_digital();

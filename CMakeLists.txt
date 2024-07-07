@@ -32,19 +32,23 @@ imgui_compressed_c_array(
 )
 
 add_executable(recap-labeller
-    ${FONTAWESOME_CPP_FILE}
-    ${SOURCE_SANS_CPP_FILE}
     src/annotation-manager.cpp
     src/app.cpp
     src/data.cpp
     src/gui/font.cpp
     src/gui/gui.cpp
-    src/gui/widgets/plot-range.cpp
     src/gui/widgets/plot-range-dragger.cpp
-    src/gui/widgets/plot-range-maker.cpp
+    src/gui/widgets/plot-range-selector.cpp
+    src/gui/widgets/plot-range.cpp
     src/gui/widgets/util.cpp
     src/labelling-task.cpp
     src/main.cpp
+    ${FONTAWESOME_CPP_FILE}
+    ${SOURCE_SANS_CPP_FILE}
+
+    # To be removed:
+    src/old-gui.cpp
+    src/plotter.cpp
 )
 target_compile_features(recap-labeller PRIVATE cxx_std_20)
 target_link_libraries(recap-labeller PRIVATE

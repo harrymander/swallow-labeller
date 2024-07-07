@@ -2,6 +2,7 @@
 #define RECAP_LABELLER_GUI_HPP
 
 #include "../app.hpp"
+#include "../old-gui.hpp"
 
 #include <filesystem>
 #include <optional>
@@ -29,6 +30,8 @@ private:
     bool m_ready_to_stop = false;
 
     recap::labeller::app::App& m_app;
+
+    recap::labeller::gui::OldGui old_gui;
 };
 
 }; // namespace recap::labeller::gui

@@ -2,9 +2,10 @@
 #define INCLUDE_RECAP_LABELLER_PLOTTER_HPP
 
 #include "data.hpp"
-#include "drag-range.hpp"
+#include "gui/widgets/plot-range-dragger.hpp"
+#include "gui/widgets/plot-range-selector.hpp"
+#include "gui/widgets/plot-range.hpp"
 #include "labelling-task.hpp"
-#include "selector.hpp"
 
 #include <fmt/core.h>
 #include <imgui.h>
@@ -38,7 +39,7 @@ public:
     [[nodiscard]] bool valid_annotation() const;
 
 private:
-    static ImPlotRange
+    static recap::labeller::gui::widgets::PlotRange
     initial_range(const std::vector<double>& time, const std::vector<uint8_t>& event);
 
     void draw_plots();
@@ -58,18 +59,18 @@ private:
     void plot_flow_line();
     void plot_event_digital() const;
 
-    recap::plot::PlotXSelector summary_selector = {};
-    recap::plot::PlotXSelector selector = {};
-    ImPlotRange selector_range = {};
-    ImPlotRange last_selector_range = {NAN, NAN};
-    ImPlotRange flow_time_delta_range = {};
-    plot::PlotXSelector flow_time_delta_selector;
+    recap::labeller::gui::widgets::PlotRangeSelector summary_selector = {};
+    recap::labeller::gui::widgets::PlotRange selector = {};
+    recap::labeller::gui::widgets::PlotRange selector_range = {};
+    recap::labeller::gui::widgets::PlotRange last_selector_range = {NAN, NAN};
+    recap::labeller::gui::widgets::PlotRange flow_time_delta_range = {};
+    recap::labeller::gui::widgets::PlotRangeSelector flow_time_delta_selector;
 
     class AnnotationEditor;
 
     recap::labeller::data::SwallowTaskData data;
     std::vector<double> event;
-    ImPlotRange summary_range;
+    recap::labeller::gui::widgets::PlotRange summary_range;
     std::unique_ptr<AnnotationEditor> annotation_editor;
 };
 

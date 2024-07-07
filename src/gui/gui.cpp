@@ -1,5 +1,6 @@
 #include "gui.hpp"
 
+#include "../old-gui.hpp"
 #include "font.hpp"
 
 #include <imgui.h>
@@ -43,7 +44,8 @@ std::optional<std::string> get_custom_ini_path()
 
 }; // namespace
 
-Gui::Gui(app::App& app) : m_app(app)
+Gui::Gui(app::App& app) :
+    m_app(app), old_gui(m_app.swallow_tasks(), m_app.annotation_manager(), m_app.data_dir(), false)
 {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -69,9 +71,12 @@ Gui::~Gui()
 void Gui::stop()
 {
     m_stop_requested = true;
-    m_ready_to_stop = true;
+    old_gui.stop();
 }
 
-void Gui::render() {}
+void Gui::render()
+{
+    m_ready_to_stop = !old_gui.draw();
+}
 
 }; // namespace recap::labeller::gui

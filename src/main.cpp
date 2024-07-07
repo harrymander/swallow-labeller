@@ -198,7 +198,7 @@ int main(int argc, const char *argv[])
         return 1;
     }
 
-    app::App app(*labelling_tasks, *annotations_mgr);
+    app::App app(*labelling_tasks, *annotations_mgr, data_dir);
     gui::Gui gui(app);
     return platform::run(gui);
 }

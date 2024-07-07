@@ -1,9 +1,8 @@
-#include "gui.hpp"
+#include "old-gui.hpp"
 
 #include "annotation-manager.hpp"
 #include "data.hpp"
-#include "font.hpp"
-#include "imgui-util.hpp"
+#include "gui/widgets/util.hpp"
 #include "labelling-task.hpp"
 #include "plotter.hpp"
 
@@ -32,7 +31,7 @@ namespace recap::labeller::gui {
 using namespace recap::labeller::annotation_manager;
 using namespace recap::labeller::plotter;
 using namespace recap::labeller::task;
-using namespace imgui_util;
+using namespace recap::labeller::gui::widgets;
 using recap::labeller::data::SwallowTaskData;
 
 namespace {
@@ -344,35 +343,9 @@ private:
     int style_id = 0;
 };
 
-std::optional<std::string> get_custom_ini_path()
-{
-    const char *const env = std::getenv("RECAP_LABELLER_IMGUI_INI_PATH");
-    if (env) {
-        std::filesystem::path path(env);
-        if (std::filesystem::is_directory(path)) {
-            spdlog::error("Invalid ImGui INI path: '{}' is a directory", path);
-        } else if (!std::filesystem::is_directory(path.parent_path())) {
-            spdlog::error(
-                "Invalid ImGui INI path: parent directory '{}' does not exist or not a directory",
-                path.parent_path()
-            );
-        } else {
-            std::string path_str = path.make_preferred().string();
-            spdlog::info("Custom ImGui INI path: {}", path_str);
-            return path_str;
-        }
-
-        spdlog::warn("Ignoring RECAP_LABELLER_IMGUI_INI_PATH, using default ImGui INI path");
-    } else {
-        spdlog::debug("RECAP_LABELLER_IMGUI_INI_PATH not set, using default ImGui INI path");
-    }
-
-    return std::nullopt;
-}
-
 }; // namespace
 
-class Gui::Impl {
+class OldGui::Impl {
 public:
     Impl(
         std::vector<SwallowTaskInfo> tasks_,
@@ -384,34 +357,7 @@ public:
         annotation_mgr(annotation_mgr),
         task_list(shuffle ? shuffled_vector(std::move(tasks_)) : tasks_, this->annotation_mgr),
         task_view(load_current_task_view())
-    {
-        spdlog::debug("Setting up ImGui and ImPlot...");
-        IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
-        ImPlot::CreateContext();
-
-        ImGuiIO& io = ImGui::GetIO();
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-        auto custom_ini_path = get_custom_ini_path();
-        if (custom_ini_path) {
-            ini_path = std::move(*custom_ini_path);
-            io.IniFilename = ini_path.c_str();
-        }
-
-        font::setup_fonts();
-    }
-
-    Impl(const Impl&) = delete;
-    Impl(Impl&&) = delete;
-    Impl& operator=(const Impl&) = delete;
-    Impl& operator=(Impl&&) = delete;
-
-    ~Impl()
-    {
-        spdlog::debug("Tearing down ImGui and ImPlot...");
-        ImPlot::DestroyContext();
-        ImGui::DestroyContext();
-    }
+    {}
 
     void stop()
     {
@@ -634,7 +580,6 @@ private:
     bool show_debug_info = false;
     bool unsaved_modal_open = false;
     ColorSchemeSelector color_scheme_selector;
-    std::string ini_path;
     std::size_t task_index = 0;
     std::optional<std::size_t> next_task_index = std::nullopt;
 
@@ -644,7 +589,7 @@ private:
     std::unique_ptr<TaskView> task_view;
 };
 
-Gui::Gui(
+OldGui::OldGui(
     std::vector<SwallowTaskInfo> tasks,
     AnnotationManager& annotation_mgr,
     std::filesystem::path data_dir,
@@ -653,19 +598,19 @@ Gui::Gui(
     pimpl(std::make_unique<Impl>(std::move(tasks), annotation_mgr, std::move(data_dir), shuffle))
 {}
 
-Gui::~Gui() = default;
+OldGui::~OldGui() = default;
 
-bool Gui::draw()
+bool OldGui::draw()
 {
     return pimpl->draw();
 }
 
-void Gui::stop()
+void OldGui::stop()
 {
     pimpl->stop();
 }
 
-void Gui::set_scaling_factor(float scaling_factor)
+void OldGui::set_scaling_factor(float scaling_factor)
 {
     pimpl->set_scaling_factor(scaling_factor);
 }
