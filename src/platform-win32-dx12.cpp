@@ -139,8 +139,7 @@ int recap::labeller::platform::run(recap::labeller::gui::Gui& gui)
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     // Main loop
-    bool running = true;
-    while (running) {
+    while (!gui.ready_to_stop()) {
         // Poll and handle messages (inputs, window resize, etc.)
         // See the WndProc() function below for our to dispatch events to the Win32 backend.
         MSG msg;
@@ -154,7 +153,7 @@ int recap::labeller::platform::run(recap::labeller::gui::Gui& gui)
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
-        running = gui.draw();
+        gui.render();
 
         // Rendering
         ImGui::Render();
