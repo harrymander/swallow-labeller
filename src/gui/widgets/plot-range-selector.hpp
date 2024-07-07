@@ -44,7 +44,7 @@ public:
      * cursor...?
      */
     template <class Id>
-    std::optional<PlotRange> update(
+    [[nodiscard]] std::optional<PlotRange> update(
         const Id& id,
         Flags flags = Flag::Default,
         ImGuiMouseButton mouse_button = DefaultMouseButton,
@@ -64,7 +64,7 @@ public:
     [[nodiscard]] bool is_selecting() const { return m_selecting; }
 
 private:
-    std::optional<PlotRange>
+    [[nodiscard]] std::optional<PlotRange>
     update(ImGuiID id, Flags flags, ImGuiMouseButton mouse_button, ImGuiKey key);
 
     bool m_selecting = false;

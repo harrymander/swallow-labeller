@@ -939,7 +939,7 @@ void SwallowTaskPlotter::draw_summary_plot()
     ImPlot::SetupAxes(nullptr, nullptr, ax_flags, ax_flags);
 
     constexpr ImColor summary_color = {.5F, .5F, .5F, .6F};
-    summary_selector.update("##summary_selector");
+    (void) summary_selector.update("##summary_selector");
     const PlotRange *selection = summary_selector.range();
     if (selection) {
         summary_range = *selection;
