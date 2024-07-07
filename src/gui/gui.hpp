@@ -4,8 +4,8 @@
 #include "../app.hpp"
 #include "../old-gui.hpp"
 
-#include <filesystem>
 #include <optional>
+#include <string>
 
 namespace recap::labeller::gui {
 
@@ -25,7 +25,7 @@ public:
     [[nodiscard]] bool ready_to_stop() const { return m_ready_to_stop; }
 
 private:
-    std::optional<std::filesystem::path> m_ini_path = std::nullopt;
+    std::optional<std::string> m_ini_path = std::nullopt;
     bool m_stop_requested = false;
     bool m_ready_to_stop = false;
 
