@@ -572,11 +572,16 @@ private:
     bool show_implot_demo = false;
     bool show_imgui_demo = false;
     bool show_imgui_metrics = false;
-    bool show_debug_info = false;
     bool unsaved_modal_open = false;
     ColorSchemeSelector color_scheme_selector;
     std::size_t task_index = 0;
     std::optional<std::size_t> next_task_index = std::nullopt;
+
+#ifdef NDEBUG
+    bool show_debug_info = false;
+#else
+    bool show_debug_info = true;
+#endif
 
     std::filesystem::path data_dir;
     AnnotationManager& annotation_mgr;
