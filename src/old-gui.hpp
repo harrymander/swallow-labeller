@@ -29,8 +29,6 @@ public:
     bool draw();
     void stop();
 
-    void set_scaling_factor(float scaling_factor);
-
 private:
     class Impl;
     std::unique_ptr<Impl> pimpl;

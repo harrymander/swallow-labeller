@@ -21,6 +21,7 @@ public:
 
     void render();
     void stop();
+    static void set_scaling_factor(float scaling_factor);
 
     [[nodiscard]] bool ready_to_stop() const { return m_ready_to_stop; }
 

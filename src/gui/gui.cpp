@@ -79,4 +79,9 @@ void Gui::render()
     m_ready_to_stop = !old_gui.draw();
 }
 
+void Gui::set_scaling_factor(float scaling_factor)
+{
+    ImGui::GetStyle().ScaleAllSizes(scaling_factor);
+}
+
 }; // namespace recap::labeller::gui

@@ -409,11 +409,6 @@ public:
         return !gui_ready_to_close;
     }
 
-    static void set_scaling_factor(float scaling_factor)
-    {
-        ImGui::GetStyle().ScaleAllSizes(scaling_factor);
-    }
-
 private:
     static constexpr ImGuiWindowFlags WindowFlags =
         (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove);
@@ -608,11 +603,6 @@ bool OldGui::draw()
 void OldGui::stop()
 {
     pimpl->stop();
-}
-
-void OldGui::set_scaling_factor(float scaling_factor)
-{
-    pimpl->set_scaling_factor(scaling_factor);
 }
 
 }; // namespace recap::labeller::gui
