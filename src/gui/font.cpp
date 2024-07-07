@@ -11,7 +11,7 @@ extern const unsigned int adobe_source_sans_compressed_data[];
 extern const unsigned int fontawesome_free_solid_compressed_size;
 extern const unsigned int fontawesome_free_solid_compressed_data[];
 
-namespace recap::labeller::font {
+namespace recap::labeller::gui {
 
 namespace {
 
@@ -81,4 +81,4 @@ void setup_fonts()
     merge_icon_font();
 }
 
-}; // namespace recap::labeller::font
+}; // namespace recap::labeller::gui

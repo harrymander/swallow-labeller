@@ -1,7 +1,7 @@
 #ifndef INCLUDE_RECAP_LABELLER_PLATFORM_HPP
 #define INCLUDE_RECAP_LABELLER_PLATFORM_HPP
 
-#include "gui.hpp"
+#include "gui/gui.hpp"
 
 namespace recap::labeller::platform {
 

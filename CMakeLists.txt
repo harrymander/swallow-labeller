@@ -33,16 +33,12 @@ imgui_compressed_c_array(
 
 add_executable(recap-labeller
     src/annotation-manager.cpp
+    src/app.cpp
     src/data.cpp
-    src/drag-range.cpp
-    src/font.cpp
-    src/gui.cpp
-    src/imgui-util.cpp
-    src/implot-util.cpp
+    src/gui/font.cpp
+    src/gui/gui.cpp
     src/labelling-task.cpp
     src/main.cpp
-    src/plotter.cpp
-    src/selector.cpp
     ${FONTAWESOME_CPP_FILE}
     ${SOURCE_SANS_CPP_FILE}
 )

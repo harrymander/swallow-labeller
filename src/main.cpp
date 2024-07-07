@@ -1,5 +1,6 @@
 #include "annotation-manager.hpp"
-#include "gui.hpp"
+#include "app.hpp"
+#include "gui/gui.hpp"
 #include "labelling-task.hpp"
 #include "platform.hpp"
 
@@ -22,10 +23,7 @@
 
 namespace {
 
-namespace platform = recap::labeller::platform;
-using namespace recap::labeller::gui;
-using namespace recap::labeller::task;
-using recap::labeller::annotation_manager::AnnotationManager;
+using namespace recap::labeller;
 
 void setup_logging(std::optional<std::string>&& logfile)
 {
@@ -73,7 +71,7 @@ int parse_args(argparse::ArgumentParser& program, int argc, const char **argv)
 }
 
 // TODO: this whole structure is a mess, need to encapsulate task management in a class...
-bool all_task_ids_unique(const std::vector<SwallowTaskInfo>& tasks)
+bool all_task_ids_unique(const std::vector<task::SwallowTaskInfo>& tasks)
 {
     std::unordered_set<std::string> ids;
     for (const auto& task : tasks) {
@@ -87,7 +85,7 @@ bool all_task_ids_unique(const std::vector<SwallowTaskInfo>& tasks)
     return true;
 }
 
-std::optional<std::vector<SwallowTaskInfo>>
+std::optional<std::vector<task::SwallowTaskInfo>>
 load_labelling_tasks(const argparse::ArgumentParser& program)
 {
     std::string tasks_path = program.get("--tasks");
@@ -98,7 +96,7 @@ load_labelling_tasks(const argparse::ArgumentParser& program)
     }
 
     try {
-        auto tasks = load_swallow_task_info_json(stream);
+        auto tasks = task::load_swallow_task_info_json(stream);
         if (tasks.empty()) {
             spdlog::critical("Labelling tasks list is empty!");
             return std::nullopt;
@@ -118,7 +116,7 @@ load_labelling_tasks(const argparse::ArgumentParser& program)
     return std::nullopt;
 }
 
-std::optional<AnnotationsMap> load_annotations(const std::filesystem::path& path)
+std::optional<task::AnnotationsMap> load_annotations(const std::filesystem::path& path)
 {
     std::ifstream stream(path);
     if (!stream) {
@@ -126,7 +124,7 @@ std::optional<AnnotationsMap> load_annotations(const std::filesystem::path& path
         return std::nullopt;
     }
     try {
-        auto annotations = load_swallow_annotation_json(stream);
+        auto annotations = task::load_swallow_annotation_json(stream);
         spdlog::debug("Loaded {} annotation(s)", annotations.size());
         return annotations;
     } catch (const std::invalid_argument& e) {
@@ -137,11 +135,12 @@ std::optional<AnnotationsMap> load_annotations(const std::filesystem::path& path
     return std::nullopt;
 }
 
-std::optional<AnnotationManager> make_annotations_mgr(const argparse::ArgumentParser& parser)
+std::optional<annotation_manager::AnnotationManager>
+make_annotations_mgr(const argparse::ArgumentParser& parser)
 {
     auto existing_path = parser.present("--existing-annotations");
     auto annotations_path = std::filesystem::path(parser.get("--annotations")).make_preferred();
-    AnnotationsMap annotations;
+    task::AnnotationsMap annotations;
     if (existing_path.has_value()) {
         spdlog::info(
             "Loading existing annotations from {} rather than {}", *existing_path, annotations_path
@@ -162,7 +161,7 @@ std::optional<AnnotationManager> make_annotations_mgr(const argparse::ArgumentPa
         spdlog::info("No existing annotations, creating annotations file at {}", annotations_path);
     }
 
-    AnnotationManager manager(annotations_path, annotations);
+    annotation_manager::AnnotationManager manager(annotations_path, annotations);
     try {
         // Sync to file to check that writing works
         manager.sync_to_file();
@@ -199,6 +198,7 @@ int main(int argc, const char *argv[])
         return 1;
     }
 
-    Gui gui(*labelling_tasks, *annotations_mgr, data_dir, program["--no-shuffle"] == false);
+    app::App app(*labelling_tasks, *annotations_mgr);
+    gui::Gui gui(app);
     return platform::run(gui);
 }
