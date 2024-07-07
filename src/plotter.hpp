@@ -65,6 +65,7 @@ private:
     recap::labeller::gui::widgets::PlotRange last_selector_range = {NAN, NAN};
     recap::labeller::gui::widgets::PlotRange flow_time_delta_range = {};
     recap::labeller::gui::widgets::PlotRangeSelector flow_time_delta_selector;
+    recap::labeller::gui::widgets::PlotRangeDragger summary_dragger;
 
     class AnnotationEditor;
 

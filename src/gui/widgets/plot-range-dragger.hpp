@@ -14,8 +14,6 @@ namespace recap::labeller::gui::widgets {
  */
 class PlotRangeDragger {
 public:
-    explicit PlotRangeDragger(PlotRange& range);
-
     /**
      * Returns true when finished editing, that is, is_editing() returns false and the range has
      * been changed since last update.
@@ -28,10 +26,10 @@ public:
      *
      * Must be called inside ImPlot::PlotBegin/End.
      */
-    template <class Id> bool update(const Id& id)
+    template <class Id> bool update(const Id& id, PlotRange& range)
     {
         recap::labeller::gui::widgets::ScopedImID id_scope(id);
-        return update(ImGui::GetID("##plot_range_dragger"));
+        return update(ImGui::GetID("##plot_range_dragger"), range);
     }
 
     /**
@@ -42,15 +40,9 @@ public:
      */
     [[nodiscard]] bool is_editing() const { return m_modified; }
 
-    [[nodiscard]] PlotRange& range() & { return m_range; }
-
-    [[nodiscard]] const PlotRange& range() const & { return m_range; }
-
 private:
-    bool update(ImGuiID id);
+    bool update(ImGuiID id, PlotRange& range);
     bool m_modified = false;
-
-    PlotRange& m_range;
 };
 
 } // namespace recap::labeller::gui::widgets

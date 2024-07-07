@@ -86,9 +86,7 @@ bool drag_range(ImGuiID id, float& x0, float& x1, const ImRect& limits, bool& he
 
 }; // namespace
 
-PlotRangeDragger::PlotRangeDragger(PlotRange& range) : m_range(range) {}
-
-bool PlotRangeDragger::update(ImGuiID id)
+bool PlotRangeDragger::update(ImGuiID id, PlotRange& range)
 {
     const ImPlotPlot *current_plot = ImPlot::GetCurrentPlot();
     IM_ASSERT_USER_ERROR(
@@ -103,8 +101,8 @@ bool PlotRangeDragger::update(ImGuiID id)
         std::isinf(xconstraint.Max) ? plot_limits.X.Max : xconstraint.Max
     );
 
-    double& xmin = m_range.start;
-    double& xmax = m_range.end;
+    double& xmin = range.start;
+    double& xmax = range.end;
     float xmin_px = plot_xaxis_to_pixels(xmin);
     float xmax_px = plot_xaxis_to_pixels(xmax);
     bool held = false;
