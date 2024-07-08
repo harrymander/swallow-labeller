@@ -285,6 +285,7 @@ private:
                 new_annotation = true;
                 update_annotation = true;
             }
+            ImGui::SetItemTooltip("Delete annotation");
         }
 
         if (update_annotation) {

@@ -518,6 +518,7 @@ public:
             if (ImGui::IsItemHovered()) {
                 hovered_index = i;
             }
+            ImGui::SetItemTooltip("Delete label");
         }
     }
 };
