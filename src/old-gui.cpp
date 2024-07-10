@@ -404,20 +404,22 @@ private:
 
     void prompt_for_unsaved_annotation(std::size_t next_task_index)
     {
-        if (unsaved_annotation_popup_open) {
-            return;
-        }
-
         static const char *const ModalName = ICON_FA_TRIANGLE_EXCLAMATION "  Unsaved annotation";
-        action_queue.add_action([this, next_task_index]() -> bool {
+        bool popup_open = false;
+        action_queue.add_action([this, next_task_index, popup_open]() mutable -> bool {
             // Have to call this here since it needs to be on the same ImGui ID stack level
-            if (!unsaved_annotation_popup_open) {
+            if (!popup_open) {
+                if (ImGui::IsPopupOpen(ModalName)) {
+                    // Popup already opened by another action
+                    return true;
+                }
+                popup_open = true;
                 ImGui::OpenPopup(ModalName);
                 ImGui::SetNextWindowPos(
                     ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f)
                 );
-                unsaved_annotation_popup_open = true;
             }
+
             bool close = true;
             if (ImGui::BeginPopupModal(ModalName, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
                 close = draw_unsaved_modal(next_task_index);
@@ -427,9 +429,6 @@ private:
                 ImGui::EndPopup();
             }
 
-            if (close) {
-                unsaved_annotation_popup_open = false;
-            }
             return close;
         });
     }
@@ -585,7 +584,6 @@ private:
 
     bool gui_ready_to_close = false;
     bool gui_closing = false;
-    bool unsaved_annotation_popup_open = false;
     bool show_implot_demo = false;
     bool show_imgui_demo = false;
     bool show_imgui_metrics = false;
