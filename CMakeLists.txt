@@ -35,6 +35,7 @@ add_executable(recap-labeller
     src/annotation-manager.cpp
     src/app.cpp
     src/data.cpp
+    src/gui/action-queue.cpp
     src/gui/font.cpp
     src/gui/gui.cpp
     src/gui/widgets/plot-range-dragger.cpp

@@ -2,6 +2,7 @@
 
 #include "annotation-manager.hpp"
 #include "data.hpp"
+#include "gui/action-queue.hpp"
 #include "gui/widgets/util.hpp"
 #include "labelling-task.hpp"
 #include "plotter.hpp"
@@ -367,7 +368,7 @@ public:
                 "Application close requested, but there are unsaved changes. Prompting user."
             );
             gui_closing = true;
-            next_task_index = task_index;
+            prompt_for_unsaved_annotation(task_index);
         } else {
             gui_ready_to_close = true;
         }
@@ -375,22 +376,6 @@ public:
 
     bool draw()
     {
-        static const char *const UnsavedModalId =
-            ICON_FA_TRIANGLE_EXCLAMATION "  Unsaved annotation";
-
-        if (next_task_index.has_value() && !unsaved_modal_open) {
-            ImGui::OpenPopup(UnsavedModalId);
-            unsaved_modal_open = true;
-        }
-
-        ImGui::SetNextWindowPos(
-            ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f)
-        );
-        if (ImGui::BeginPopupModal(UnsavedModalId, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            draw_unsaved_modal();
-            ImGui::EndPopup();
-        }
-
         ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
         ImGui::SetNextWindowPos({0, 0});
         if (ImGui::Begin(
@@ -404,7 +389,10 @@ public:
                 draw_menu_bar();
                 ImGui::EndMenuBar();
             }
+
             draw_window_contents();
+
+            action_queue.process_actions();
         }
         ImGui::End();
         return !gui_ready_to_close;
@@ -414,20 +402,52 @@ private:
     static constexpr ImGuiWindowFlags WindowFlags =
         (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove);
 
-    void draw_unsaved_modal()
+    void prompt_for_unsaved_annotation(std::size_t next_task_index)
     {
-        static const char *close_button_str = "Close without saving";
-        const float button_width =
-            ImGui::CalcTextSize(close_button_str).x + 2 * ImGui::GetStyle().ItemInnerSpacing.x;
+        if (unsaved_annotation_popup_open) {
+            return;
+        }
 
-        bool close_popup = false;
+        static const char *const ModalName = ICON_FA_TRIANGLE_EXCLAMATION "  Unsaved annotation";
+        action_queue.add_action([this, next_task_index]() -> bool {
+            // Have to call this here since it needs to be on the same ImGui ID stack level
+            if (!unsaved_annotation_popup_open) {
+                ImGui::OpenPopup(ModalName);
+                ImGui::SetNextWindowPos(
+                    ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f)
+                );
+                unsaved_annotation_popup_open = true;
+            }
+            bool close = true;
+            if (ImGui::BeginPopupModal(ModalName, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+                close = draw_unsaved_modal(next_task_index);
+                if (close) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+
+            if (close) {
+                unsaved_annotation_popup_open = false;
+            }
+            return close;
+        });
+    }
+
+    // Returns true if modal should close
+    [[nodiscard]] bool draw_unsaved_modal(std::size_t next_task_index)
+    {
+        static const char *close_str = "Close without saving";
+        const float close_str_width = ImGui::CalcTextSize(close_str).x;
+        const float button_width = close_str_width + 2 * ImGui::GetStyle().ItemInnerSpacing.x;
+
+        bool close = false;
         ImGui::TextUnformatted("Task has unsaved changes!");
-
-        if (ButtonRed(close_button_str, {button_width, 0})) {
+        if (ButtonRed(close_str, {button_width, 0})) {
             spdlog::info("Discarding changes");
-            close_popup = true;
-            if (*next_task_index != task_index) {
-                set_task_index(*next_task_index);
+            close = true;
+            if (next_task_index != task_index) {
+                set_task_index(next_task_index);
             }
             gui_ready_to_close = gui_closing;
         }
@@ -435,8 +455,7 @@ private:
         ImGui::SameLine();
         if (ImGui::Button("Cancel", {button_width, 0})) {
             spdlog::debug("Cancel task close");
-            close_popup = true;
-
+            close = true;
             if (gui_closing) {
                 spdlog::info("GUI close cancelled");
                 gui_closing = false;
@@ -444,11 +463,7 @@ private:
         }
         ImGui::SetItemDefaultFocus();
 
-        if (close_popup) {
-            next_task_index.reset();
-            unsaved_modal_open = false;
-            ImGui::CloseCurrentPopup();
-        }
+        return close;
     }
 
     void draw_menu_bar()
@@ -524,7 +539,7 @@ private:
         const std::size_t new_index = task_list.draw("##tasklist", task_index);
         if (new_index != task_index) {
             if (annotation_unsaved()) {
-                next_task_index = new_index;
+                prompt_for_unsaved_annotation(new_index);
             } else {
                 set_task_index(new_index);
             }
@@ -570,13 +585,13 @@ private:
 
     bool gui_ready_to_close = false;
     bool gui_closing = false;
+    bool unsaved_annotation_popup_open = false;
     bool show_implot_demo = false;
     bool show_imgui_demo = false;
     bool show_imgui_metrics = false;
-    bool unsaved_modal_open = false;
     ColorSchemeSelector color_scheme_selector;
     std::size_t task_index = 0;
-    std::optional<std::size_t> next_task_index = std::nullopt;
+    ActionQueue action_queue;
 
 #ifdef NDEBUG
     bool show_debug_info = false;
