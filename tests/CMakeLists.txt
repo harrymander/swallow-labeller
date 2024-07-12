@@ -73,3 +73,16 @@ add_executable(test-observable test-observable.cpp)
 target_link_libraries(test-observable PRIVATE GTest::gtest_main)
 target_include_directories(test-observable PRIVATE ../src)
 gtest_discover_tests(test-observable)
+
+add_executable(
+    test-annotation-json
+    test-annotation-json.cpp
+    ../src/annotation.cpp
+)
+target_link_libraries(
+    test-annotation-json
+    PRIVATE
+    GTest::gtest_main nlohmann_json::nlohmann_json
+)
+target_include_directories(test-annotation-json PRIVATE ../src)
+gtest_discover_tests(test-annotation-json)

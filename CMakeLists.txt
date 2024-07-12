@@ -32,6 +32,7 @@ imgui_compressed_c_array(
 )
 
 add_executable(recap-labeller
+    src/annotation.cpp
     src/annotation-manager.cpp
     src/app.cpp
     src/data.cpp
