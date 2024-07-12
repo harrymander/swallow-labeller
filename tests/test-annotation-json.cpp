@@ -1,16 +1,15 @@
 #include "annotation.hpp"
 
 #include <gtest/gtest.h>
-#include <nlohmann/json.hpp>
 
+#include <stdexcept>
 #include <variant>
 
 using namespace recap::labeller;
-using Json = nlohmann::json;
 
 TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndEarClick)
 {
-    const auto json = Json::parse(R"({
+    const auto annotation = SwallowAnnotation::from_json(R"({
         "swallow_apnea": {
             "is_ambiguous": false,
             "pattern": "ex-ex",
@@ -18,7 +17,6 @@ TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndEarClick)
         },
         "ear_clicks": [{"start": 12, "end": 100}, {"start": 200, "end": 300}]
     })");
-    SwallowAnnotation annotation = json.template get<SwallowAnnotation>();
 
     ASSERT_TRUE(std::holds_alternative<SwallowApneaAnnotation>(annotation.swallow_apnea));
     auto apnea = std::get<SwallowApneaAnnotation>(annotation.swallow_apnea);
@@ -35,20 +33,20 @@ TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndEarClick)
 
 TEST(TestSwallowAnnotationJson, TestParsingInvalidSRCPatternFails)
 {
-    const auto json = Json::parse(R"({
+    const auto json = R"({
         "swallow_apnea": {
             "is_ambiguous": false,
             "pattern": "ExEx",
             "time": {"start": 0.0, "end": 1.0}
         },
         "ear_clicks": [{"start": 12, "end": 100}, {"start": 200, "end": 300}]
-    })");
-    EXPECT_THROW(json.template get<SwallowAnnotation>(), std::runtime_error);
+    })";
+    EXPECT_THROW(SwallowAnnotation::from_json(json), std::runtime_error);
 }
 
 TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndNoEarClick)
 {
-    const auto json = Json::parse(R"({
+    const auto annotation = SwallowAnnotation::from_json(R"({
         "swallow_apnea": {
             "is_ambiguous": false,
             "pattern": "ex-ex",
@@ -56,7 +54,6 @@ TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndNoEarClick)
         },
         "ear_clicks": {"error": "audio-error"}
     })");
-    SwallowAnnotation annotation = json.template get<SwallowAnnotation>();
 
     ASSERT_TRUE(std::holds_alternative<SwallowApneaAnnotation>(annotation.swallow_apnea));
     auto apnea = std::get<SwallowApneaAnnotation>(annotation.swallow_apnea);
@@ -71,11 +68,10 @@ TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndNoEarClick)
 
 TEST(TestSwallowAnnotationJson, TestParsingWithEarClickAndNoApnea)
 {
-    const auto json = Json::parse(R"({
+    const auto annotation = SwallowAnnotation::from_json(R"({
         "swallow_apnea": { "error": "apnea-cutoff" },
         "ear_clicks": [{"start": 12, "end": 100}, {"start": 200, "end": 300}]
     })");
-    SwallowAnnotation annotation = json.template get<SwallowAnnotation>();
 
     ASSERT_TRUE(std::holds_alternative<ApneaError>(annotation.swallow_apnea));
     ASSERT_EQ(std::get<ApneaError>(annotation.swallow_apnea), ApneaError::ApneaCutoff);
@@ -88,11 +84,10 @@ TEST(TestSwallowAnnotationJson, TestParsingWithEarClickAndNoApnea)
 
 TEST(TestSwallowAnnotationJson, TestParsingWithoutApneaAndEarClick)
 {
-    const auto json = Json::parse(R"({
+    const auto annotation = SwallowAnnotation::from_json(R"({
         "swallow_apnea": { "error": "apnea-cutoff" },
         "ear_clicks": { "error": "audio-error" }
     })");
-    SwallowAnnotation annotation = json.template get<SwallowAnnotation>();
 
     ASSERT_TRUE(std::holds_alternative<ApneaError>(annotation.swallow_apnea));
     ASSERT_EQ(std::get<ApneaError>(annotation.swallow_apnea), ApneaError::ApneaCutoff);
@@ -103,31 +98,30 @@ TEST(TestSwallowAnnotationJson, TestParsingWithoutApneaAndEarClick)
 
 TEST(TestSwallowAnnotationJson, TestParsingInvalidErrorKeyFails)
 {
-    const auto json = Json::parse(R"({
+    const auto json = R"({
         "swallow_apnea": { "errors": "apnea-cutoff" },
         "ear_clicks": { "error": "audio-error" }
-    })");
+    })";
 
-    // TODO: encapsulate JSON (de)serialisation and hide the JSON library exception type
-    EXPECT_THROW(json.template get<SwallowAnnotation>(), Json::exception);
+    EXPECT_THROW(SwallowAnnotation::from_json(json), std::runtime_error);
 }
 
 TEST(TestSwallowAnnotationJson, TestParsingInvalidApneaErrorFails)
 {
-    const auto json = Json::parse(R"({
+    const auto json = R"({
         "swallow_apnea": { "error": "apnea-is-cutoff" },
         "ear_clicks": { "error": "audio-error" }
-    })");
-    EXPECT_THROW(json.template get<SwallowAnnotation>(), std::runtime_error);
+    })";
+    EXPECT_THROW(SwallowAnnotation::from_json(json), std::runtime_error);
 }
 
 TEST(TestSwallowAnnotationJson, TestParsingInvalidEarClickErrorFails)
 {
-    const auto json = Json::parse(R"({
+    const auto json = R"({
         "swallow_apnea": { "error": "apnea-cutoff" },
         "ear_clicks": { "error": "audio-no-error" }
-    })");
-    EXPECT_THROW(json.template get<SwallowAnnotation>(), std::runtime_error);
+    })";
+    EXPECT_THROW(SwallowAnnotation::from_json(json), std::runtime_error);
 }
 
 /**
@@ -136,8 +130,8 @@ TEST(TestSwallowAnnotationJson, TestParsingInvalidEarClickErrorFails)
  */
 #define ASSERT_SERIALIZE_DERIALIZE_EQ(annotation)                                                  \
     do {                                                                                           \
-        Json serialized = annotation;                                                              \
-        SwallowAnnotation annotation_deserialized = serialized.template get<SwallowAnnotation>();  \
+        std::string serialized = annotation.dump_json();                                           \
+        auto annotation_deserialized = SwallowAnnotation::from_json(serialized);                   \
         ASSERT_EQ(annotation, annotation_deserialized);                                            \
     } while (0)
 

@@ -9,6 +9,8 @@
 #include <cstddef>
 #include <optional>
 #include <stdexcept>
+#include <string>
+#include <string_view>
 #include <utility>
 
 NLOHMANN_JSON_NAMESPACE_BEGIN
@@ -144,6 +146,21 @@ void from_json(const nlohmann::json& j, SwallowAnnotation& annotation)
 {
     j.at("swallow_apnea").get_to(annotation.swallow_apnea);
     j.at("ear_clicks").get_to(annotation.ear_clicks);
+}
+
+SwallowAnnotation SwallowAnnotation::from_json(std::string_view str)
+{
+    try {
+        const auto json = nlohmann::json::parse(str);
+        return json.template get<SwallowAnnotation>();
+    } catch (const nlohmann::json::exception& e) {
+        throw std::runtime_error(std::string("JSON parse error: ") + e.what());
+    }
+}
+
+std::string SwallowAnnotation::dump_json() const
+{
+    return nlohmann::json(*this).dump();
 }
 
 }; // namespace recap::labeller

@@ -1,9 +1,8 @@
 #ifndef RECAP_LABELLER_ANNOTATION_HPP_INCLUDE
 #define RECAP_LABELLER_ANNOTATION_HPP_INCLUDE
 
-#include <nlohmann/json_fwd.hpp>
-
-#include <optional>
+#include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -47,10 +46,12 @@ struct SwallowAnnotation {
     std::variant<std::vector<TimeRange>, EarClickError> ear_clicks;
 
     bool operator==(const SwallowAnnotation&) const = default;
-};
 
-void to_json(nlohmann::json& j, const SwallowAnnotation& annotation);
-void from_json(const nlohmann::json& j, SwallowAnnotation& annotation);
+    // Raises std::runtime_error on parse error
+    static SwallowAnnotation from_json(std::string_view str);
+
+    [[nodiscard]] std::string dump_json() const;
+};
 
 }; // namespace recap::labeller
 
