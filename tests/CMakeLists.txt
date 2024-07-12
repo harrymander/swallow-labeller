@@ -69,3 +69,7 @@ target_compile_definitions(
 )
 gtest_discover_tests(test-tasks-parsing)
 
+add_executable(test-observable test-observable.cpp)
+target_link_libraries(test-observable PRIVATE GTest::gtest_main)
+target_include_directories(test-observable PRIVATE ../src)
+gtest_discover_tests(test-observable)
