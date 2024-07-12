@@ -33,11 +33,7 @@ TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndEarClick)
     EXPECT_EQ(clicks, exp_clicks);
 }
 
-/**
- * TODO: the nlohmann_json enum conversion macro uses the default-constructed enum value if cannot
- * match string to enum...
- */
-TEST(TestSwallowAnnotationJson, DISABLED_TestParsingInvalidSRCPatternFails)
+TEST(TestSwallowAnnotationJson, TestParsingInvalidSRCPatternFails)
 {
     const auto json = Json::parse(R"({
         "swallow_apnea": {
@@ -47,7 +43,7 @@ TEST(TestSwallowAnnotationJson, DISABLED_TestParsingInvalidSRCPatternFails)
         },
         "ear_clicks": [{"start": 12, "end": 100}, {"start": 200, "end": 300}]
     })");
-    ASSERT_THROW(json.template get<SwallowAnnotation>(), Json::exception);
+    EXPECT_THROW(json.template get<SwallowAnnotation>(), std::runtime_error);
 }
 
 TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndNoEarClick)
@@ -111,33 +107,27 @@ TEST(TestSwallowAnnotationJson, TestParsingInvalidErrorKeyFails)
         "swallow_apnea": { "errors": "apnea-cutoff" },
         "ear_clicks": { "error": "audio-error" }
     })");
+
+    // TODO: encapsulate JSON (de)serialisation and hide the JSON library exception type
     EXPECT_THROW(json.template get<SwallowAnnotation>(), Json::exception);
 }
 
-/**
- * TODO: the nlohmann_json enum conversion macro uses the default-constructed enum value if cannot
- * match string to enum...
- */
-TEST(TestSwallowAnnotationJson, DISABLED_TestParsingInvalidApneaErrorFails)
+TEST(TestSwallowAnnotationJson, TestParsingInvalidApneaErrorFails)
 {
     const auto json = Json::parse(R"({
         "swallow_apnea": { "error": "apnea-is-cutoff" },
         "ear_clicks": { "error": "audio-error" }
     })");
-    EXPECT_THROW(json.template get<SwallowAnnotation>(), Json::exception);
+    EXPECT_THROW(json.template get<SwallowAnnotation>(), std::runtime_error);
 }
 
-/**
- * TODO: the nlohmann_json enum conversion macro uses the default-constructed enum value if cannot
- * match string to enum...
- */
-TEST(TestSwallowAnnotationJson, DISABLED_TestParsingInvalidEarClickErrorFails)
+TEST(TestSwallowAnnotationJson, TestParsingInvalidEarClickErrorFails)
 {
     const auto json = Json::parse(R"({
         "swallow_apnea": { "error": "apnea-cutoff" },
         "ear_clicks": { "error": "audio-no-error" }
     })");
-    EXPECT_THROW(json.template get<SwallowAnnotation>(), Json::exception);
+    EXPECT_THROW(json.template get<SwallowAnnotation>(), std::runtime_error);
 }
 
 /**

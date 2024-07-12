@@ -4,6 +4,13 @@
 
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <optional>
+#include <stdexcept>
+#include <utility>
+
 NLOHMANN_JSON_NAMESPACE_BEGIN
 
 /**
@@ -41,36 +48,89 @@ NLOHMANN_JSON_NAMESPACE_END
 
 namespace recap::labeller {
 
+namespace {
+
+/**
+ * Alternative to NLOHMANN_JSON_SERIALIZE_ENUM, which default-constructs the enum if it cannot
+ * be converted to a matching value rather than giving an error.
+ *
+ * Assumes that all enum items are accounted for in the array, otherwise bad things will happen.
+ *
+ * Uses a linear search to match enum, which is obviously inefficient for large enums.
+ */
+template <typename E, std::size_t N> class EnumStrConverter {
+public:
+    explicit EnumStrConverter(std::array<std::pair<E, std::string_view>, N> items) noexcept :
+        items{std::move(items)}
+    {}
+
+    void to_json(nlohmann::json& j, E e) const
+    {
+        const auto it = std::find_if(items.begin(), items.end(), [e](const auto& item) {
+            return item.first == e;
+        });
+
+        // just set without checking iterator is valid, since we assume all enum items are included
+        // in array
+        j = it->second;
+    }
+
+    void from_json(const nlohmann::json& j, E& e) const
+    {
+        const auto str = j.get<std::string_view>();
+        const auto it = std::find_if(items.begin(), items.end(), [str](const auto& item) {
+            return item.second == str;
+        });
+        if (it == items.end()) {
+            throw std::runtime_error("Invalid enum value: " + std::string(str));
+        }
+        e = it->first;
+    }
+
+private:
+    std::array<std::pair<E, std::string_view>, N> items;
+};
+
+static const EnumStrConverter<SRCPattern, 4> SRCPatternStrConverter({{
+    {SRCPattern::ExEx, "ex-ex"},
+    {SRCPattern::ExIn, "ex-in"},
+    {SRCPattern::InEx, "in-ex"},
+    {SRCPattern::InIn, "in-in"},
+}});
+
+static const EnumStrConverter<ApneaError, 3> ApneaErrorStrConverter({{
+    {ApneaError::FlowError, "flow-error"},
+    {ApneaError::NoSwallow, "no-swallow"},
+    {ApneaError::ApneaCutoff, "apnea-cutoff"},
+}});
+
+static const EnumStrConverter<EarClickError, 2> EarClickErrorStrConverter({{
+    {EarClickError::NoEarClick, "no-ear-click"},
+    {EarClickError::AudioError, "audio-error"},
+}});
+
+}; // namespace
+
+// A macro could possibly be avoided here by patching into the nlohman:: namespace and defining an
+// adl_serializer (see above)
+#define DEFINE_JSON_ENUM_CONVERTERS(enum_type, converter)                                          \
+    void to_json(nlohmann::json& j, const enum_type& e)                                            \
+    {                                                                                              \
+        (converter).to_json(j, e);                                                                 \
+    }                                                                                              \
+    void from_json(const nlohmann::json& j, enum_type& e)                                          \
+    {                                                                                              \
+        (converter).from_json(j, e);                                                               \
+    }
+
+DEFINE_JSON_ENUM_CONVERTERS(SRCPattern, SRCPatternStrConverter);
+DEFINE_JSON_ENUM_CONVERTERS(ApneaError, ApneaErrorStrConverter);
+DEFINE_JSON_ENUM_CONVERTERS(EarClickError, EarClickErrorStrConverter);
+#undef DEFINE_JSON_ENUM_CONVERTERS
+
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TimeRange, start, end);
 
-NLOHMANN_JSON_SERIALIZE_ENUM(
-    SRCPattern,
-    {
-        {SRCPattern::ExEx, "ex-ex"},
-        {SRCPattern::ExIn, "ex-in"},
-        {SRCPattern::InEx, "in-ex"},
-        {SRCPattern::InIn, "in-in"},
-    }
-);
-
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SwallowApneaAnnotation, is_ambiguous, pattern, time);
-
-NLOHMANN_JSON_SERIALIZE_ENUM(
-    ApneaError,
-    {
-        {ApneaError::FlowError, "flow-error"},
-        {ApneaError::NoSwallow, "no-swallow"},
-        {ApneaError::ApneaCutoff, "apnea-cutoff"},
-    }
-);
-
-NLOHMANN_JSON_SERIALIZE_ENUM(
-    EarClickError,
-    {
-        {EarClickError::NoEarClick, "no-ear-click"},
-        {EarClickError::AudioError, "audio-error"},
-    }
-);
 
 void to_json(nlohmann::json& j, const SwallowAnnotation& annotation)
 {
