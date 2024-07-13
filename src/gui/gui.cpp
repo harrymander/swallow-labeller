@@ -5,6 +5,7 @@
 #include "widgets/util.hpp"
 
 #include <IconsFontAwesome6.h>
+#include <fmt/format.h>
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <implot.h>
@@ -47,8 +48,7 @@ std::optional<std::string> get_custom_ini_path()
 
 }; // namespace
 
-Gui::Gui(app::App& app) :
-    m_app(app), old_gui(m_app.swallow_tasks(), m_app.annotation_manager(), m_app.data_dir(), false)
+Gui::Gui(app::App& app) : m_app(app)
 {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -94,6 +94,7 @@ void Gui::draw()
     setup_dockspace();
 
     if (ImGui::Begin(SidebarWindowId, nullptr, WindowFlags)) {
+        draw_task_list();
         ImGui::End();
     }
 
@@ -186,9 +187,59 @@ void Gui::draw_menu_bar()
     }
 }
 
+namespace {
+
+std::string task_info_str(const task::SwallowTaskInfo& task)
+{
+    return fmt::format(
+        "Subject #{}, {}\nRepeat #{}, swallow #{}",
+        task.subject,
+        swallow_test_type_string(task.test_type),
+        task.repeatnum,
+        task.swallownum
+    );
+}
+
+}; // namespace
+
+void Gui::draw_task_list()
+{
+    const auto& tasks = m_app.tasks_info();
+    const std::size_t num_annotated = m_app.num_annotated_tasks();
+    ImGui::Text(
+        ICON_FA_SQUARE_CHECK "  %zu task%s out of %zu annotated",
+        num_annotated,
+        num_annotated == 1 ? "" : "s",
+        tasks.size()
+    );
+
+    ImGui::BeginDisabled(num_annotated == 0);
+    if (ImGui::Button(
+            num_annotated != 0 && m_only_show_annotated_tasks ? "Show all" : "Show annotated only"
+        ))
+    {
+        m_only_show_annotated_tasks = !m_only_show_annotated_tasks;
+    }
+    ImGui::EndDisabled();
+
+    m_task_list_text_filter.Draw("Filter##task_info_list_filter");
+    const std::size_t active_index = m_app.active_task_index();
+    if (ImGui::BeginListBox("##task_info_list", {-1, -1})) {
+        for (std::size_t i = 0; i < tasks.size(); i++) {
+            const std::string str = task_info_str(tasks[i]);
+            if (m_task_list_text_filter.PassFilter(str.c_str())) {
+                if (ImGui::Selectable(str.c_str(), active_index == i)) {
+                    m_app.set_active_task_index(i);
+                }
+            }
+        }
+        ImGui::EndListBox();
+    }
+}
+
 void Gui::draw_debug_info()
 {
-    ImGuiIO& io = ImGui::GetIO();
+    const ImGuiIO& io = ImGui::GetIO();
     ImGui::Text(
         ICON_FA_GEAR
         "  Mouse Position: [%.0f,%.0f]. Application average: %.3f ms/frame (%.1f FPS).",

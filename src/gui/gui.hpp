@@ -3,6 +3,7 @@
 
 #include "../app.hpp"
 #include "../old-gui.hpp"
+#include "imgui.h"
 #include "widgets/color-scheme-selector.hpp"
 
 #include <optional>
@@ -36,6 +37,9 @@ private:
     bool m_show_imgui_metrics = false;
     recap::labeller::gui::widgets::ColorSchemeSelector m_color_scheme_selector;
 
+    bool m_only_show_annotated_tasks = false;
+    ImGuiTextFilter m_task_list_text_filter;
+
 #if NDEBUG
     bool m_show_debug_info = false;
 #else
@@ -43,10 +47,10 @@ private:
 #endif
 
     recap::labeller::app::App& m_app;
-    recap::labeller::gui::OldGui old_gui;
 
     void setup_dockspace() const;
     void draw_main_window();
+    void draw_task_list();
     void draw_menu_bar();
     static void draw_debug_info();
 };

@@ -47,10 +47,6 @@ add_executable(recap-labeller
     src/main.cpp
     ${FONTAWESOME_CPP_FILE}
     ${SOURCE_SANS_CPP_FILE}
-
-    # To be removed:
-    src/old-gui.cpp
-    src/plotter.cpp
 )
 target_compile_features(recap-labeller PRIVATE cxx_std_20)
 target_link_libraries(recap-labeller PRIVATE
