@@ -3,6 +3,7 @@
 
 #include "../app.hpp"
 #include "../old-gui.hpp"
+#include "widgets/color-scheme-selector.hpp"
 
 #include <optional>
 #include <string>
@@ -33,6 +34,7 @@ private:
     bool m_show_imgui_demo_window = false;
     bool m_show_implot_demo_window = false;
     bool m_show_imgui_metrics = false;
+    recap::labeller::gui::widgets::ColorSchemeSelector m_color_scheme_selector;
 
 #if NDEBUG
     bool m_show_debug_info = false;

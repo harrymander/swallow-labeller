@@ -165,6 +165,11 @@ void Gui::draw_menu_bar()
         ImGui::EndMenu();
     }
 
+    if (ImGui::BeginMenu("View")) {
+        m_color_scheme_selector.draw();
+        ImGui::EndMenu();
+    }
+
     if (ImGui::BeginMenu("Tools")) {
         if (ImGui::MenuItem("ImGui demo...") && !m_show_imgui_demo_window) {
             m_show_imgui_demo_window = true;
