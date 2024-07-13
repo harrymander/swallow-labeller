@@ -153,7 +153,7 @@ int recap::labeller::platform::run(recap::labeller::gui::Gui& gui)
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
-        gui.render();
+        gui.draw();
 
         // Rendering
         ImGui::Render();

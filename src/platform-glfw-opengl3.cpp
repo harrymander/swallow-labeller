@@ -158,7 +158,7 @@ int run(recap::labeller::gui::Gui& gui)
             glfwSetWindowShouldClose(window, 0);
             signal_stop = 0;
         }
-        gui.render();
+        gui.draw();
         running = !gui.ready_to_stop();
         if (stopping && running) {
             spdlog::warn("Exit request received, but GUI is blocking exit");
