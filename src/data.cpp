@@ -16,7 +16,7 @@ template <class T> static std::vector<T> get_array(const cnpy::npz_t& data, cons
         throw std::invalid_argument("missing field: " + std::string(name));
     }
 
-    const cnpy::NpyArray array = found->second;
+    const cnpy::NpyArray& array = found->second;
 
     if (array.fortran_order) {
         throw std::invalid_argument("array is in Fortran order");
