@@ -87,4 +87,10 @@ PlotRangeSelector::update(ImGuiID id, Flags flags, ImGuiMouseButton mouse_button
     return std::nullopt;
 }
 
+void PlotRangeSelector::reset()
+{
+    m_selecting = false;
+    m_range = {NAN, NAN};
+}
+
 }; // namespace recap::labeller::gui::widgets

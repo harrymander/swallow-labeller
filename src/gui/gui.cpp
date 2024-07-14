@@ -386,6 +386,7 @@ void Gui::on_new_active_task(const app::App::ActiveTaskVariant& new_variant)
         m_plot_summary_range = {NAN, NAN};
     }
 
+    m_plot_summary_selector.reset();
     spdlog::debug(
         "Set new summary range to [{}, {}]", m_plot_summary_range.start, m_plot_summary_range.end
     );

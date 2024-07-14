@@ -63,6 +63,8 @@ public:
 
     [[nodiscard]] bool is_selecting() const { return m_selecting; }
 
+    void reset();
+
 private:
     [[nodiscard]] std::optional<PlotRange>
     update(ImGuiID id, Flags flags, ImGuiMouseButton mouse_button, ImGuiKey key);
