@@ -315,6 +315,13 @@ void plot_data(
     }
 }
 
+void plot_event(const char *id, const SwallowTaskData& data)
+{
+    ImPlot::PlotDigital(
+        id, data.flow_time.data(), data.event.data(), static_cast<int>(data.event.size())
+    );
+}
+
 void draw_plot_delta_selector(
     const char *id,
     widgets::PlotRangeSelector& selector,
@@ -369,6 +376,7 @@ void Gui::draw_plots(app::SwallowLabellingTaskManager& task_manager)
     if (ImPlot::BeginPlot("##flow_plot", {-1, 0}, PlotFlags)) {
         constexpr ImU32 FlowDeltaSelectorColor = IM_COL32(120, 120, 120, 50);
         plot_data("##flow", data.flow_time, data.flow, "Flow rate (L/min)", "{:g} L/min");
+        plot_event("##flow_event", data);
         draw_plot_delta_selector(
             "##flow_delta_selector", m_flow_delta_selector, FlowDeltaSelectorColor
         );
@@ -377,6 +385,7 @@ void Gui::draw_plots(app::SwallowLabellingTaskManager& task_manager)
 
     if (ImPlot::BeginPlot("##audio_plot", {-1, 0}, PlotFlags)) {
         plot_data("##audio", data.audio_time, data.audio, "Ear audio (V)", "{:g} V");
+        plot_event("##audio_event", data);
         ImPlot::EndPlot();
     }
 
@@ -390,6 +399,7 @@ void Gui::draw_plots(app::SwallowLabellingTaskManager& task_manager)
         // constexpr ImColor SummaryColor = {.5F, .5F, .5F, .6F};
         ImPlot::SetupAxes(nullptr, nullptr, AxFlags, AxFlags);
         plot_line("##summary_flow_plot_line", data.flow_time, data.flow);
+        plot_event("##summary_event", data);
         ImPlot::EndPlot();
     }
 }

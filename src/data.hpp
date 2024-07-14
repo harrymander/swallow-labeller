@@ -9,7 +9,7 @@ namespace recap::labeller {
 
 struct SwallowTaskData {
     std::vector<double> flow;
-    std::vector<uint8_t> event;
+    std::vector<double> event;
     std::vector<double> flow_time;
 
     std::vector<double> audio;
