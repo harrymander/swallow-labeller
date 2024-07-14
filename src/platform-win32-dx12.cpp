@@ -90,7 +90,8 @@ int recap::labeller::platform::run(recap::labeller::gui::Gui& gui)
         NULL,
         NULL,
         L"ImGui Example",
-        NULL};
+        NULL,
+    };
 
     ::RegisterClassExW(&wc);
     HWND hwnd = ::CreateWindowW(
@@ -177,7 +178,8 @@ int recap::labeller::platform::run(recap::labeller::gui::Gui& gui)
             clear_color.x * clear_color.w,
             clear_color.y * clear_color.w,
             clear_color.z * clear_color.w,
-            clear_color.w};
+            clear_color.w,
+        };
         g_pd3dCommandList->ClearRenderTargetView(
             g_mainRenderTargetDescriptor[backBufferIdx], clear_color_with_alpha, 0, NULL
         );
