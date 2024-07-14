@@ -374,7 +374,9 @@ void Gui::on_new_active_task(const app::App::ActiveTaskVariant& new_variant)
 {
     constexpr double EventBufferSecs = 6;
     m_plot_summary_range = VariantVisitor{
-        [](const app::SwallowLabellingTaskError&) -> widgets::PlotRange { return {NAN, NAN}; },
+        [](const app::SwallowLabellingTaskError&) -> widgets::PlotRange {
+            return widgets::PlotRange{NAN, NAN};
+        },
         [](const app::SwallowLabellingTaskManager& task_manager) -> widgets::PlotRange {
             const auto& info = task_manager.task().info();
             const auto& time = task_manager.data().flow_time;
