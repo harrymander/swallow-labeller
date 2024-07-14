@@ -184,12 +184,13 @@ void Gui::draw_main_window()
 
 namespace {
 
-void setup_axis_links(ImAxis axis, double *v1, double *v2)
+void setup_axis_links(ImAxis axis, double& v1, double& v2)
 {
-    double *vmin;
-    double *vmax;
-    std::tie(vmin, vmax) = util::minmax_pointers(v1, v2);
-    ImPlot::SetupAxisLinks(axis, vmin, vmax);
+    if (v1 <= v2) {
+        ImPlot::SetupAxisLinks(axis, &v1, &v2);
+    } else {
+        ImPlot::SetupAxisLinks(axis, &v2, &v1);
+    }
 }
 
 bool is_mouse_inside_plot()
@@ -403,7 +404,7 @@ void Gui::draw_plots(app::SwallowLabellingTaskManager& task_manager)
     if (ImPlot::BeginAlignedPlots("##aligned_plots")) {
         if (ImPlot::BeginPlot("##flow_plot", {-1, 0}, PlotFlags)) {
             constexpr ImU32 FlowDeltaSelectorColor = IM_COL32(120, 120, 120, 50);
-            setup_axis_links(ImAxis_X1, &m_plot_summary_range.start, &m_plot_summary_range.end);
+            setup_axis_links(ImAxis_X1, m_plot_summary_range.start, m_plot_summary_range.end);
             plot_data("##flow", data.flow_time, data.flow, "Flow rate (L/min)", "{:g} L/min");
             plot_event("##flow_event", data);
             draw_plot_delta_selector(
@@ -412,7 +413,7 @@ void Gui::draw_plots(app::SwallowLabellingTaskManager& task_manager)
             ImPlot::EndPlot();
         }
         if (ImPlot::BeginPlot("##audio_plot", {-1, 0}, PlotFlags)) {
-            setup_axis_links(ImAxis_X1, &m_plot_summary_range.start, &m_plot_summary_range.end);
+            setup_axis_links(ImAxis_X1, m_plot_summary_range.start, m_plot_summary_range.end);
             plot_data("##audio", data.audio_time, data.audio, "Ear audio (V)", "{:g} V");
             plot_event("##audio_event", data);
             ImPlot::EndPlot();
