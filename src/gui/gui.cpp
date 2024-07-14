@@ -87,8 +87,9 @@ void Gui::stop()
     m_ready_to_stop = true;
 }
 
-static const char *const SidebarWindowId = "##sidebar";
+static const char *const SidebarWindowId = "##sidebarwindow";
 static const char *const MainWindowId = "##mainwindow";
+static const char *const LabelInfoWindowId = "##labelinfowindow";
 
 void Gui::draw()
 {
@@ -112,6 +113,10 @@ void Gui::draw()
         ImGui::End();
     }
 
+    if (ImGui::Begin(LabelInfoWindowId, nullptr, WindowFlags)) {
+        ImGui::End();
+    }
+
     if (m_show_imgui_demo_window) {
         ImGui::ShowDemoWindow(&m_show_imgui_demo_window);
     }
@@ -131,6 +136,9 @@ void Gui::setup_dockspace() const
         (ImGuiDockNodeFlags_NoUndocking | ImGuiDockNodeFlags_AutoHideTabBar
          | ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoTabBar);
 
+    constexpr float SidebarRatio = 0.2;
+    constexpr float LabelInfoRatioX = 0.2 / (1 - SidebarRatio);
+
     // If the dockspace ID already exists, the the node sizes are already set in imgui.ini
     ImGuiID id = ImGui::GetID("##dockspace");
     if (m_first_draw && ImGui::DockBuilderGetNode(id) == nullptr) [[unlikely]] {
@@ -140,14 +148,18 @@ void Gui::setup_dockspace() const
         spdlog::debug("Setting up dockspace");
         ImGui::DockBuilderRemoveNode(id);
         ImGui::DockBuilderAddNode(id);
-        constexpr float SidebarRatio = 0.2;
 
-        ImGuiID dock_sidebar = 1;
-        ImGuiID dock_main = 2;
+        ImGuiID dock_sidebar;
+        ImGuiID dock_main;
+        ImGuiID dock_label_info;
         ImGui::DockBuilderSplitNode(id, ImGuiDir_Left, SidebarRatio, &dock_sidebar, &dock_main);
+        ImGui::DockBuilderSplitNode(
+            dock_main, ImGuiDir_Right, LabelInfoRatioX, &dock_label_info, &dock_main
+        );
 
         ImGui::DockBuilderDockWindow(SidebarWindowId, dock_sidebar);
         ImGui::DockBuilderDockWindow(MainWindowId, dock_main);
+        ImGui::DockBuilderDockWindow(LabelInfoWindowId, dock_label_info);
         ImGui::DockBuilderFinish(id);
     } else {
         ImGui::DockSpaceOverViewport(id, ImGui::GetMainViewport(), DockspaceFlags);
