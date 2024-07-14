@@ -71,6 +71,10 @@ static float GetDPIScalingFactor();
 
 static recap::labeller::gui::Gui *g_gui;
 
+#define WINDOW_NAME                                                                                \
+    L"" PROGRAM_NAME L" v"                                                                         \
+    L"" VERSION_STR
+
 // Main code
 int recap::labeller::platform::run(recap::labeller::gui::Gui& gui)
 {
@@ -89,15 +93,14 @@ int recap::labeller::platform::run(recap::labeller::gui::Gui& gui)
         NULL,
         NULL,
         NULL,
-        L"ImGui Example",
+        WINDOW_NAME,
         NULL,
     };
 
     ::RegisterClassExW(&wc);
     HWND hwnd = ::CreateWindowW(
         wc.lpszClassName,
-        L"" PROGRAM_NAME L" v"
-        L"" VERSION_STR,
+        WINDOW_NAME,
         WS_OVERLAPPEDWINDOW,
         100,
         100,
