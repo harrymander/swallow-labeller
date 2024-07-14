@@ -398,30 +398,27 @@ void Gui::draw_plots(app::SwallowLabellingTaskManager& task_manager)
 
     const auto& data = task_manager.data();
 
-    if (ImPlot::BeginPlot("##flow_plot", {-1, 0}, PlotFlags)) {
-        constexpr ImU32 FlowDeltaSelectorColor = IM_COL32(120, 120, 120, 50);
-        setup_axis_links(ImAxis_X1, &m_plot_summary_range.start, &m_plot_summary_range.end);
-        plot_data("##flow", data.flow_time, data.flow, "Flow rate (L/min)", "{:g} L/min");
-        plot_event("##flow_event", data);
-        draw_plot_delta_selector(
-            "##flow_delta_selector", m_flow_delta_selector, FlowDeltaSelectorColor
-        );
-        ImPlot::EndPlot();
+    if (ImPlot::BeginAlignedPlots("##aligned_plots")) {
+        if (ImPlot::BeginPlot("##flow_plot", {-1, 0}, PlotFlags)) {
+            constexpr ImU32 FlowDeltaSelectorColor = IM_COL32(120, 120, 120, 50);
+            setup_axis_links(ImAxis_X1, &m_plot_summary_range.start, &m_plot_summary_range.end);
+            plot_data("##flow", data.flow_time, data.flow, "Flow rate (L/min)", "{:g} L/min");
+            plot_event("##flow_event", data);
+            draw_plot_delta_selector(
+                "##flow_delta_selector", m_flow_delta_selector, FlowDeltaSelectorColor
+            );
+            ImPlot::EndPlot();
+        }
+        if (ImPlot::BeginPlot("##audio_plot", {-1, 0}, PlotFlags)) {
+            setup_axis_links(ImAxis_X1, &m_plot_summary_range.start, &m_plot_summary_range.end);
+            plot_data("##audio", data.audio_time, data.audio, "Ear audio (V)", "{:g} V");
+            plot_event("##audio_event", data);
+            ImPlot::EndPlot();
+        }
+        ImPlot::EndAlignedPlots();
     }
 
-    if (ImPlot::BeginPlot("##audio_plot", {-1, 0}, PlotFlags)) {
-        setup_axis_links(ImAxis_X1, &m_plot_summary_range.start, &m_plot_summary_range.end);
-        plot_data("##audio", data.audio_time, data.audio, "Ear audio (V)", "{:g} V");
-        plot_event("##audio_event", data);
-        ImPlot::EndPlot();
-    }
-
-    if (ImPlot::BeginPlot(
-            "##summary_plot",
-            {-1, SummaryPlotHeight},
-            PlotFlags | ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_AutoFit
-        ))
-    {
+    if (ImPlot::BeginPlot("##summary_plot", {-1, SummaryPlotHeight}, ImPlotFlags_CanvasOnly)) {
         constexpr ImPlotAxisFlags AxFlags = ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_AutoFit;
         ImPlot::SetupAxes(nullptr, nullptr, AxFlags, AxFlags);
         draw_plot_summary_selector();
@@ -446,10 +443,7 @@ void Gui::draw_plot_summary_selector()
 
 void Gui::draw_active_task(app::SwallowLabellingTaskManager& task_manager)
 {
-    if (ImPlot::BeginAlignedPlots("##aligned_plots")) {
-        draw_plots(task_manager);
-        ImPlot::EndAlignedPlots();
-    }
+    draw_plots(task_manager);
 }
 
 void Gui::set_scaling_factor(float scaling_factor)
