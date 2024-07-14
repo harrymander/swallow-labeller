@@ -1,5 +1,6 @@
 #include "gui.hpp"
 
+#include "../variant-visitor.hpp"
 #include "font.hpp"
 
 #include <IconsFontAwesome6.h>
@@ -148,7 +149,30 @@ void Gui::draw_main_window()
     if (m_show_debug_info) {
         draw_debug_info();
     }
+
+    const auto& task = m_app.tasks()[m_app.active_task_index()];
+    const auto& info = task.info();
+    ImGui::Text(
+        "Subject #%u, %s swallows, repeat #%u, swallow #%u (%s)",
+        info.subject,
+        swallow_test_type_string(info.test_type).c_str(),
+        info.repeatnum,
+        info.swallownum,
+        task.data_path().c_str()
+    );
+
+    VariantVisitor{
+        [this](const app::SwallowLabellingTaskError& error) {
+            ImGui::Text(ICON_FA_TRIANGLE_EXCLAMATION "  %s", error.message.c_str());
+            if (ImGui::Button("Retry...")) {
+                m_app.reload_active_task();
+            }
+        },
+        [this](app::SwallowLabellingTaskManager& task_manager) { draw_active_task(task_manager); },
+    }(m_app.active_task());
 }
+
+void Gui::draw_active_task(app::SwallowLabellingTaskManager& task_manager) {}
 
 void Gui::set_scaling_factor(float scaling_factor)
 {

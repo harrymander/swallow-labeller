@@ -49,6 +49,7 @@ private:
 
     void setup_dockspace() const;
     void draw_main_window();
+    void draw_active_task(recap::labeller::app::SwallowLabellingTaskManager& task_manager);
     void draw_task_list();
     void draw_menu_bar();
     static void draw_debug_info();

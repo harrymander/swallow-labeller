@@ -3,12 +3,15 @@
 
 #include "annotation-manager.hpp"
 #include "annotation.hpp"
+#include "data.hpp"
 #include "labelling-task.hpp"
 
 #include <spdlog/spdlog.h>
 
 #include <filesystem>
+#include <memory>
 #include <optional>
+#include <variant>
 #include <vector>
 
 namespace recap::labeller::app {
@@ -41,6 +44,21 @@ private:
     std::string m_data_path;
 };
 
+struct SwallowLabellingTaskError {
+    std::string message;
+};
+
+class SwallowLabellingTaskManager {
+public:
+    SwallowLabellingTaskManager(SwallowLabellingTask& task, SwallowTaskData data);
+
+    const SwallowTaskData& data() const { return m_data; }
+
+private:
+    SwallowLabellingTask& m_task;
+    SwallowTaskData m_data;
+};
+
 class App {
 public:
     App(const std::vector<SwallowTaskInfo>& swallow_tasks,
@@ -53,22 +71,25 @@ public:
 
     [[nodiscard]] std::size_t active_task_index() const { return m_active_task_index; }
 
-    void set_active_task_index(std::size_t index)
+    void set_active_task_index(std::size_t index);
+
+    std::variant<SwallowLabellingTaskError, SwallowLabellingTaskManager>& active_task()
     {
-        if (index < m_swallow_tasks.size()) {
-            spdlog::debug("Setting task index: {}", index);
-            m_active_task_index = index;
-        } else {
-            spdlog::error("Invalid task index: {}; not changing!", index);
-        }
+        return *m_active_task;
     }
+
+    void reload_active_task();
 
 private:
     std::vector<SwallowLabellingTask> m_swallow_tasks;
     SwallowAnnotationManager m_annotation_manager;
     std::size_t m_num_annotated_tasks;
+    std::unique_ptr<std::variant<SwallowLabellingTaskError, SwallowLabellingTaskManager>>
+        m_active_task;
 
     std::size_t m_active_task_index = 0;
+
+    void load_active_task();
 };
 
 }; // namespace recap::labeller::app

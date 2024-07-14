@@ -1,11 +1,18 @@
 #include "app.hpp"
 
 #include "annotation-manager.hpp"
+#include "data.hpp"
 #include "labelling-task.hpp"
 
+#include <fmt/core.h>
+
+#include <exception>
 #include <filesystem>
+#include <fstream>
+#include <memory>
 #include <optional>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace recap::labeller::app {
@@ -63,6 +70,67 @@ App::App(
         m_swallow_tasks.end(),
         [](const auto& task) { return task.state() == SwallowLabellingTaskState::Annotated; }
     ))
+{
+    load_active_task();
+}
+
+void App::set_active_task_index(std::size_t index)
+{
+    if (index < m_swallow_tasks.size()) {
+        if (index != m_active_task_index) {
+            spdlog::debug("Setting task index to {}", index);
+            m_active_task_index = index;
+            load_active_task();
+        } else {
+            spdlog::warn("Task index is already {}; not changing!", index);
+        }
+    } else {
+        spdlog::error("Invalid task index: {}; not changing!", index);
+    }
+}
+
+namespace {
+
+template <typename T, typename... Args>
+std::unique_ptr<std::variant<SwallowLabellingTaskError, SwallowLabellingTaskManager>>
+make_unique_active_task(Args&&...args)
+{
+    return std::make_unique<std::variant<SwallowLabellingTaskError, SwallowLabellingTaskManager>>(
+        std::in_place_type<T>, std::forward<Args>(args)...
+    );
+}
+
+}; // namespace
+
+void App::reload_active_task()
+{
+    spdlog::info("Reloading active task...");
+    load_active_task();
+}
+
+void App::load_active_task()
+{
+    SwallowLabellingTask& task = m_swallow_tasks[m_active_task_index];
+    if (task.state() == SwallowLabellingTaskState::DataFileNotFound) {
+        m_active_task = make_unique_active_task<SwallowLabellingTaskError>("Data file not found");
+    } else {
+        try {
+            std::ifstream stream(task.data_path());
+            auto data = SwallowTaskData::from_numpy(cnpy::npz_load(stream));
+            m_active_task = make_unique_active_task<SwallowLabellingTaskManager>(task, data);
+            spdlog::debug("Loaded data from {}", task.data_path());
+        } catch (const std::exception& e) {
+            spdlog::error("Error loading data file from {}: {}", task.data_path(), e.what());
+            std::string err = fmt::format("Error loading data file: {}", e.what());
+            m_active_task = make_unique_active_task<SwallowLabellingTaskError>(std::move(err));
+        }
+    }
+}
+
+SwallowLabellingTaskManager::SwallowLabellingTaskManager(
+    SwallowLabellingTask& task, SwallowTaskData data
+) :
+    m_task(task), m_data(std::move(data))
 {}
 
 }; // namespace recap::labeller::app

@@ -5,7 +5,7 @@
 
 #include <vector>
 
-namespace recap::labeller::data {
+namespace recap::labeller {
 
 struct SwallowTaskData {
     std::vector<double> flow;
@@ -19,6 +19,6 @@ struct SwallowTaskData {
     static SwallowTaskData from_numpy(const cnpy::npz_t& data);
 };
 
-}; // namespace recap::labeller::data
+}; // namespace recap::labeller
 
 #endif // INCLUDE_PLOT_DATA_HPP

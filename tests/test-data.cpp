@@ -5,7 +5,7 @@
 
 #include <stdexcept>
 
-using namespace recap::labeller::data;
+using namespace recap::labeller;
 
 static SwallowTaskData load_data(const std::string& path)
 {
