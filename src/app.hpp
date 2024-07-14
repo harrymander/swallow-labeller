@@ -8,27 +8,48 @@
 #include <spdlog/spdlog.h>
 
 #include <filesystem>
+#include <optional>
 #include <vector>
 
 namespace recap::labeller::app {
 
+enum class SwallowLabellingTaskState {
+    Unannotated,
+    Annotated,
+    DataFileNotFound,
+};
+
 class SwallowLabellingTask {
 public:
     SwallowLabellingTask(
-        const recap::labeller::SwallowTaskInfo& task_info,
-        const recap::labeller::SwallowAnnotation *annotation
+        recap::labeller::SwallowTaskInfo task_info,
+        const std::filesystem::path& data_dir,
+        std::optional<SwallowAnnotation> annotation
     );
+
+    [[nodiscard]] SwallowLabellingTaskState state() const { return m_state; }
+
+    [[nodiscard]] const recap::labeller::SwallowTaskInfo& info() const { return m_info; }
+
+    [[nodiscard]] const std::string& data_path() const { return m_data_path; }
+
+private:
+    SwallowLabellingTaskState m_state = SwallowLabellingTaskState::Unannotated;
+
+    recap::labeller::SwallowTaskInfo m_info;
+    std::optional<SwallowAnnotation> m_annotation;
+    std::string m_data_path;
 };
 
 class App {
 public:
-    App(std::vector<SwallowTaskInfo> swallow_tasks,
+    App(const std::vector<SwallowTaskInfo>& swallow_tasks,
         SwallowAnnotationManager annotation_manager,
-        std::filesystem::path data_dir);
+        const std::filesystem::path& data_dir);
 
-    [[nodiscard]] const std::vector<SwallowTaskInfo>& tasks_info() const { return m_swallow_tasks; }
+    [[nodiscard]] const std::vector<SwallowLabellingTask>& tasks() const { return m_swallow_tasks; }
 
-    [[nodiscard]] std::size_t num_annotated_tasks() const { return 0; }
+    [[nodiscard]] std::size_t num_annotated_tasks() const { return m_num_annotated_tasks; }
 
     [[nodiscard]] std::size_t active_task_index() const { return m_active_task_index; }
 
@@ -43,9 +64,9 @@ public:
     }
 
 private:
-    std::vector<SwallowTaskInfo> m_swallow_tasks;
+    std::vector<SwallowLabellingTask> m_swallow_tasks;
     SwallowAnnotationManager m_annotation_manager;
-    std::filesystem::path m_data_dir;
+    std::size_t m_num_annotated_tasks;
 
     std::size_t m_active_task_index = 0;
 };

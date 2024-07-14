@@ -1,7 +1,6 @@
 #include "gui.hpp"
 
 #include "font.hpp"
-#include "widgets/util.hpp"
 
 #include <IconsFontAwesome6.h>
 #include <fmt/format.h>
@@ -188,14 +187,31 @@ void Gui::draw_menu_bar()
 
 namespace {
 
-std::string task_info_str(const SwallowTaskInfo& task)
+const char *swallow_task_icon(const app::SwallowLabellingTask& task)
 {
+    using enum app::SwallowLabellingTaskState;
+    switch (task.state()) {
+    case Annotated:
+        return ICON_FA_SQUARE_CHECK "  ";
+    case DataFileNotFound:
+        return ICON_FA_FILE_CIRCLE_EXCLAMATION "  ";
+    default:
+        break;
+    }
+
+    return "";
+}
+
+std::string task_info_str(const app::SwallowLabellingTask& task)
+{
+    const SwallowTaskInfo& info = task.info();
     return fmt::format(
-        "Subject #{}, {}\nRepeat #{}, swallow #{}",
-        task.subject,
-        swallow_test_type_string(task.test_type),
-        task.repeatnum,
-        task.swallownum
+        "{}Subject #{}, {}\nRepeat #{}, swallow #{}",
+        swallow_task_icon(task),
+        info.subject,
+        swallow_test_type_string(info.test_type),
+        info.repeatnum,
+        info.swallownum
     );
 }
 
@@ -203,7 +219,7 @@ std::string task_info_str(const SwallowTaskInfo& task)
 
 void Gui::draw_task_list()
 {
-    const auto& tasks = m_app.tasks_info();
+    const auto& tasks = m_app.tasks();
     const std::size_t num_annotated = m_app.num_annotated_tasks();
     ImGui::Text(
         ICON_FA_SQUARE_CHECK "  %zu task%s out of %zu annotated",
