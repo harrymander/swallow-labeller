@@ -373,19 +373,18 @@ void draw_plot_delta_selector(
 void Gui::on_new_active_task(const app::App::ActiveTaskVariant& new_variant)
 {
     constexpr double EventBufferSecs = 6;
-    m_plot_summary_range = VariantVisitor{
-        [](const app::SwallowLabellingTaskError&) -> widgets::PlotRange {
-            return widgets::PlotRange{NAN, NAN};
-        },
-        [](const app::SwallowLabellingTaskManager& task_manager) -> widgets::PlotRange {
-            const auto& info = task_manager.task().info();
-            const auto& time = task_manager.data().flow_time;
-            return {
-                std::max(info.event_range_secs.start - EventBufferSecs, time.front()),
-                std::min(info.event_range_secs.end + EventBufferSecs, time.back()),
-            };
-        },
-    }(new_variant);
+
+    const auto *task_manager = std::get_if<app::SwallowLabellingTaskManager>(&new_variant);
+    if (task_manager) {
+        const auto& info = task_manager->task().info();
+        const auto& time = task_manager->data().flow_time;
+        m_plot_summary_range = {
+            std::max(info.event_range_secs.start - EventBufferSecs, time.front()),
+            std::min(info.event_range_secs.end + EventBufferSecs, time.back()),
+        };
+    } else {
+        m_plot_summary_range = {NAN, NAN};
+    }
 
     spdlog::debug(
         "Set new summary range to [{}, {}]", m_plot_summary_range.start, m_plot_summary_range.end
