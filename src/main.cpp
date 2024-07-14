@@ -1,4 +1,5 @@
 #include "annotation-manager.hpp"
+#include "annotation.hpp"
 #include "app.hpp"
 #include "gui/gui.hpp"
 #include "labelling-task.hpp"
@@ -71,7 +72,7 @@ int parse_args(argparse::ArgumentParser& program, int argc, const char **argv)
 }
 
 // TODO: this whole structure is a mess, need to encapsulate task management in a class...
-bool all_task_ids_unique(const std::vector<task::SwallowTaskInfo>& tasks)
+bool all_task_ids_unique(const std::vector<SwallowTaskInfo>& tasks)
 {
     std::unordered_set<std::string> ids;
     for (const auto& task : tasks) {
@@ -85,7 +86,7 @@ bool all_task_ids_unique(const std::vector<task::SwallowTaskInfo>& tasks)
     return true;
 }
 
-std::optional<std::vector<task::SwallowTaskInfo>>
+std::optional<std::vector<SwallowTaskInfo>>
 load_labelling_tasks(const argparse::ArgumentParser& program)
 {
     std::string tasks_path = program.get("--tasks");
@@ -96,7 +97,7 @@ load_labelling_tasks(const argparse::ArgumentParser& program)
     }
 
     try {
-        auto tasks = task::load_swallow_task_info_json(stream);
+        auto tasks = load_swallow_task_info_json(stream);
         if (tasks.empty()) {
             spdlog::critical("Labelling tasks list is empty!");
             return std::nullopt;
@@ -116,7 +117,7 @@ load_labelling_tasks(const argparse::ArgumentParser& program)
     return std::nullopt;
 }
 
-std::optional<task::AnnotationsMap> load_annotations(const std::filesystem::path& path)
+std::optional<SwallowAnnotationsMap> load_annotations(const std::filesystem::path& path)
 {
     std::ifstream stream(path);
     if (!stream) {
@@ -124,7 +125,7 @@ std::optional<task::AnnotationsMap> load_annotations(const std::filesystem::path
         return std::nullopt;
     }
     try {
-        auto annotations = task::load_swallow_annotation_json(stream);
+        auto annotations = load_swallow_annotations_map_json(stream);
         spdlog::debug("Loaded {} annotation(s)", annotations.size());
         return annotations;
     } catch (const std::invalid_argument& e) {
@@ -135,17 +136,17 @@ std::optional<task::AnnotationsMap> load_annotations(const std::filesystem::path
     return std::nullopt;
 }
 
-std::optional<annotation_manager::AnnotationManager>
-make_annotations_mgr(const argparse::ArgumentParser& parser)
+std::optional<SwallowAnnotationManager> make_annotations_mgr(const argparse::ArgumentParser& parser)
 {
     auto existing_path = parser.present("--existing-annotations");
     auto annotations_path = std::filesystem::path(parser.get("--annotations")).make_preferred();
-    task::AnnotationsMap annotations;
+    SwallowAnnotationsMap annotations;
     if (existing_path.has_value()) {
         spdlog::info(
             "Loading existing annotations from {} rather than {}", *existing_path, annotations_path
         );
-        auto opt = load_annotations(std::filesystem::path(*existing_path).make_preferred());
+        auto path = std::filesystem::path(*existing_path).make_preferred();
+        auto opt = load_annotations(path);
         if (!opt.has_value()) {
             return std::nullopt;
         }
@@ -161,7 +162,7 @@ make_annotations_mgr(const argparse::ArgumentParser& parser)
         spdlog::info("No existing annotations, creating annotations file at {}", annotations_path);
     }
 
-    annotation_manager::AnnotationManager manager(annotations_path, annotations);
+    SwallowAnnotationManager manager(annotations_path, annotations);
     try {
         // Sync to file to check that writing works
         manager.sync_to_file();

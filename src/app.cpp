@@ -1,13 +1,16 @@
 #include "app.hpp"
 
+#include "annotation-manager.hpp"
+#include "labelling-task.hpp"
+
 #include <filesystem>
 #include <vector>
 
 namespace recap::labeller::app {
 
 App::App(
-    std::vector<task::SwallowTaskInfo> swallow_tasks,
-    annotation_manager::AnnotationManager annotation_manager,
+    std::vector<SwallowTaskInfo> swallow_tasks,
+    SwallowAnnotationManager annotation_manager,
     std::filesystem::path data_dir
 ) :
     m_swallow_tasks(std::move(swallow_tasks)),

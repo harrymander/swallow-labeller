@@ -2,7 +2,6 @@
 #define RECAP_LABELLER_GUI_HPP
 
 #include "../app.hpp"
-#include "../old-gui.hpp"
 #include "imgui.h"
 #include "widgets/color-scheme-selector.hpp"
 

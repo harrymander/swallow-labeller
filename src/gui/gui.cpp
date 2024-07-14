@@ -1,6 +1,5 @@
 #include "gui.hpp"
 
-#include "../old-gui.hpp"
 #include "font.hpp"
 #include "widgets/util.hpp"
 
@@ -189,7 +188,7 @@ void Gui::draw_menu_bar()
 
 namespace {
 
-std::string task_info_str(const task::SwallowTaskInfo& task)
+std::string task_info_str(const SwallowTaskInfo& task)
 {
     return fmt::format(
         "Subject #{}, {}\nRepeat #{}, swallow #{}",

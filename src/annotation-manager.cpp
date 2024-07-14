@@ -1,45 +1,23 @@
 #include "annotation-manager.hpp"
 
-#include "labelling-task.hpp"
+#include "annotation.hpp"
 
 #include <spdlog/fmt/std.h>
 #include <spdlog/spdlog.h>
 
-#include <algorithm>
 #include <filesystem>
 #include <fstream>
-#include <ostream>
 #include <string>
 
-namespace recap::labeller::annotation_manager {
+namespace recap::labeller {
 
-using namespace recap::labeller::task;
-
-namespace {
-
-void sort_time_ranges(std::vector<TimeRange>& ranges)
-{
-    std::sort(ranges.begin(), ranges.end(), [](const TimeRange& a, const TimeRange& b) {
-        return a.start < b.start ? true : a.end < b.end;
-    });
-}
-
-void normalise_annotation(SwallowAnnotation& annotation)
-{
-    sort_time_ranges(annotation.ear_clicks);
-}
-
-}; // namespace
-
-AnnotationManager::AnnotationManager(std::filesystem::path path, AnnotationsMap annotations) :
+SwallowAnnotationManager::SwallowAnnotationManager(
+    std::filesystem::path path, SwallowAnnotationsMap annotations
+) :
     path(std::move(path)), annotations(std::move(annotations))
-{
-    for (auto& item : this->annotations) {
-        normalise_annotation(item.second);
-    }
-}
+{}
 
-const SwallowAnnotation *AnnotationManager::get_annotation(const std::string& id) const
+const SwallowAnnotation *SwallowAnnotationManager::get_annotation(const std::string& id) const
 {
     const auto it = annotations.find(id);
     if (it == annotations.end()) {
@@ -48,21 +26,20 @@ const SwallowAnnotation *AnnotationManager::get_annotation(const std::string& id
     return &it->second;
 }
 
-bool AnnotationManager::annotation_saved(const std::string& id, const SwallowAnnotation& annotation)
-    const
+bool SwallowAnnotationManager::annotation_saved(
+    const std::string& id, const SwallowAnnotation& annotation
+) const
 {
     const SwallowAnnotation *existing = get_annotation(id);
     if (existing) {
         SwallowAnnotation normed = annotation;
-        normalise_annotation(normed);
         return *existing == normed;
     }
     return false;
 }
 
-bool AnnotationManager::add_annotation(const std::string& id, SwallowAnnotation annotation)
+bool SwallowAnnotationManager::add_annotation(const std::string& id, SwallowAnnotation annotation)
 {
-    normalise_annotation(annotation);
     const auto it = annotations.find(id);
     if (it != annotations.end()) {
         const auto& existing = it->second;
@@ -79,7 +56,7 @@ bool AnnotationManager::add_annotation(const std::string& id, SwallowAnnotation 
     return true;
 }
 
-void AnnotationManager::remove_annotation(const std::string& id)
+void SwallowAnnotationManager::remove_annotation(const std::string& id)
 {
     const auto it = annotations.find(id);
     if (it != annotations.end()) {
@@ -90,13 +67,14 @@ void AnnotationManager::remove_annotation(const std::string& id)
     }
 }
 
-void AnnotationManager::sync_to_file() const
+void SwallowAnnotationManager::sync_to_file() const
 {
     std::ofstream stream;
     stream.exceptions(std::ios::badbit | std::ios::failbit);
     stream.open(path);
-    dump_swallow_annotations_json(stream, annotations);
+    dump_swallow_annotations_map_json(stream, annotations);
+    stream << '\n';
     spdlog::debug("Wrote {} annotations to {}", annotations.size(), path);
 }
 
-}; // namespace recap::labeller::annotation_manager
+}; // namespace recap::labeller

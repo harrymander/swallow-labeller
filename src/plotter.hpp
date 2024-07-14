@@ -21,7 +21,7 @@ class SwallowTaskPlotter {
 public:
     explicit SwallowTaskPlotter(
         recap::labeller::data::SwallowTaskData data,
-        recap::labeller::task::SwallowAnnotation annotation = {}
+        recap::labeller::SwallowAnnotation annotation = {}
     );
     ~SwallowTaskPlotter() noexcept;
     SwallowTaskPlotter(SwallowTaskPlotter&&) noexcept;
@@ -32,7 +32,7 @@ public:
 
     void draw(const char *id);
 
-    [[nodiscard]] const recap::labeller::task::SwallowAnnotation& annotation() const;
+    [[nodiscard]] const recap::labeller::SwallowAnnotation& annotation() const;
 
     void reset_annotation();
 

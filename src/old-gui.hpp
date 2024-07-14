@@ -13,7 +13,7 @@ namespace recap::labeller::gui {
 class OldGui {
 public:
     OldGui(
-        std::vector<recap::labeller::task::SwallowTaskInfo> tasks,
+        std::vector<recap::labeller::SwallowTaskInfo> tasks,
         annotation_manager::AnnotationManager& annotation_mgr,
         std::filesystem::path data_dir,
         bool shuffle = true

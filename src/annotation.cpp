@@ -163,4 +163,21 @@ std::string SwallowAnnotation::dump_json() const
     return nlohmann::json(*this).dump();
 }
 
+SwallowAnnotationsMap load_swallow_annotations_map_json(std::istream& stream)
+{
+    try {
+        return nlohmann::json::parse(stream).template get<SwallowAnnotationsMap>();
+    } catch (const nlohmann::json::exception& e) {
+        throw std::runtime_error(std::string("JSON parse error: ") + e.what());
+    }
+}
+
+void dump_swallow_annotations_map_json(
+    std::ostream& os, const SwallowAnnotationsMap& map, int indent
+)
+{
+    nlohmann::json json = map;
+    os << json.dump(indent);
+}
+
 }; // namespace recap::labeller

@@ -1,24 +1,23 @@
 #ifndef INCLUDE_RECAP_LABELLER_ANNOTATION_MANAGER_HPP
 #define INCLUDE_RECAP_LABELLER_ANNOTATION_MANAGER_HPP
 
-#include "labelling-task.hpp"
+#include "annotation.hpp"
 
 #include <filesystem>
-#include <ostream>
 
-namespace recap::labeller::annotation_manager {
+namespace recap::labeller {
 
-class AnnotationManager {
+class SwallowAnnotationManager {
 public:
-    AnnotationManager(
-        std::filesystem::path path, recap::labeller::task::AnnotationsMap annotations
+    SwallowAnnotationManager(
+        std::filesystem::path path, recap::labeller::SwallowAnnotationsMap annotations
     );
 
     /**
      * Retrieves annotation with annotation_id and returns pointer to it, or nullptr if no
      * annotation with that ID
      */
-    [[nodiscard]] const recap::labeller::task::SwallowAnnotation *
+    [[nodiscard]] const recap::labeller::SwallowAnnotation *
     get_annotation(const std::string& annotation_id) const;
 
     /**
@@ -26,16 +25,15 @@ public:
      * annotation, otherwise false.
      */
     [[nodiscard]] bool annotation_saved(
-        const std::string& id, const recap::labeller::task::SwallowAnnotation& annotation
+        const std::string& id, const recap::labeller::SwallowAnnotation& annotation
     ) const;
 
     /**
      * Adds or updates annotation with given annotation_id. Returns true if annotation added or
      * updated.
      */
-    [[nodiscard]] bool add_annotation(
-        const std::string& annotation_id, recap::labeller::task::SwallowAnnotation annotation
-    );
+    [[nodiscard]] bool
+    add_annotation(const std::string& annotation_id, recap::labeller::SwallowAnnotation annotation);
 
     void remove_annotation(const std::string& annotation_id);
 
@@ -48,10 +46,10 @@ public:
 
 private:
     std::filesystem::path path;
-    recap::labeller::task::AnnotationsMap annotations;
+    recap::labeller::SwallowAnnotationsMap annotations;
     std::string path_str;
 };
 
-}; // namespace recap::labeller::annotation_manager
+}; // namespace recap::labeller
 
 #endif // INCLUDE_RECAP_LABELLER_ANNOTATION_MANAGER_HPP

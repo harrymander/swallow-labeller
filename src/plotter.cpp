@@ -36,7 +36,7 @@
 namespace recap::labeller::plotter {
 
 using labeller::data::SwallowTaskData;
-using namespace labeller::task;
+using namespace labeller;
 using namespace recap::labeller::gui::widgets;
 
 namespace {

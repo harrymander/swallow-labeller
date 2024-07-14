@@ -1,19 +1,17 @@
 #ifndef RECAP_LABELLER_ANNOTATION_HPP_INCLUDE
 #define RECAP_LABELLER_ANNOTATION_HPP_INCLUDE
 
+#include "time-range.hpp"
+
+#include <istream>
+#include <map>
+#include <ostream>
 #include <string>
 #include <string_view>
 #include <variant>
 #include <vector>
 
 namespace recap::labeller {
-
-struct TimeRange {
-    double start;
-    double end;
-
-    bool operator==(const TimeRange&) const = default;
-};
 
 enum class SRCPattern {
     ExEx,
@@ -52,6 +50,13 @@ struct SwallowAnnotation {
 
     [[nodiscard]] std::string dump_json() const;
 };
+
+using SwallowAnnotationsMap = std::map<std::string, SwallowAnnotation>;
+
+SwallowAnnotationsMap load_swallow_annotations_map_json(std::istream& stream);
+void dump_swallow_annotations_map_json(
+    std::ostream& os, const SwallowAnnotationsMap& map, int indent = -1
+);
 
 }; // namespace recap::labeller
 
