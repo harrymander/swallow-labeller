@@ -4,6 +4,7 @@
 #include "../app.hpp"
 #include "imgui.h"
 #include "widgets/color-scheme-selector.hpp"
+#include "widgets/plot-range-dragger.hpp"
 #include "widgets/plot-range-selector.hpp"
 #include "widgets/plot-range.hpp"
 
@@ -48,16 +49,23 @@ private:
     ImGuiTextFilter m_task_list_text_filter;
 
     widgets::PlotRangeSelector m_flow_delta_selector;
+    widgets::PlotRangeDragger m_plot_summary_dragger;
+    widgets::PlotRangeSelector m_plot_summary_selector;
+    widgets::PlotRange m_plot_summary_range = {NAN, NAN};
 
     recap::labeller::app::App& m_app;
+    recap::labeller::app::App::NewActiveTaskObservable::Observer m_new_active_task_observer;
 
     void setup_dockspace() const;
     void draw_active_task(recap::labeller::app::SwallowLabellingTaskManager& task_manager);
-    void draw_plots(recap::labeller::app::SwallowLabellingTaskManager& task_manager);
     void draw_main_window();
     void draw_task_list();
     void draw_menu_bar();
     static void draw_debug_info();
+
+    void draw_plots(recap::labeller::app::SwallowLabellingTaskManager& task_manager);
+    void draw_plot_summary_selector();
+    void on_new_active_task(const app::App::ActiveTaskVariant& new_variant);
 };
 
 }; // namespace recap::labeller::gui

@@ -92,10 +92,9 @@ void App::set_active_task_index(std::size_t index)
 namespace {
 
 template <typename T, typename... Args>
-std::unique_ptr<std::variant<SwallowLabellingTaskError, SwallowLabellingTaskManager>>
-make_unique_active_task(Args&&...args)
+std::unique_ptr<App::ActiveTaskVariant> make_unique_active_task(Args&&...args)
 {
-    return std::make_unique<std::variant<SwallowLabellingTaskError, SwallowLabellingTaskManager>>(
+    return std::make_unique<App::ActiveTaskVariant>(
         std::in_place_type<T>, std::forward<Args>(args)...
     );
 }
@@ -125,6 +124,8 @@ void App::load_active_task()
             m_active_task = make_unique_active_task<SwallowLabellingTaskError>(std::move(err));
         }
     }
+
+    m_new_active_task_observable.notify(*m_active_task);
 }
 
 SwallowLabellingTaskManager::SwallowLabellingTaskManager(

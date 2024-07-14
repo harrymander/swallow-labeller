@@ -5,6 +5,7 @@
 #include "annotation.hpp"
 #include "data.hpp"
 #include "labelling-task.hpp"
+#include "observable.hpp"
 
 #include <spdlog/spdlog.h>
 
@@ -54,6 +55,8 @@ public:
 
     const SwallowTaskData& data() const { return m_data; }
 
+    const SwallowLabellingTask& task() const { return m_task; }
+
 private:
     SwallowLabellingTask& m_task;
     SwallowTaskData m_data;
@@ -73,9 +76,15 @@ public:
 
     void set_active_task_index(std::size_t index);
 
-    std::variant<SwallowLabellingTaskError, SwallowLabellingTaskManager>& active_task()
+    using ActiveTaskVariant = std::variant<SwallowLabellingTaskError, SwallowLabellingTaskManager>;
+    using NewActiveTaskObservable = Observable<const ActiveTaskVariant&>;
+
+    ActiveTaskVariant& active_task() { return *m_active_task; }
+
+    NewActiveTaskObservable::Observer
+    subscribe_new_active_task(NewActiveTaskObservable::Function&& func)
     {
-        return *m_active_task;
+        return m_new_active_task_observable.subscribe(func);
     }
 
     void reload_active_task();
@@ -84,8 +93,8 @@ private:
     std::vector<SwallowLabellingTask> m_swallow_tasks;
     SwallowAnnotationManager m_annotation_manager;
     std::size_t m_num_annotated_tasks;
-    std::unique_ptr<std::variant<SwallowLabellingTaskError, SwallowLabellingTaskManager>>
-        m_active_task;
+    std::unique_ptr<ActiveTaskVariant> m_active_task;
+    NewActiveTaskObservable m_new_active_task_observable;
 
     std::size_t m_active_task_index = 0;
 

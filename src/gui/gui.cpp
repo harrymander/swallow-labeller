@@ -52,7 +52,10 @@ std::optional<std::string> get_custom_ini_path()
 
 }; // namespace
 
-Gui::Gui(app::App& app) : m_app(app)
+Gui::Gui(app::App& app) :
+    m_app(app), m_new_active_task_observer(m_app.subscribe_new_active_task([this](const auto& v) {
+        on_new_active_task(v);
+    }))
 {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -67,6 +70,8 @@ Gui::Gui(app::App& app) : m_app(app)
     }
 
     setup_fonts();
+
+    m_app.reload_active_task();
 }
 
 Gui::~Gui()
@@ -365,6 +370,26 @@ void draw_plot_delta_selector(
 
 }; // namespace
 
+void Gui::on_new_active_task(const app::App::ActiveTaskVariant& new_variant)
+{
+    constexpr double EventBufferSecs = 6;
+    m_plot_summary_range = VariantVisitor{
+        [](const app::SwallowLabellingTaskError&) -> widgets::PlotRange { return {NAN, NAN}; },
+        [](const app::SwallowLabellingTaskManager& task_manager) -> widgets::PlotRange {
+            const auto& info = task_manager.task().info();
+            const auto& time = task_manager.data().flow_time;
+            return {
+                std::max(info.event_range_secs.start - EventBufferSecs, time.front()),
+                std::min(info.event_range_secs.end + EventBufferSecs, time.back()),
+            };
+        },
+    }(new_variant);
+
+    spdlog::debug(
+        "Set new summary range to [{}, {}]", m_plot_summary_range.start, m_plot_summary_range.end
+    );
+}
+
 void Gui::draw_plots(app::SwallowLabellingTaskManager& task_manager)
 {
     constexpr float SummaryPlotHeight = 75;
@@ -375,6 +400,7 @@ void Gui::draw_plots(app::SwallowLabellingTaskManager& task_manager)
 
     if (ImPlot::BeginPlot("##flow_plot", {-1, 0}, PlotFlags)) {
         constexpr ImU32 FlowDeltaSelectorColor = IM_COL32(120, 120, 120, 50);
+        setup_axis_links(ImAxis_X1, &m_plot_summary_range.start, &m_plot_summary_range.end);
         plot_data("##flow", data.flow_time, data.flow, "Flow rate (L/min)", "{:g} L/min");
         plot_event("##flow_event", data);
         draw_plot_delta_selector(
@@ -384,6 +410,7 @@ void Gui::draw_plots(app::SwallowLabellingTaskManager& task_manager)
     }
 
     if (ImPlot::BeginPlot("##audio_plot", {-1, 0}, PlotFlags)) {
+        setup_axis_links(ImAxis_X1, &m_plot_summary_range.start, &m_plot_summary_range.end);
         plot_data("##audio", data.audio_time, data.audio, "Ear audio (V)", "{:g} V");
         plot_event("##audio_event", data);
         ImPlot::EndPlot();
@@ -396,12 +423,25 @@ void Gui::draw_plots(app::SwallowLabellingTaskManager& task_manager)
         ))
     {
         constexpr ImPlotAxisFlags AxFlags = ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_AutoFit;
-        // constexpr ImColor SummaryColor = {.5F, .5F, .5F, .6F};
         ImPlot::SetupAxes(nullptr, nullptr, AxFlags, AxFlags);
+        draw_plot_summary_selector();
         plot_line("##summary_flow_plot_line", data.flow_time, data.flow);
         plot_event("##summary_event", data);
         ImPlot::EndPlot();
     }
+}
+
+void Gui::draw_plot_summary_selector()
+{
+    constexpr ImColor SummaryColor = {.5F, .5F, .5F, .6F};
+    (void) m_plot_summary_selector.update("##plot_summary_selector");
+    const widgets::PlotRange *new_range = m_plot_summary_selector.range();
+    if (new_range) {
+        m_plot_summary_range = *new_range;
+    } else {
+        (void) m_plot_summary_dragger.update("##plot_summary_dragger", m_plot_summary_range);
+    }
+    widgets::draw_plot_range(m_plot_summary_range, SummaryColor);
 }
 
 void Gui::draw_active_task(app::SwallowLabellingTaskManager& task_manager)
