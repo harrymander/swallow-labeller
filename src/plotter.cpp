@@ -8,7 +8,6 @@
 #include "gui/widgets/plot-range.hpp"
 #include "gui/widgets/util.hpp"
 #include "labelling-task.hpp"
-#include "optutil.hpp"
 #include "strutil.hpp"
 #include "util.hpp"
 
@@ -58,126 +57,6 @@ bool begin_data_plot(const char *id)
     return ImPlot::BeginPlot(
         id, {-1, 0}, ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus
     );
-}
-
-void setup_axis_links(ImAxis axis, double *v1, double *v2)
-{
-    double *vmin;
-    double *vmax;
-    std::tie(vmin, vmax) = util::minmax_pointers(v1, v2);
-    ImPlot::SetupAxisLinks(axis, vmin, vmax);
-}
-
-bool is_mouse_inside_plot()
-{
-    if (!ImGui::IsMousePosValid()) {
-        return false;
-    }
-
-    const ImVec2 bbmin = ImPlot::GetPlotPos();
-    const ImVec2 bbmax = bbmin + ImPlot::GetPlotSize();
-    const ImVec2 pos = ImGui::GetMousePos();
-    return pos.x >= bbmin.x && pos.x <= bbmax.x && pos.y >= bbmin.y && pos.y <= bbmax.y;
-}
-
-void add_plot_marker(ImDrawList *draw_list, const ImVec2& pos)
-{
-    constexpr float half_width = 4;
-    draw_list->AddRect(
-        ImVec2(pos.x - half_width, pos.y - half_width),
-        ImVec2(pos.x + half_width, pos.y + half_width),
-        ImColor(128, 128, 128)
-    );
-}
-
-constexpr float TextAutoalignMargin = 15;
-constexpr float TextAutoalignPadding = 6;
-
-/**
- * Add left-aligned text starting at (xp, yp), automatically right-aligning text if it would be
- * extend past xend
- */
-void add_text_autoalign_left(
-    ImDrawList *draw_list, const char *text, float xp, float yp, float xend
-)
-{
-    const float text_width = ImGui::CalcTextSize(text).x;
-    if (xp + text_width + TextAutoalignMargin > xend) {
-        xp -= text_width + TextAutoalignPadding;
-    } else {
-        xp += TextAutoalignPadding;
-    }
-    draw_list->AddText(ImVec2(xp, yp), ImGui::GetColorU32(ImGuiCol_Text), text);
-}
-
-/**
- * Add right-aligned text ending at (xp, yp), automatically left-aligning text if it would extend
- * before xstart
- */
-void add_text_autoalign_right(
-    ImDrawList *draw_list, const char *text, float xp, float yp, float xstart
-)
-{
-    const float text_width = ImGui::CalcTextSize(text).x;
-    if (xp - text_width - TextAutoalignMargin < xstart) {
-        xp += TextAutoalignPadding;
-    } else {
-        xp -= text_width + TextAutoalignPadding;
-    }
-    draw_list->AddText(ImVec2(xp, yp), ImGui::GetColorU32(ImGuiCol_Text), text);
-}
-
-void add_plot_vline(
-    ImDrawList *draw_list,
-    double xplot,
-    double yplot,
-    const ImVec2& pospx,
-    fmt::format_string<double> xfmt,
-    fmt::format_string<double> yfmt
-)
-{
-    const ImVec2 plot_pos = ImPlot::GetPlotPos();
-    const ImVec2 plot_size = ImPlot::GetPlotSize();
-    const ImVec2 top(pospx.x, plot_pos.y);
-    const ImVec2 bottom(pospx.x, top.y + plot_size.y);
-    draw_list->AddLine(top, bottom, ImColor(128, 128, 128));
-
-    const float xend = plot_pos.x + plot_size.x;
-    add_text_autoalign_left(
-        draw_list,
-        fmt::vformat(xfmt, fmt::make_format_args(xplot)).c_str(),
-        bottom.x,
-        bottom.y - ImGui::GetTextLineHeightWithSpacing(),
-        xend
-    );
-    add_text_autoalign_left(
-        draw_list, fmt::vformat(yfmt, fmt::make_format_args(yplot)).c_str(), top.x, top.y, xend
-    );
-}
-
-void draw_plot_cursor(double xplot, double yplot, fmt::format_string<double> yfmt)
-{
-    ImDrawList *draw_list = ImPlot::GetPlotDrawList();
-    const auto pospx = ImPlot::PlotToPixels(xplot, yplot);
-    add_plot_vline(draw_list, xplot, yplot, pospx, "t = {:g} s", yfmt);
-    add_plot_marker(draw_list, pospx);
-}
-
-void draw_plot_hovered(const double *x, size_t n, const double *y, fmt::format_string<double> yfmt)
-{
-    const auto mouse = ImPlot::GetPlotMousePos();
-    if (mouse.x > x[0]) {
-        const double *const end = x + n;
-        const double *xclosest = util::binary_search_closest(x, end, mouse.x);
-        if (xclosest != end) {
-            draw_plot_cursor(*xclosest, y[xclosest - x], yfmt);
-        }
-    }
-}
-
-void plot_line(const char *id, const std::vector<double>& x, const std::vector<double>& y)
-{
-    ImPlot::PlotLine(id, x.data(), y.data(), static_cast<int>(y.size()));
 }
 
 void draw_plot_range_delta_text(const PlotRange& range)

@@ -1,5 +1,6 @@
 #include "plot-range-dragger.hpp"
 
+#include "../../util.hpp"
 #include "util.hpp"
 
 #include <imgui.h>
@@ -19,10 +20,7 @@ namespace {
 constexpr float EdgeWidthPx = 8;
 constexpr float HalfEdgeWidthPx = EdgeWidthPx / 2;
 
-template <class T> std::pair<T *, T *> minmax_pointers(T *v1, T *v2)
-{
-    return (*v1 <= *v2) ? std::make_pair(v1, v2) : std::make_pair(v2, v1);
-}
+using recap::util::minmax_pointers;
 
 // Coordinates in pixels
 bool drag_range(ImGuiID id, float& x0, float& x1, const ImRect& limits, bool& held)

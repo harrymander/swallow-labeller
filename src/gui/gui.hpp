@@ -4,6 +4,8 @@
 #include "../app.hpp"
 #include "imgui.h"
 #include "widgets/color-scheme-selector.hpp"
+#include "widgets/plot-range-selector.hpp"
+#include "widgets/plot-range.hpp"
 
 #include <optional>
 #include <string>
@@ -36,20 +38,23 @@ private:
     bool m_show_imgui_metrics = false;
     recap::labeller::gui::widgets::ColorSchemeSelector m_color_scheme_selector;
 
-    bool m_only_show_annotated_tasks = false;
-    ImGuiTextFilter m_task_list_text_filter;
-
 #if NDEBUG
     bool m_show_debug_info = false;
 #else
     bool m_show_debug_info = true;
 #endif
 
+    bool m_only_show_annotated_tasks = false;
+    ImGuiTextFilter m_task_list_text_filter;
+
+    widgets::PlotRangeSelector m_flow_delta_selector;
+
     recap::labeller::app::App& m_app;
 
     void setup_dockspace() const;
-    void draw_main_window();
     void draw_active_task(recap::labeller::app::SwallowLabellingTaskManager& task_manager);
+    void draw_plots(recap::labeller::app::SwallowLabellingTaskManager& task_manager);
+    void draw_main_window();
     void draw_task_list();
     void draw_menu_bar();
     static void draw_debug_info();
