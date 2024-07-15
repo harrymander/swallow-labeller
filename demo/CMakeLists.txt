@@ -9,6 +9,7 @@ set(DEMO_GEN_PY ${CMAKE_CURRENT_SOURCE_DIR}/gen-demo.py)
 set(DEMO_DIR ${CMAKE_CURRENT_BINARY_DIR}/demofiles)
 set(DEMO_TASKS_JSON ${DEMO_DIR}/tasks.json)
 set(DEMO_DATA_DIR ${DEMO_DIR}/data)
+set(DEMO_ANNOTATIONS_JSON ${DEMO_DIR}/demo-annotations.json)
 
 add_custom_command(
     OUTPUT ${DEMO_TASKS_JSON}
@@ -30,9 +31,10 @@ add_custom_target(
         recap-labeller
         --tasks ${DEMO_TASKS_JSON}
         --data-dir ${DEMO_DATA_DIR}
-        --annotations ${DEMO_DIR}/demo-annotations.json
+        --annotations ${DEMO_ANNOTATIONS_JSON}
     COMMENT
 "\nRunning demo:
   Tasks JSON: ${DEMO_TASKS_JSON}
-  Data dir: ${DEMO_DATA_DIR}"
+  Data dir: ${DEMO_DATA_DIR}
+  Annotations JSON: ${DEMO_ANNOTATIONS_JSON}"
 )
