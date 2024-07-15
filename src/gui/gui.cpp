@@ -71,7 +71,7 @@ Gui::Gui(app::App& app) :
 
     setup_fonts();
 
-    m_app.reload_active_task();
+    on_new_active_task(m_app.active_task());
 }
 
 Gui::~Gui()
