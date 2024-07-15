@@ -52,9 +52,9 @@ struct SwallowLabellingTaskError {
     std::string message;
 };
 
-class SwallowLabellingTaskManager {
+class ActiveSwallowLabellingTask {
 public:
-    SwallowLabellingTaskManager(SwallowLabellingTask& task, SwallowTaskData data);
+    ActiveSwallowLabellingTask(SwallowLabellingTask& task, SwallowTaskData data);
 
     [[nodiscard]] const SwallowTaskData& data() const { return m_data; }
 
@@ -81,7 +81,7 @@ public:
 
     void set_active_task_index(std::size_t index);
 
-    using ActiveTaskVariant = std::variant<SwallowLabellingTaskError, SwallowLabellingTaskManager>;
+    using ActiveTaskVariant = std::variant<SwallowLabellingTaskError, ActiveSwallowLabellingTask>;
     using NewActiveTaskObservable = Observable<const ActiveTaskVariant&>;
 
     ActiveTaskVariant& active_task() { return *m_active_task; }

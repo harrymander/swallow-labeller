@@ -193,7 +193,7 @@ void Gui::draw_main_window()
                 m_app.reload_active_task();
             }
         },
-        [this](app::SwallowLabellingTaskManager& task_manager) { draw_active_task(task_manager); },
+        [this](app::ActiveSwallowLabellingTask& active_task) { draw_active_task(active_task); },
     }(m_app.active_task());
 }
 
@@ -374,10 +374,10 @@ void Gui::on_new_active_task(const app::App::ActiveTaskVariant& new_variant)
 {
     constexpr double EventBufferSecs = 6;
 
-    const auto *task_manager = std::get_if<app::SwallowLabellingTaskManager>(&new_variant);
-    if (task_manager) {
-        const auto& info = task_manager->info();
-        const auto& time = task_manager->data().flow_time;
+    const auto *active_task = std::get_if<app::ActiveSwallowLabellingTask>(&new_variant);
+    if (active_task) {
+        const auto& info = active_task->info();
+        const auto& time = active_task->data().flow_time;
         m_plot_summary_range = {
             std::max(info.event_range_secs.start - EventBufferSecs, time.front()),
             std::min(info.event_range_secs.end + EventBufferSecs, time.back()),
@@ -477,9 +477,9 @@ void Gui::draw_plot_summary_selector()
     widgets::draw_plot_range(m_plot_summary_range, SummaryColor);
 }
 
-void Gui::draw_active_task(app::SwallowLabellingTaskManager& task_manager)
+void Gui::draw_active_task(app::ActiveSwallowLabellingTask& active_task)
 {
-    draw_plots(task_manager.data());
+    draw_plots(active_task.data());
 }
 
 void Gui::set_scaling_factor(float scaling_factor)

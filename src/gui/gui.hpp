@@ -79,7 +79,7 @@ private:
     Plotter m_audio_plotter;
 
     void setup_dockspace() const;
-    void draw_active_task(recap::labeller::app::SwallowLabellingTaskManager& task_manager);
+    void draw_active_task(recap::labeller::app::ActiveSwallowLabellingTask& active_task);
     void draw_main_window();
     void draw_task_list();
     void draw_menu_bar();

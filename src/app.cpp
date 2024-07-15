@@ -118,7 +118,7 @@ void App::load_active_task()
         try {
             std::ifstream stream(task.data_path());
             auto data = SwallowTaskData::from_numpy(cnpy::npz_load(stream));
-            m_active_task = make_unique_active_task<SwallowLabellingTaskManager>(task, data);
+            m_active_task = make_unique_active_task<ActiveSwallowLabellingTask>(task, data);
             spdlog::debug("Loaded data from {}", task.data_path());
         } catch (const std::exception& e) {
             spdlog::error("Error loading data file from {}: {}", task.data_path(), e.what());
@@ -131,7 +131,7 @@ void App::load_active_task()
     m_new_active_task_observable.notify(*m_active_task);
 }
 
-SwallowLabellingTaskManager::SwallowLabellingTaskManager(
+ActiveSwallowLabellingTask::ActiveSwallowLabellingTask(
     SwallowLabellingTask& task, SwallowTaskData data
 ) :
     m_task(task), m_data(std::move(data))
