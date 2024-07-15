@@ -58,7 +58,9 @@ public:
 
     [[nodiscard]] const SwallowTaskData& data() const { return m_data; }
 
-    [[nodiscard]] const SwallowLabellingTask& task() const { return m_task; }
+    [[nodiscard]] SwallowLabellingTaskState state() const { return m_task.state(); }
+
+    [[nodiscard]] const recap::labeller::SwallowTaskInfo& info() const { return m_task.info(); }
 
 private:
     SwallowLabellingTask& m_task;

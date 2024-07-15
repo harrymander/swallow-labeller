@@ -376,7 +376,7 @@ void Gui::on_new_active_task(const app::App::ActiveTaskVariant& new_variant)
 
     const auto *task_manager = std::get_if<app::SwallowLabellingTaskManager>(&new_variant);
     if (task_manager) {
-        const auto& info = task_manager->task().info();
+        const auto& info = task_manager->info();
         const auto& time = task_manager->data().flow_time;
         m_plot_summary_range = {
             std::max(info.event_range_secs.start - EventBufferSecs, time.front()),
