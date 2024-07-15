@@ -53,9 +53,12 @@ std::optional<std::string> get_custom_ini_path()
 }; // namespace
 
 Gui::Gui(app::App& app) :
-    m_app(app), m_new_active_task_observer(m_app.subscribe_new_active_task([this](const auto& v) {
+    m_app(app),
+    m_new_active_task_observer(m_app.subscribe_new_active_task([this](const auto& v) {
         on_new_active_task(v);
-    }))
+    })),
+    m_flow_plotter("Flow (L/min)", "{:g} L/min", m_plot_summary_range),
+    m_audio_plotter("Ear audio (V)", "{:g} V", m_plot_summary_range)
 {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -317,22 +320,6 @@ void plot_line(const char *id, const std::vector<double>& x, const std::vector<d
     ImPlot::PlotLine(id, x.data(), y.data(), static_cast<int>(y.size()));
 }
 
-void plot_data(
-    const char *id,
-    const std::vector<double>& x,
-    const std::vector<double>& y,
-    const char *ylabel,
-    fmt::format_string<double> yfmt
-)
-{
-    ImPlot::SetupAxis(ImAxis_Y1, ylabel, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit);
-    ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, x[0], x.back());
-    plot_line(id, x, y);
-    if (is_mouse_inside_plot()) {
-        draw_plot_hovered(x.data(), x.size(), y.data(), yfmt);
-    }
-}
-
 void plot_event(const char *id, const SwallowTaskData& data)
 {
     ImPlot::PlotDigital(
@@ -405,29 +392,65 @@ void Gui::on_new_active_task(const app::App::ActiveTaskVariant& new_variant)
     );
 }
 
+Gui::Plotter::Plotter(
+    std::string ylabel, fmt::format_string<double> cursor_format, widgets::PlotRange& xrange
+) :
+    m_ylabel(std::move(ylabel)), m_cursor_format(cursor_format), m_xrange(xrange)
+{}
+
+bool Gui::Plotter::begin(const char *id)
+{
+    constexpr ImPlotFlags Flags =
+        ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus;
+    ImGui::PushID(id);
+    if (ImPlot::BeginPlot("##plot", {-1, 0}, Flags)) {
+        return true;
+    }
+    ImGui::PopID();
+    return false;
+}
+
+// Only call if begin returns true!
+void Gui::Plotter::end()
+{
+    ImPlot::EndPlot();
+    ImGui::PopID();
+}
+
+void Gui::Plotter::plot_data(
+    const std::vector<double>& x, const std::vector<double>& y, const SwallowTaskData& data
+)
+{
+    constexpr ImU32 DeltaSelectorColor = IM_COL32(120, 120, 120, 50);
+
+    setup_axis_links(ImAxis_X1, m_xrange.start, m_xrange.end);
+    ImPlot::SetupAxis(
+        ImAxis_Y1, m_ylabel.c_str(), ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit
+    );
+    ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, x[0], x.back());
+
+    plot_line("##line", x, y);
+    if (is_mouse_inside_plot()) {
+        draw_plot_hovered(x.data(), x.size(), y.data(), m_cursor_format);
+    }
+    plot_event("##event", data);
+    draw_plot_delta_selector("##delta_selector", m_delta_selector, DeltaSelectorColor);
+}
+
 void Gui::draw_plots(const SwallowTaskData& data)
 {
     constexpr float SummaryPlotHeight = 75;
-    constexpr ImPlotFlags PlotFlags =
-        ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus;
 
     if (ImPlot::BeginAlignedPlots("##aligned_plots")) {
-        if (ImPlot::BeginPlot("##flow_plot", {-1, 0}, PlotFlags)) {
-            constexpr ImU32 FlowDeltaSelectorColor = IM_COL32(120, 120, 120, 50);
-            setup_axis_links(ImAxis_X1, m_plot_summary_range.start, m_plot_summary_range.end);
-            plot_data("##flow", data.flow_time, data.flow, "Flow rate (L/min)", "{:g} L/min");
-            plot_event("##flow_event", data);
-            draw_plot_delta_selector(
-                "##flow_delta_selector", m_flow_delta_selector, FlowDeltaSelectorColor
-            );
-            ImPlot::EndPlot();
+        if (m_flow_plotter.begin("##flow_plot")) {
+            m_flow_plotter.plot_data(data.flow_time, data.flow, data);
+            m_flow_plotter.end();
         }
-        if (ImPlot::BeginPlot("##audio_plot", {-1, 0}, PlotFlags)) {
-            setup_axis_links(ImAxis_X1, m_plot_summary_range.start, m_plot_summary_range.end);
-            plot_data("##audio", data.audio_time, data.audio, "Ear audio (V)", "{:g} V");
-            plot_event("##audio_event", data);
-            ImPlot::EndPlot();
+        if (m_audio_plotter.begin("##audio_plot")) {
+            m_audio_plotter.plot_data(data.audio_time, data.audio, data);
+            m_audio_plotter.end();
         }
+
         ImPlot::EndAlignedPlots();
     }
 

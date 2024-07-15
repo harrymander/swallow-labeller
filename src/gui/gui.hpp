@@ -8,6 +8,8 @@
 #include "widgets/plot-range-selector.hpp"
 #include "widgets/plot-range.hpp"
 
+#include <fmt/core.h>
+
 #include <optional>
 #include <string>
 
@@ -30,6 +32,25 @@ public:
     [[nodiscard]] bool ready_to_stop() const { return m_ready_to_stop; }
 
 private:
+    class Plotter {
+    public:
+        Plotter(
+            std::string ylabel, fmt::format_string<double> cursor_format, widgets::PlotRange& xrange
+        );
+
+        static bool begin(const char *id);
+        void plot_data(
+            const std::vector<double>& x, const std::vector<double>& y, const SwallowTaskData& data
+        );
+        static void end();
+
+    private:
+        std::string m_ylabel;
+        fmt::format_string<double> m_cursor_format;
+        widgets::PlotRange& m_xrange;
+        widgets::PlotRangeSelector m_delta_selector;
+    };
+
     bool m_first_draw = true;
     std::optional<std::string> m_ini_path = std::nullopt;
     bool m_stop_requested = false;
@@ -48,13 +69,14 @@ private:
     bool m_only_show_annotated_tasks = false;
     ImGuiTextFilter m_task_list_text_filter;
 
-    widgets::PlotRangeSelector m_flow_delta_selector;
     widgets::PlotRangeDragger m_plot_summary_dragger;
     widgets::PlotRangeSelector m_plot_summary_selector;
     widgets::PlotRange m_plot_summary_range = {NAN, NAN};
 
     recap::labeller::app::App& m_app;
     recap::labeller::app::App::NewActiveTaskObservable::Observer m_new_active_task_observer;
+    Plotter m_flow_plotter;
+    Plotter m_audio_plotter;
 
     void setup_dockspace() const;
     void draw_active_task(recap::labeller::app::SwallowLabellingTaskManager& task_manager);
