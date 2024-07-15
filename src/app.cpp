@@ -12,7 +12,6 @@
 #include <memory>
 #include <optional>
 #include <utility>
-#include <variant>
 #include <vector>
 
 namespace recap::labeller::app {
@@ -49,13 +48,20 @@ SwallowLabellingTask::SwallowLabellingTask(
     fs::path path = (data_dir / fs::path(m_info.npz_file.path)).make_preferred();
     m_data_path = path.string();
     if (!fs::is_regular_file(path)) {
-        spdlog::error("Data file not found at path '{}'", m_data_path);
-        m_state = SwallowLabellingTaskState::DataFileNotFound;
-    } else if (m_annotation.has_value()) {
-        m_state = SwallowLabellingTaskState::Annotated;
-    } else {
-        m_state = SwallowLabellingTaskState::Unannotated;
+        std::string err = fmt::format("Data file not found at path '{}'", m_data_path);
+        spdlog::error(err);
+        m_error_msg = std::move(err);
     }
+}
+
+void SwallowLabellingTask::set_error_msg(std::string str)
+{
+    m_error_msg = std::move(str);
+}
+
+void SwallowLabellingTask::clear_error_msg()
+{
+    m_error_msg.reset();
 }
 
 App::App(
@@ -68,7 +74,7 @@ App::App(
     m_num_annotated_tasks(std::count_if(
         m_swallow_tasks.begin(),
         m_swallow_tasks.end(),
-        [](const auto& task) { return task.state() == SwallowLabellingTaskState::Annotated; }
+        [](const auto& task) { return task.is_annotated(); }
     ))
 {
     load_active_task();
@@ -89,18 +95,6 @@ void App::set_active_task_index(std::size_t index)
     }
 }
 
-namespace {
-
-template <typename T, typename... Args>
-std::unique_ptr<App::ActiveTaskVariant> make_unique_active_task(Args&&...args)
-{
-    return std::make_unique<App::ActiveTaskVariant>(
-        std::in_place_type<T>, std::forward<Args>(args)...
-    );
-}
-
-}; // namespace
-
 void App::reload_active_task()
 {
     spdlog::info("Reloading active task...");
@@ -112,26 +106,28 @@ void App::load_active_task()
     SwallowLabellingTask& task = m_swallow_tasks[m_active_task_index];
     const auto path = fs::path(task.data_path());
     if (!fs::is_regular_file(path)) {
-        task.set_state(SwallowLabellingTaskState::DataFileNotFound);
-        m_active_task = make_unique_active_task<SwallowLabellingTaskError>("Data file not found");
+        task.set_error_msg("Data file not found");
+        m_active_task = make_unique_active_task_variant<ActiveSwallowLabellingTaskErrorView>(task);
     } else {
         try {
             std::ifstream stream(task.data_path());
             auto data = SwallowTaskData::from_numpy(cnpy::npz_load(stream));
-            m_active_task = make_unique_active_task<ActiveSwallowLabellingTask>(task, data);
             spdlog::debug("Loaded data from {}", task.data_path());
+            task.clear_error_msg();
+            m_active_task =
+                make_unique_active_task_variant<ActiveSwallowLabellingTaskView>(task, data);
         } catch (const std::exception& e) {
             spdlog::error("Error loading data file from {}: {}", task.data_path(), e.what());
-            std::string err = fmt::format("Error loading data file: {}", e.what());
-            m_active_task = make_unique_active_task<SwallowLabellingTaskError>(std::move(err));
-            task.set_state(SwallowLabellingTaskState::DataFileReadError);
+            task.set_error_msg(fmt::format("Error loading data file: {}", e.what()));
+            m_active_task =
+                make_unique_active_task_variant<ActiveSwallowLabellingTaskErrorView>(task);
         }
     }
 
     m_new_active_task_observable.notify(*m_active_task);
 }
 
-ActiveSwallowLabellingTask::ActiveSwallowLabellingTask(
+ActiveSwallowLabellingTaskView::ActiveSwallowLabellingTaskView(
     SwallowLabellingTask& task, SwallowTaskData data
 ) :
     m_task(task), m_data(std::move(data))

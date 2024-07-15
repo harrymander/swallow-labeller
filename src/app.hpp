@@ -12,17 +12,10 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
-#include <variant>
+#include <utility>
 #include <vector>
 
 namespace recap::labeller::app {
-
-enum class SwallowLabellingTaskState {
-    Unannotated,
-    Annotated,
-    DataFileNotFound,
-    DataFileReadError,
-};
 
 class SwallowLabellingTask {
 public:
@@ -32,37 +25,55 @@ public:
         std::optional<SwallowAnnotation> annotation
     );
 
-    [[nodiscard]] SwallowLabellingTaskState state() const { return m_state; }
+    [[nodiscard]] const std::optional<std::string>& error_msg() const { return m_error_msg; }
 
     [[nodiscard]] const recap::labeller::SwallowTaskInfo& info() const { return m_info; }
 
     [[nodiscard]] const std::string& data_path() const { return m_data_path; }
 
-    void set_state(SwallowLabellingTaskState state) { m_state = state; }
+    [[nodiscard]] bool is_annotated() const { return m_annotation.has_value(); }
+
+    [[nodiscard]] const std::optional<SwallowAnnotation>& annotation() const
+    {
+        return m_annotation;
+    }
+
+    void set_error_msg(std::string str);
+    void clear_error_msg();
 
 private:
-    SwallowLabellingTaskState m_state = SwallowLabellingTaskState::Unannotated;
+    std::optional<std::string> m_error_msg = std::nullopt;
 
     recap::labeller::SwallowTaskInfo m_info;
     std::optional<SwallowAnnotation> m_annotation;
     std::string m_data_path;
 };
 
-struct SwallowLabellingTaskError {
-    std::string message;
-};
-
-class ActiveSwallowLabellingTask {
+class ActiveSwallowLabellingTaskErrorView {
 public:
-    ActiveSwallowLabellingTask(SwallowLabellingTask& task, SwallowTaskData data);
+    [[nodiscard]] const SwallowTaskInfo& info() const { return m_task.info(); }
 
-    [[nodiscard]] const SwallowTaskData& data() const { return m_data; }
-
-    [[nodiscard]] SwallowLabellingTaskState state() const { return m_task.state(); }
-
-    [[nodiscard]] const recap::labeller::SwallowTaskInfo& info() const { return m_task.info(); }
+    [[nodiscard]] const std::string& error_msg() const { return *m_task.error_msg(); }
 
 private:
+    friend class App;
+
+    explicit ActiveSwallowLabellingTaskErrorView(const SwallowLabellingTask& task) : m_task(task) {}
+
+    const SwallowLabellingTask& m_task;
+};
+
+class ActiveSwallowLabellingTaskView {
+public:
+    [[nodiscard]] const SwallowTaskData& data() const { return m_data; }
+
+    [[nodiscard]] const SwallowTaskInfo& info() const { return m_task.info(); }
+
+private:
+    friend class App;
+
+    ActiveSwallowLabellingTaskView(SwallowLabellingTask& task, SwallowTaskData data);
+
     SwallowLabellingTask& m_task;
     SwallowTaskData m_data;
 };
@@ -81,10 +92,11 @@ public:
 
     void set_active_task_index(std::size_t index);
 
-    using ActiveTaskVariant = std::variant<SwallowLabellingTaskError, ActiveSwallowLabellingTask>;
+    using ActiveTaskVariant =
+        std::variant<ActiveSwallowLabellingTaskView, ActiveSwallowLabellingTaskErrorView>;
     using NewActiveTaskObservable = Observable<const ActiveTaskVariant&>;
 
-    ActiveTaskVariant& active_task() { return *m_active_task; }
+    ActiveTaskVariant& active_task_view() { return *m_active_task; }
 
     NewActiveTaskObservable::Observer
     subscribe_new_active_task(NewActiveTaskObservable::Function&& func)
@@ -104,6 +116,14 @@ private:
     std::size_t m_active_task_index = 0;
 
     void load_active_task();
+
+    template <typename T, typename... Args>
+    static std::unique_ptr<ActiveTaskVariant> make_unique_active_task_variant(Args&&...args)
+    {
+        return std::unique_ptr<ActiveTaskVariant>(
+            new ActiveTaskVariant(T(std::forward<Args>(args)...))
+        );
+    }
 };
 
 }; // namespace recap::labeller::app

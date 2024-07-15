@@ -74,7 +74,7 @@ Gui::Gui(app::App& app) :
 
     setup_fonts();
 
-    on_new_active_task(m_app.active_task());
+    on_new_active_task(m_app.active_task_view());
 }
 
 Gui::~Gui()
@@ -187,14 +187,14 @@ void Gui::draw_main_window()
     );
 
     VariantVisitor{
-        [this](const app::SwallowLabellingTaskError& error) {
-            ImGui::Text(ICON_FA_TRIANGLE_EXCLAMATION "  %s", error.message.c_str());
+        [this](const app::ActiveSwallowLabellingTaskView& task) { draw_plots(task.data()); },
+        [this](const app::ActiveSwallowLabellingTaskErrorView& error) {
+            ImGui::Text(ICON_FA_TRIANGLE_EXCLAMATION "  %s", error.error_msg().c_str());
             if (ImGui::Button("Retry...")) {
                 m_app.reload_active_task();
             }
         },
-        [this](app::ActiveSwallowLabellingTask& active_task) { draw_active_task(active_task); },
-    }(m_app.active_task());
+    }(m_app.active_task_view());
 }
 
 namespace {
@@ -370,23 +370,25 @@ void draw_plot_delta_selector(
 
 }; // namespace
 
-void Gui::on_new_active_task(const app::App::ActiveTaskVariant& new_variant)
+void Gui::on_new_active_task(const app::App::ActiveTaskVariant& new_task)
 {
     constexpr double EventBufferSecs = 6;
 
-    const auto *active_task = std::get_if<app::ActiveSwallowLabellingTask>(&new_variant);
-    if (active_task) {
-        const auto& info = active_task->info();
-        const auto& time = active_task->data().flow_time;
-        m_plot_summary_range = {
-            std::max(info.event_range_secs.start - EventBufferSecs, time.front()),
-            std::min(info.event_range_secs.end + EventBufferSecs, time.back()),
-        };
-    } else {
-        m_plot_summary_range = {NAN, NAN};
-    }
+    m_plot_summary_range = VariantVisitor{
+        [](const app::ActiveSwallowLabellingTaskView& task) -> widgets::PlotRange {
+            const auto& info = task.info();
+            const auto& time = task.data().flow_time;
+            return widgets::PlotRange{
+                std::max(info.event_range_secs.start - EventBufferSecs, time.front()),
+                std::min(info.event_range_secs.end + EventBufferSecs, time.back()),
+            };
+        },
+        [this](const app::ActiveSwallowLabellingTaskErrorView&) -> widgets::PlotRange {
+            m_plot_summary_selector.reset();
+            return widgets::PlotRange{NAN, NAN};
+        },
+    }(new_task);
 
-    m_plot_summary_selector.reset();
     spdlog::debug(
         "Set new summary range to [{}, {}]", m_plot_summary_range.start, m_plot_summary_range.end
     );
@@ -477,11 +479,6 @@ void Gui::draw_plot_summary_selector()
     widgets::draw_plot_range(m_plot_summary_range, SummaryColor);
 }
 
-void Gui::draw_active_task(app::ActiveSwallowLabellingTask& active_task)
-{
-    draw_plots(active_task.data());
-}
-
 void Gui::set_scaling_factor(float scaling_factor)
 {
     ImGui::GetStyle().ScaleAllSizes(scaling_factor);
@@ -521,15 +518,12 @@ namespace {
 
 const char *swallow_task_icon(const app::SwallowLabellingTask& task)
 {
-    using enum app::SwallowLabellingTaskState;
-    switch (task.state()) {
-    case Annotated:
-        return ICON_FA_SQUARE_CHECK "  ";
-    case DataFileNotFound:
-    case DataFileReadError:
+    if (task.error_msg().has_value()) {
         return ICON_FA_FILE_CIRCLE_EXCLAMATION "  ";
-    case Unannotated:
-        break;
+    }
+
+    if (task.is_annotated()) {
+        return ICON_FA_SQUARE_CHECK "  ";
     }
 
     return "";
