@@ -405,13 +405,11 @@ void Gui::on_new_active_task(const app::App::ActiveTaskVariant& new_variant)
     );
 }
 
-void Gui::draw_plots(app::SwallowLabellingTaskManager& task_manager)
+void Gui::draw_plots(const SwallowTaskData& data)
 {
     constexpr float SummaryPlotHeight = 75;
     constexpr ImPlotFlags PlotFlags =
         ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus;
-
-    const auto& data = task_manager.data();
 
     if (ImPlot::BeginAlignedPlots("##aligned_plots")) {
         if (ImPlot::BeginPlot("##flow_plot", {-1, 0}, PlotFlags)) {
@@ -458,7 +456,7 @@ void Gui::draw_plot_summary_selector()
 
 void Gui::draw_active_task(app::SwallowLabellingTaskManager& task_manager)
 {
-    draw_plots(task_manager);
+    draw_plots(task_manager.data());
 }
 
 void Gui::set_scaling_factor(float scaling_factor)

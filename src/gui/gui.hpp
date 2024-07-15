@@ -63,7 +63,7 @@ private:
     void draw_menu_bar();
     static void draw_debug_info();
 
-    void draw_plots(recap::labeller::app::SwallowLabellingTaskManager& task_manager);
+    void draw_plots(const SwallowTaskData& data);
     void draw_plot_summary_selector();
     void on_new_active_task(const app::App::ActiveTaskVariant& new_variant);
 };
