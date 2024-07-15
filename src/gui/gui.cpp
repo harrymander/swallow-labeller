@@ -526,8 +526,9 @@ const char *swallow_task_icon(const app::SwallowLabellingTask& task)
     case Annotated:
         return ICON_FA_SQUARE_CHECK "  ";
     case DataFileNotFound:
+    case DataFileReadError:
         return ICON_FA_FILE_CIRCLE_EXCLAMATION "  ";
-    default:
+    case Unannotated:
         break;
     }
 

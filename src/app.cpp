@@ -110,7 +110,9 @@ void App::reload_active_task()
 void App::load_active_task()
 {
     SwallowLabellingTask& task = m_swallow_tasks[m_active_task_index];
-    if (task.state() == SwallowLabellingTaskState::DataFileNotFound) {
+    const auto path = fs::path(task.data_path());
+    if (!fs::is_regular_file(path)) {
+        task.set_state(SwallowLabellingTaskState::DataFileNotFound);
         m_active_task = make_unique_active_task<SwallowLabellingTaskError>("Data file not found");
     } else {
         try {
@@ -122,6 +124,7 @@ void App::load_active_task()
             spdlog::error("Error loading data file from {}: {}", task.data_path(), e.what());
             std::string err = fmt::format("Error loading data file: {}", e.what());
             m_active_task = make_unique_active_task<SwallowLabellingTaskError>(std::move(err));
+            task.set_state(SwallowLabellingTaskState::DataFileReadError);
         }
     }
 

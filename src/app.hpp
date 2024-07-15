@@ -21,6 +21,7 @@ enum class SwallowLabellingTaskState {
     Unannotated,
     Annotated,
     DataFileNotFound,
+    DataFileReadError,
 };
 
 class SwallowLabellingTask {
@@ -36,6 +37,8 @@ public:
     [[nodiscard]] const recap::labeller::SwallowTaskInfo& info() const { return m_info; }
 
     [[nodiscard]] const std::string& data_path() const { return m_data_path; }
+
+    void set_state(SwallowLabellingTaskState state) { m_state = state; }
 
 private:
     SwallowLabellingTaskState m_state = SwallowLabellingTaskState::Unannotated;
