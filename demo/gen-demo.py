@@ -13,6 +13,10 @@ FLOW_SAMPLE_RATE = 100
 AUDIO_SAMPLE_RATE = 1000
 
 
+def random_md5_hexdigest() -> str:
+    return ''.join(random.choices('abcdef0123456789', k=32))
+
+
 @dataclasses.dataclass
 @dataclasses.dataclass
 class TimeRange:
@@ -108,7 +112,7 @@ def gen_random_task(
         test_type=test_type,
         repeatnum=repeatnum,
         swallownum=swallownum,
-        recording_file="abc123",
+        recording_file=random_md5_hexdigest(),
         csv_range_secs=TimeRange(start=start_time, end=end_time),
         event_range_secs=TimeRange(start=event_start, end=event_end),
         npz_file=FileInfo(path=path, checksum=checksum),
