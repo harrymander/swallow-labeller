@@ -89,3 +89,8 @@ option(ENABLE_LINTING "Enable linting" ON)
 if(ENABLE_LINTING)
     include(cmake/lint.cmake)
 endif()
+
+option(BUILD_DEMO "Build demo" ON)
+if(BUILD_DEMO)
+    add_subdirectory(demo)
+endif()

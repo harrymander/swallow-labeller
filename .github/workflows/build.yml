@@ -44,7 +44,7 @@ jobs:
       - name: Bootstrap vcpkg
         run: vcpkg/bootstrap-vcpkg.bat
       - name: Configure
-        run: cmake --preset windows
+        run: cmake --preset windows -DBUILD_DEMO=off
       - name: Build
         run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
 

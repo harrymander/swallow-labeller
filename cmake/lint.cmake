@@ -20,6 +20,7 @@ find_program(CLANG_FORMAT clang-format)
 if(CLANG_FORMAT STREQUAL CLANG_FORMAT-NOTFOUND)
     message(WARNING "clang-format not found, disabling lint and format targets")
 else()
+    set(Python3_FIND_UNVERSIONED_NAMES FIRST)
     find_package(Python3 COMPONENTS Interpreter REQUIRED)
     set(
         CLANG_FORMAT_CMD
