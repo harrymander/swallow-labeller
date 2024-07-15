@@ -56,9 +56,9 @@ class SwallowLabellingTaskManager {
 public:
     SwallowLabellingTaskManager(SwallowLabellingTask& task, SwallowTaskData data);
 
-    const SwallowTaskData& data() const { return m_data; }
+    [[nodiscard]] const SwallowTaskData& data() const { return m_data; }
 
-    const SwallowLabellingTask& task() const { return m_task; }
+    [[nodiscard]] const SwallowLabellingTask& task() const { return m_task; }
 
 private:
     SwallowLabellingTask& m_task;
