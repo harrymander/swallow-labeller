@@ -20,6 +20,12 @@
 #include <filesystem>
 #include <optional>
 
+#define FILE_ERR_ICON ICON_FA_FILE_CIRCLE_EXCLAMATION
+#define ERR_ICON ICON_FA_TRIANGLE_EXCLAMATION
+#define DEBUG_INFO_ICON ICON_FA_GEAR
+#define ANNOTATED_TASK_ICON ICON_FA_SQUARE_CHECK
+#define ICON_TEXT_SPACE "  "
+
 namespace recap::labeller::gui {
 
 namespace {
@@ -189,7 +195,7 @@ void Gui::draw_main_window()
     VariantVisitor{
         [this](const app::ActiveSwallowLabellingTaskView& task) { draw_plots(task.data()); },
         [this](const app::ActiveSwallowLabellingTaskErrorView& error) {
-            ImGui::Text(ICON_FA_TRIANGLE_EXCLAMATION "  %s", error.error_msg().c_str());
+            ImGui::Text(ERR_ICON ICON_TEXT_SPACE "%s", error.error_msg().c_str());
             if (ImGui::Button("Retry...")) {
                 m_app.reload_active_task();
             }
@@ -519,11 +525,11 @@ namespace {
 const char *swallow_task_icon(const app::SwallowLabellingTask& task)
 {
     if (task.error_msg().has_value()) {
-        return ICON_FA_FILE_CIRCLE_EXCLAMATION "  ";
+        return FILE_ERR_ICON ICON_TEXT_SPACE;
     }
 
     if (task.is_annotated()) {
-        return ICON_FA_SQUARE_CHECK "  ";
+        return ANNOTATED_TASK_ICON ICON_TEXT_SPACE;
     }
 
     return "";
@@ -549,7 +555,7 @@ void Gui::draw_task_list()
     const auto& tasks = m_app.tasks();
     const std::size_t num_annotated = m_app.num_annotated_tasks();
     ImGui::Text(
-        ICON_FA_SQUARE_CHECK "  %zu task%s out of %zu annotated",
+        ANNOTATED_TASK_ICON ICON_TEXT_SPACE "%zu task%s out of %zu annotated",
         num_annotated,
         num_annotated == 1 ? "" : "s",
         tasks.size()
@@ -583,8 +589,8 @@ void Gui::draw_debug_info()
 {
     const ImGuiIO& io = ImGui::GetIO();
     ImGui::Text(
-        ICON_FA_GEAR
-        "  Mouse Position: [%.0f,%.0f]. Application average: %.3f ms/frame (%.1f FPS).",
+        DEBUG_INFO_ICON ICON_TEXT_SPACE
+        "Mouse Position: [%.0f,%.0f]. Application average: %.3f ms/frame (%.1f FPS).",
         io.MousePos.x,
         io.MousePos.y,
         1000.0f / io.Framerate,
