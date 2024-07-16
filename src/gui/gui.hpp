@@ -84,7 +84,7 @@ private:
     void draw_menu_bar();
     static void draw_debug_info();
 
-    void draw_plots(const SwallowTaskData& data);
+    void draw_plots(const app::ActiveSwallowLabellingTaskView& task_view);
     void draw_plot_summary_selector();
     void on_new_active_task(const app::App::ActiveTaskVariant& new_task);
 

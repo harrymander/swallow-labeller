@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -100,12 +101,9 @@ public:
 
     void set_swallow_is_ambiguous(bool is_ambiguous) { m_swallow_is_ambiguous = is_ambiguous; }
 
-    [[nodiscard]] const models::TimeRange& swallow_apnea_range() const
-    {
-        return m_swallow_apnea_range;
-    }
-
-    void set_swallow_apnea_range(models::TimeRange range) { m_swallow_apnea_range = range; }
+    [[nodiscard]] bool can_add_new_swallow_apnea_range() const;
+    [[nodiscard]] bool can_edit_swallow_apnea_range() const;
+    [[nodiscard]] std::optional<std::string_view> swallow_apnea_label_error() const;
 
     [[nodiscard]] EarClickAnnotationStatus ear_click_annotation_status() const
     {
@@ -122,6 +120,9 @@ public:
         return m_ear_click_ranges;
     }
 
+    [[nodiscard]] bool can_add_new_ear_click_range() const;
+    [[nodiscard]] std::optional<std::string_view> earclick_label_error() const;
+
 private:
     friend class App;
 
@@ -132,7 +133,7 @@ private:
 
     SwallowApneaAnnotationStatus m_swallow_apnea_status = SwallowApneaAnnotationStatus::ExEx;
     bool m_swallow_is_ambiguous = false;
-    models::TimeRange m_swallow_apnea_range;
+    models::TimeRange m_swallow_apnea_range = {NAN, NAN};
 
     EarClickAnnotationStatus m_ear_click_status = EarClickAnnotationStatus::Ok;
     std::vector<models::TimeRange> m_ear_click_ranges;

@@ -27,6 +27,7 @@
 #define ERR_ICON ICON_FA_TRIANGLE_EXCLAMATION
 #define DEBUG_INFO_ICON ICON_FA_GEAR
 #define ANNOTATED_TASK_ICON ICON_FA_SQUARE_CHECK
+#define HINT_ICON ICON_FA_LIGHTBULB
 #define ICON_TEXT_SPACE "  "
 
 namespace recap::labeller::gui {
@@ -238,7 +239,7 @@ void Gui::draw_main_window()
     );
 
     VariantVisitor{
-        [this](const app::ActiveSwallowLabellingTaskView& task) { draw_plots(task.data()); },
+        [this](const app::ActiveSwallowLabellingTaskView& task) { draw_plots(task); },
         [this](const app::ActiveSwallowLabellingTaskErrorView& error) {
             ImGui::Text(ERR_ICON ICON_TEXT_SPACE "%s", error.error_msg().c_str());
             if (ImGui::Button("Retry...")) {
@@ -419,6 +420,18 @@ void draw_plot_delta_selector(
     };
 }
 
+// Add text in top left corner of plot
+void add_plot_text(const char *str)
+{
+    ImPlot::PushPlotClipRect();
+    ImPlot::GetPlotDrawList()->AddText(
+        ImPlot::GetPlotPos() + ImGui::GetStyle().ItemSpacing,
+        ImPlot::GetStyleColorU32(ImPlotCol_InlayText),
+        str
+    );
+    ImPlot::PopPlotClipRect();
+}
+
 }; // namespace
 
 void Gui::on_new_active_task(const app::App::ActiveTaskVariant& new_task)
@@ -482,19 +495,28 @@ void Gui::Plotter::plot_data(
     draw_plot_delta_selector("##delta_selector", m_delta_selector, DeltaSelectorColor);
 }
 
-void Gui::draw_plots(const SwallowTaskData& data)
+void Gui::draw_plots(const app::ActiveSwallowLabellingTaskView& task_view)
 {
     constexpr float SummaryPlotHeight = 75;
     constexpr unsigned int NumPlots = 2;
     const float plot_height = (ImGui::GetContentRegionAvail().y - SummaryPlotHeight) / NumPlots
         - ImGui::GetStyle().ItemSpacing.y;
 
+    const auto& data = task_view.data();
     if (ImPlot::BeginAlignedPlots("##aligned_plots")) {
-        m_flow_plotter.draw("##flow_plot", plot_height, [this, &data]() {
+        m_flow_plotter.draw("##flow_plot", plot_height, [this, &data, &task_view]() {
             m_flow_plotter.plot_data(data.flow_time, data.flow, data);
+            if (task_view.can_add_new_swallow_apnea_range()) {
+                add_plot_text(HINT_ICON ICON_TEXT_SPACE
+                              "Hold Ctrl and left click and drag to add apnea label");
+            }
         });
-        m_audio_plotter.draw("##audio_plot", plot_height, [this, &data]() {
+        m_audio_plotter.draw("##audio_plot", plot_height, [this, &data, &task_view]() {
             m_audio_plotter.plot_data(data.audio_time, data.audio, data);
+            if (task_view.can_add_new_ear_click_range()) {
+                add_plot_text(HINT_ICON ICON_TEXT_SPACE
+                              "Hold Ctrl and left click and drag to add ear click label(s)");
+            }
         });
         ImPlot::EndAlignedPlots();
     }
@@ -738,9 +760,15 @@ void Gui::draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view)
     ImGui::TextWrapped("Expiratory flow is positive");
 
     ImGui::SeparatorText("Swallow apnea");
+    if (const auto& error = task_view.swallow_apnea_label_error()) {
+        ImGui::TextUnformatted(fmt::format(ERR_ICON ICON_TEXT_SPACE "{}", *error).c_str());
+    }
     draw_swallow_apnea_annotation_selection(task_view);
 
     ImGui::SeparatorText("Ear clicks");
+    if (const auto& error = task_view.earclick_label_error()) {
+        ImGui::TextUnformatted(fmt::format(ERR_ICON ICON_TEXT_SPACE "{}", *error).c_str());
+    }
     app::EarClickAnnotationStatus ear_click_status = task_view.ear_click_annotation_status();
     if (ear_click_annotation_status_radio(ear_click_status)) {
         task_view.set_ear_click_annotation_status(ear_click_status);

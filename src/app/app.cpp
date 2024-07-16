@@ -3,9 +3,11 @@
 #include "annotation-store.hpp"
 #include "models/data.hpp"
 #include "models/task-info.hpp"
+#include "models/time-range.hpp"
 
 #include <fmt/core.h>
 
+#include <cmath>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -150,5 +152,56 @@ ActiveSwallowLabellingTaskView::ActiveSwallowLabellingTaskView(
 ) :
     m_task(task), m_data(std::move(data))
 {}
+
+namespace {
+
+[[nodiscard]] inline bool apnea_status_is_src_pattern(SwallowApneaAnnotationStatus status)
+{
+    using enum SwallowApneaAnnotationStatus;
+    return status == ExEx || status == InEx || status == ExIn || status == InIn;
+}
+
+[[nodiscard]] inline bool timerange_allnan(const models::TimeRange& range)
+{
+    return std::isnan(range.start) && std::isnan(range.end);
+}
+
+}; // namespace
+
+bool ActiveSwallowLabellingTaskView::can_add_new_swallow_apnea_range() const
+{
+    return (
+        apnea_status_is_src_pattern(m_swallow_apnea_status)
+        && timerange_allnan(m_swallow_apnea_range)
+    );
+}
+
+bool ActiveSwallowLabellingTaskView::can_edit_swallow_apnea_range() const
+{
+    return apnea_status_is_src_pattern(m_swallow_apnea_status);
+}
+
+std::optional<std::string_view> ActiveSwallowLabellingTaskView::swallow_apnea_label_error() const
+{
+    if (can_add_new_swallow_apnea_range()) {
+        return "Missing swallow apnea label";
+    }
+
+    return std::nullopt;
+}
+
+bool ActiveSwallowLabellingTaskView::can_add_new_ear_click_range() const
+{
+    return m_ear_click_status == EarClickAnnotationStatus::Ok;
+}
+
+std::optional<std::string_view> ActiveSwallowLabellingTaskView::earclick_label_error() const
+{
+    if (can_add_new_ear_click_range() && m_ear_click_ranges.empty()) {
+        return "Missing ear click label(s)";
+    }
+
+    return std::nullopt;
+}
 
 }; // namespace recap::labeller::app
