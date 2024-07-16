@@ -1,5 +1,5 @@
-#include "annotation-manager.hpp"
-#include "app.hpp"
+#include "app/annotation-manager.hpp"
+#include "app/app.hpp"
 #include "gui/gui.hpp"
 #include "models/annotation.hpp"
 #include "models/task-info.hpp"

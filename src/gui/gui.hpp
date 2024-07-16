@@ -1,7 +1,7 @@
 #ifndef RECAP_LABELLER_GUI_HPP
 #define RECAP_LABELLER_GUI_HPP
 
-#include "app.hpp"
+#include "app/app.hpp"
 #include "gui/widgets/color-scheme-selector.hpp"
 #include "gui/widgets/plot-range-dragger.hpp"
 #include "gui/widgets/plot-range-selector.hpp"

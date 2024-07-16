@@ -1,7 +1,7 @@
 #ifndef RECAP_LABELLER_APP_INCLUDE_HPP
 #define RECAP_LABELLER_APP_INCLUDE_HPP
 
-#include "annotation-manager.hpp"
+#include "app/annotation-manager.hpp"
 #include "models/annotation.hpp"
 #include "models/data.hpp"
 #include "models/task-info.hpp"
