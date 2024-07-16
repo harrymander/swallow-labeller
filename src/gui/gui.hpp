@@ -87,6 +87,8 @@ private:
     void draw_plots(const SwallowTaskData& data);
     void draw_plot_summary_selector();
     void on_new_active_task(const app::App::ActiveTaskVariant& new_task);
+
+    void draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view);
 };
 
 }; // namespace recap::labeller::gui

@@ -5,6 +5,7 @@
 #include "models/annotation.hpp"
 #include "models/data.hpp"
 #include "models/task-info.hpp"
+#include "models/time-range.hpp"
 #include "util/observable.hpp"
 
 #include <spdlog/spdlog.h>
@@ -63,11 +64,64 @@ private:
     const SwallowLabellingTask& m_task;
 };
 
+enum class SwallowApneaAnnotationStatus {
+    Ok,
+    FlowError,
+    NoSwallow,
+    ApneaCutoff,
+};
+
+enum class EarClickAnnotationStatus {
+    Ok,
+    AudioError,
+    NoEarClick,
+};
+
 class ActiveSwallowLabellingTaskView {
 public:
     [[nodiscard]] const SwallowTaskData& data() const { return m_data; }
 
     [[nodiscard]] const models::SwallowTaskInfo& info() const { return m_task.info(); }
+
+    [[nodiscard]] SwallowApneaAnnotationStatus swallow_apnea_annotation_status() const
+    {
+        return m_swallow_apnea_status;
+    }
+
+    void set_swallow_apnea_annotation_status(SwallowApneaAnnotationStatus status)
+    {
+        m_swallow_apnea_status = status;
+    }
+
+    [[nodiscard]] bool swallow_is_ambiguous() const { return m_swallow_is_ambiguous; }
+
+    void set_swallow_is_ambiguous(bool is_ambiguous) { m_swallow_is_ambiguous = is_ambiguous; }
+
+    [[nodiscard]] models::SRCPattern src_pattern() const { return m_src_pattern; }
+
+    void set_src_pattern(models::SRCPattern pattern) { m_src_pattern = pattern; }
+
+    [[nodiscard]] const models::TimeRange& swallow_apnea_range() const
+    {
+        return m_swallow_apnea_range;
+    }
+
+    void set_swallow_apnea_range(models::TimeRange range) { m_swallow_apnea_range = range; }
+
+    [[nodiscard]] EarClickAnnotationStatus ear_click_annotation_status() const
+    {
+        return m_ear_click_status;
+    }
+
+    void set_ear_click_annotation_status(EarClickAnnotationStatus status)
+    {
+        m_ear_click_status = status;
+    }
+
+    [[nodiscard]] const std::vector<models::TimeRange>& ear_click_ranges() const
+    {
+        return m_ear_click_ranges;
+    }
 
 private:
     friend class App;
@@ -76,6 +130,14 @@ private:
 
     SwallowLabellingTask& m_task;
     SwallowTaskData m_data;
+
+    SwallowApneaAnnotationStatus m_swallow_apnea_status = SwallowApneaAnnotationStatus::Ok;
+    bool m_swallow_is_ambiguous = false;
+    models::SRCPattern m_src_pattern = models::SRCPattern::ExEx;
+    models::TimeRange m_swallow_apnea_range;
+
+    EarClickAnnotationStatus m_ear_click_status = EarClickAnnotationStatus::Ok;
+    std::vector<models::TimeRange> m_ear_click_ranges;
 };
 
 class App {

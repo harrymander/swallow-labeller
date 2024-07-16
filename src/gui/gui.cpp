@@ -1,10 +1,12 @@
+#include <array>
 #define IMGUI_DEFINE_MATH_OPERATORS
 
+#include "app/app.hpp"
 #include "gui.hpp"
-
 #include "gui/font.hpp"
 #include "gui/widgets/plot-range-selector.hpp"
 #include "gui/widgets/plot-range.hpp"
+#include "gui/widgets/radio-button-enum.hpp"
 #include "gui/widgets/util.hpp"
 #include "util/util.hpp"
 #include "util/variant-visitor.hpp"
@@ -19,6 +21,7 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <variant>
 
 #define FILE_ERR_ICON ICON_FA_FILE_CIRCLE_EXCLAMATION
 #define ERR_ICON ICON_FA_TRIANGLE_EXCLAMATION
@@ -145,7 +148,11 @@ void Gui::draw()
 
     draw_window(TaskListWindowId, [this]() { draw_task_list(); });
     draw_window(MainWindowId, [this]() { draw_main_window(); });
-    draw_window(LabelInfoWindowId, []() { /* TODO */ });
+
+    auto *task_view = std::get_if<app::ActiveSwallowLabellingTaskView>(&m_app.active_task_view());
+    if (task_view != nullptr) {
+        draw_window(LabelInfoWindowId, [this, task_view]() { draw_label_editor(*task_view); });
+    }
 
     show_window(m_show_imgui_demo_window, ImGui::ShowDemoWindow);
     show_window(m_show_imgui_metrics, ImGui::ShowMetricsWindow);
@@ -645,4 +652,86 @@ void Gui::draw_debug_info()
         io.Framerate
     );
 }
+
+bool shortcut_toggle(ImGuiKeyChord chord, bool& val)
+{
+    if (ImGui::Shortcut(chord)) {
+        val = !val;
+        return true;
+    }
+    return false;
+}
+
+namespace {
+
+void draw_swallow_apnea_annotation_status(app::ActiveSwallowLabellingTaskView& task_view)
+{
+    using enum app::SwallowApneaAnnotationStatus;
+
+    widgets::ScopedImID id_scope("##apnea_annotation_status");
+
+    // Do not include Ok since we need to manually place ambiguous checkbox next to it...
+    static std::array<widgets::RadioButtonField<app::SwallowApneaAnnotationStatus>, 3> options = {{
+        {"No swallow", NoSwallow},
+        {"Flow error", FlowError},
+        {"Apnea cut-off", ApneaCutoff},
+    }};
+
+    bool status_changed = false;
+    auto status = task_view.swallow_apnea_annotation_status();
+    if (ImGui::RadioButton("Ok", status == Ok)) {
+        if (status != Ok) {
+            status = Ok;
+            status_changed = true;
+        }
+    }
+
+    bool is_ambiguous = task_view.swallow_is_ambiguous();
+    ImGui::SameLine();
+    if (ImGui::Checkbox("Ambiguous pattern [a]", &is_ambiguous)
+        || shortcut_toggle(ImGuiKey_A, is_ambiguous))
+    {
+        spdlog::debug("is_ambiguous = {}", is_ambiguous);
+        task_view.set_swallow_is_ambiguous(is_ambiguous);
+    }
+
+    if (widgets::radio_button_enums("##radio", status, options)) {
+        status_changed = true;
+    }
+
+    if (status_changed) {
+        task_view.set_swallow_apnea_annotation_status(status);
+    }
+}
+
+bool ear_click_annotation_status_radio(const char *id, app::EarClickAnnotationStatus& status)
+{
+    using enum app::EarClickAnnotationStatus;
+    static std::array<widgets::RadioButtonField<app::EarClickAnnotationStatus>, 3> options = {{
+        {"Ok [e]", Ok, ImGuiKey_E},
+        {"No ear click [w]", NoEarClick, ImGuiKey_W},
+        {"Audio error", AudioError},
+    }};
+    return widgets::radio_button_enums(id, status, options);
+}
+
+}; // namespace
+
+void Gui::draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view)
+{
+    ImGui::SeparatorText("Instructions");
+    ImGui::TextWrapped("Single apnoea label required, may have multiple ear audio labels.");
+    ImGui::TextWrapped("Code pattern using general breathing cycle (i.e. ignoring SNIF/SNRF");
+    ImGui::TextWrapped("Expiratory flow is positive");
+
+    ImGui::SeparatorText("Swallow apnea");
+    draw_swallow_apnea_annotation_status(task_view);
+
+    ImGui::SeparatorText("Ear clicks");
+    app::EarClickAnnotationStatus ear_click_status = task_view.ear_click_annotation_status();
+    if (ear_click_annotation_status_radio("##ear_click_status_selector", ear_click_status)) {
+        task_view.set_ear_click_annotation_status(ear_click_status);
+    }
+}
+
 }; // namespace recap::labeller::gui
