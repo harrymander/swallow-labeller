@@ -164,16 +164,19 @@ void Gui::setup_dockspace() const
     // approximate sizes since the ratio calculations don't factor in window spacing etc.
     constexpr float TasklistPx = 250;
     constexpr float LabelInfoPx = 350;
+    constexpr float MinRatio = 0.1;
+    constexpr float MaxRatio = 0.25;
 
     // If the dockspace ID already exists, the the node sizes are already set in imgui.ini. The
     // following is adapted from:
     // https://gist.github.com/AidanSun05/953f1048ffe5699800d2c92b88c36d9f
     ImGuiID id = ImGui::GetID("##dockspace");
+    const ImGuiViewport *const viewport = ImGui::GetMainViewport();
     if (m_first_draw) [[unlikely]] {
-        if (ImGui::DockBuilderGetNode(id) == nullptr) {
+        const bool is_configured = ImGui::DockBuilderGetNode(id) == nullptr;
+        ImGui::DockSpaceOverViewport(id, viewport, DockspaceFlags);
+        if (is_configured) {
             spdlog::debug("Setting up dockspace");
-            const ImGuiViewport *const viewport = ImGui::GetMainViewport();
-            ImGui::DockSpaceOverViewport(id, viewport, DockspaceFlags);
             ImGui::DockBuilderRemoveNode(id);
             ImGui::DockBuilderAddNode(id);
 
@@ -181,13 +184,19 @@ void Gui::setup_dockspace() const
             ImGuiID dock_main;
             ImGuiID dock_label_info;
             const float viewport_width = viewport->Size.x;
+            spdlog::debug("{}", TasklistPx / viewport_width);
+            spdlog::debug("{}", LabelInfoPx / (viewport_width - TasklistPx));
             ImGui::DockBuilderSplitNode(
-                id, ImGuiDir_Left, TasklistPx / viewport_width, &dock_tasklist, &dock_main
+                id,
+                ImGuiDir_Left,
+                std::clamp(TasklistPx / viewport_width, MinRatio, MaxRatio),
+                &dock_tasklist,
+                &dock_main
             );
             ImGui::DockBuilderSplitNode(
                 dock_main,
                 ImGuiDir_Right,
-                LabelInfoPx / (viewport_width - TasklistPx),
+                std::clamp(LabelInfoPx / (viewport_width - TasklistPx), MinRatio, MaxRatio),
                 &dock_label_info,
                 &dock_main
             );
@@ -200,7 +209,7 @@ void Gui::setup_dockspace() const
             spdlog::debug("Not setting up dockspace since sizes already set in imgui.ini");
         }
     } else {
-        ImGui::DockSpaceOverViewport(id, ImGui::GetMainViewport(), DockspaceFlags);
+        ImGui::DockSpaceOverViewport(id, viewport, DockspaceFlags);
     }
 }
 
