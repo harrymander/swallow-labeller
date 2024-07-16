@@ -154,32 +154,36 @@ void Gui::setup_dockspace() const
     // following is adapted from:
     // https://gist.github.com/AidanSun05/953f1048ffe5699800d2c92b88c36d9f
     ImGuiID id = ImGui::GetID("##dockspace");
-    if (m_first_draw && ImGui::DockBuilderGetNode(id) == nullptr) [[unlikely]] {
-        spdlog::debug("Setting up dockspace");
-        const ImGuiViewport *const viewport = ImGui::GetMainViewport();
-        ImGui::DockSpaceOverViewport(id, viewport, DockspaceFlags);
-        ImGui::DockBuilderRemoveNode(id);
-        ImGui::DockBuilderAddNode(id);
+    if (m_first_draw) [[unlikely]] {
+        if (ImGui::DockBuilderGetNode(id) == nullptr) {
+            spdlog::debug("Setting up dockspace");
+            const ImGuiViewport *const viewport = ImGui::GetMainViewport();
+            ImGui::DockSpaceOverViewport(id, viewport, DockspaceFlags);
+            ImGui::DockBuilderRemoveNode(id);
+            ImGui::DockBuilderAddNode(id);
 
-        ImGuiID dock_tasklist;
-        ImGuiID dock_main;
-        ImGuiID dock_label_info;
-        const float viewport_width = viewport->Size.x;
-        ImGui::DockBuilderSplitNode(
-            id, ImGuiDir_Left, TasklistPx / viewport_width, &dock_tasklist, &dock_main
-        );
-        ImGui::DockBuilderSplitNode(
-            dock_main,
-            ImGuiDir_Right,
-            LabelInfoPx / (viewport_width - TasklistPx),
-            &dock_label_info,
-            &dock_main
-        );
+            ImGuiID dock_tasklist;
+            ImGuiID dock_main;
+            ImGuiID dock_label_info;
+            const float viewport_width = viewport->Size.x;
+            ImGui::DockBuilderSplitNode(
+                id, ImGuiDir_Left, TasklistPx / viewport_width, &dock_tasklist, &dock_main
+            );
+            ImGui::DockBuilderSplitNode(
+                dock_main,
+                ImGuiDir_Right,
+                LabelInfoPx / (viewport_width - TasklistPx),
+                &dock_label_info,
+                &dock_main
+            );
 
-        ImGui::DockBuilderDockWindow(TaskListWindowId, dock_tasklist);
-        ImGui::DockBuilderDockWindow(MainWindowId, dock_main);
-        ImGui::DockBuilderDockWindow(LabelSidebarWindowId, dock_label_info);
-        ImGui::DockBuilderFinish(id);
+            ImGui::DockBuilderDockWindow(TaskListWindowId, dock_tasklist);
+            ImGui::DockBuilderDockWindow(MainWindowId, dock_main);
+            ImGui::DockBuilderDockWindow(LabelSidebarWindowId, dock_label_info);
+            ImGui::DockBuilderFinish(id);
+        } else {
+            spdlog::debug("Not setting up dockspace since sizes already set in imgui.ini");
+        }
     } else {
         ImGui::DockSpaceOverViewport(id, ImGui::GetMainViewport(), DockspaceFlags);
     }
