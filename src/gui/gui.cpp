@@ -664,38 +664,51 @@ bool shortcut_toggle(ImGuiKeyChord chord, bool& val)
 
 namespace {
 
-void draw_swallow_apnea_annotation_status(app::ActiveSwallowLabellingTaskView& task_view)
+void draw_swallow_apnea_annotation_selection(app::ActiveSwallowLabellingTaskView& task_view)
 {
     using enum app::SwallowApneaAnnotationStatus;
 
     widgets::ScopedImID id_scope("##apnea_annotation_status");
 
-    // Do not include Ok since we need to manually place ambiguous checkbox next to it...
-    static std::array<widgets::RadioButtonField<app::SwallowApneaAnnotationStatus>, 3> options = {{
-        {"No swallow", NoSwallow},
-        {"Flow error", FlowError},
-        {"Apnea cut-off", ApneaCutoff},
-    }};
-
-    bool status_changed = false;
     auto status = task_view.swallow_apnea_annotation_status();
-    if (ImGui::RadioButton("Ok", status == Ok)) {
-        if (status != Ok) {
-            status = Ok;
-            status_changed = true;
+    bool is_ambiguous = task_view.swallow_is_ambiguous();
+    bool status_changed = false;
+
+    static std::array<widgets::RadioButtonField<app::SwallowApneaAnnotationStatus>, 4> src_options =
+        {{
+            {"ex-ex [1]", ExEx, ImGuiKey_1},
+            {"ex-in [2]", ExIn, ImGuiKey_2},
+            {"in-ex [3]", InEx, ImGuiKey_3},
+            {"in-in [4]", InIn, ImGuiKey_4},
+        }};
+    for (const auto& opt : src_options) {
+        bool selected = opt.value == status;
+        if (ImGui::RadioButton(opt.label, selected) || ImGui::Shortcut(opt.key)) {
+            if (!selected) {
+                status = opt.value;
+                status_changed = true;
+                selected = true;
+                spdlog::debug("Apnea SRC selection changed to {}", opt.label);
+            }
+        }
+        if (selected) {
+            ImGui::SameLine();
+            if (ImGui::Checkbox("Ambiguous [a]", &is_ambiguous)
+                || shortcut_toggle(ImGuiKey_A, is_ambiguous)) {
+                spdlog::debug("Swallow apnea is_ambiguous changed: {}", is_ambiguous);
+                task_view.set_swallow_is_ambiguous(is_ambiguous);
+            }
         }
     }
 
-    bool is_ambiguous = task_view.swallow_is_ambiguous();
-    ImGui::SameLine();
-    if (ImGui::Checkbox("Ambiguous pattern [a]", &is_ambiguous)
-        || shortcut_toggle(ImGuiKey_A, is_ambiguous))
-    {
-        spdlog::debug("is_ambiguous = {}", is_ambiguous);
-        task_view.set_swallow_is_ambiguous(is_ambiguous);
-    }
-
-    if (widgets::radio_button_enums("##radio", status, options)) {
+    ImGui::Spacing();
+    static std::array<widgets::RadioButtonField<app::SwallowApneaAnnotationStatus>, 3>
+        other_options = {{
+            {"No swallow", NoSwallow},
+            {"Apnea cut-off", ApneaCutoff},
+            {"FlowError", FlowError},
+        }};
+    if (widgets::radio_button_enums("##other_options", status, other_options)) {
         status_changed = true;
     }
 
@@ -704,7 +717,7 @@ void draw_swallow_apnea_annotation_status(app::ActiveSwallowLabellingTaskView& t
     }
 }
 
-bool ear_click_annotation_status_radio(const char *id, app::EarClickAnnotationStatus& status)
+bool ear_click_annotation_status_radio(app::EarClickAnnotationStatus& status)
 {
     using enum app::EarClickAnnotationStatus;
     static std::array<widgets::RadioButtonField<app::EarClickAnnotationStatus>, 3> options = {{
@@ -712,7 +725,7 @@ bool ear_click_annotation_status_radio(const char *id, app::EarClickAnnotationSt
         {"No ear click [w]", NoEarClick, ImGuiKey_W},
         {"Audio error", AudioError},
     }};
-    return widgets::radio_button_enums(id, status, options);
+    return widgets::radio_button_enums("##earclick_annotation_status", status, options);
 }
 
 }; // namespace
@@ -725,11 +738,11 @@ void Gui::draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view)
     ImGui::TextWrapped("Expiratory flow is positive");
 
     ImGui::SeparatorText("Swallow apnea");
-    draw_swallow_apnea_annotation_status(task_view);
+    draw_swallow_apnea_annotation_selection(task_view);
 
     ImGui::SeparatorText("Ear clicks");
     app::EarClickAnnotationStatus ear_click_status = task_view.ear_click_annotation_status();
-    if (ear_click_annotation_status_radio("##ear_click_status_selector", ear_click_status)) {
+    if (ear_click_annotation_status_radio(ear_click_status)) {
         task_view.set_ear_click_annotation_status(ear_click_status);
     }
 }

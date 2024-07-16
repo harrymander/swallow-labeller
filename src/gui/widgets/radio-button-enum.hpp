@@ -7,6 +7,7 @@
 #include <spdlog/spdlog.h>
 
 #include <initializer_list>
+#include <type_traits>
 
 namespace recap::labeller::gui::widgets {
 
@@ -39,19 +40,16 @@ bool radio_button_enums(
     return changed;
 }
 
-template <class T> class RadioButtonField {
-public:
+template <class T> struct RadioButtonField {
+    static_assert(std::is_enum_v<T>, "T must be an enum");
+
     RadioButtonField(const char *label, T value, ImGuiKey key = ImGuiKey_None) :
-        label(label), value(std::move(value)), key(key)
+        label(label), value(value), key(key)
     {}
 
-private:
     const char *label;
     T value;
     ImGuiKey key;
-
-    template <class U, class ConstIt>
-    friend bool radio_button_enums(const char *, U&, ConstIt, ConstIt, bool);
 };
 
 template <class T, class Container>

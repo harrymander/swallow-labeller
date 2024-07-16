@@ -65,7 +65,10 @@ private:
 };
 
 enum class SwallowApneaAnnotationStatus {
-    Ok,
+    ExEx,
+    ExIn,
+    InEx,
+    InIn,
     FlowError,
     NoSwallow,
     ApneaCutoff,
@@ -97,10 +100,6 @@ public:
 
     void set_swallow_is_ambiguous(bool is_ambiguous) { m_swallow_is_ambiguous = is_ambiguous; }
 
-    [[nodiscard]] models::SRCPattern src_pattern() const { return m_src_pattern; }
-
-    void set_src_pattern(models::SRCPattern pattern) { m_src_pattern = pattern; }
-
     [[nodiscard]] const models::TimeRange& swallow_apnea_range() const
     {
         return m_swallow_apnea_range;
@@ -131,9 +130,8 @@ private:
     SwallowLabellingTask& m_task;
     SwallowTaskData m_data;
 
-    SwallowApneaAnnotationStatus m_swallow_apnea_status = SwallowApneaAnnotationStatus::Ok;
+    SwallowApneaAnnotationStatus m_swallow_apnea_status = SwallowApneaAnnotationStatus::ExEx;
     bool m_swallow_is_ambiguous = false;
-    models::SRCPattern m_src_pattern = models::SRCPattern::ExEx;
     models::TimeRange m_swallow_apnea_range;
 
     EarClickAnnotationStatus m_ear_click_status = EarClickAnnotationStatus::Ok;
