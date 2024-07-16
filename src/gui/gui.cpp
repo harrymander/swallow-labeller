@@ -98,7 +98,7 @@ void Gui::stop()
 
 static const char *const TaskListWindowId = "##tasklistwindow";
 static const char *const MainWindowId = "##mainwindow";
-static const char *const LabelInfoWindowId = "##labelinfowindow";
+static const char *const LabelSidebarWindowId = "##labelinfowindow";
 
 void Gui::draw()
 {
@@ -145,30 +145,40 @@ void Gui::setup_dockspace() const
         (ImGuiDockNodeFlags_NoUndocking | ImGuiDockNodeFlags_AutoHideTabBar
          | ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoTabBar);
 
-    constexpr float SidebarRatio = 0.2;
-    constexpr float LabelInfoRatioX = 0.2 / (1 - SidebarRatio);
+    // Initial widths for sidebars from which we calculate dock node ratios - these are just
+    // approximate sizes since the ratio calculations don't factor in window spacing etc.
+    constexpr float TasklistPx = 250;
+    constexpr float LabelInfoPx = 350;
 
-    // If the dockspace ID already exists, the the node sizes are already set in imgui.ini
+    // If the dockspace ID already exists, the the node sizes are already set in imgui.ini. The
+    // following is adapted from:
+    // https://gist.github.com/AidanSun05/953f1048ffe5699800d2c92b88c36d9f
     ImGuiID id = ImGui::GetID("##dockspace");
     if (m_first_draw && ImGui::DockBuilderGetNode(id) == nullptr) [[unlikely]] {
-        ImGui::DockSpaceOverViewport(id, ImGui::GetMainViewport(), DockspaceFlags);
-        // The following is adapted from
-        // https://gist.github.com/AidanSun05/953f1048ffe5699800d2c92b88c36d9f
         spdlog::debug("Setting up dockspace");
+        const ImGuiViewport *const viewport = ImGui::GetMainViewport();
+        ImGui::DockSpaceOverViewport(id, viewport, DockspaceFlags);
         ImGui::DockBuilderRemoveNode(id);
         ImGui::DockBuilderAddNode(id);
 
         ImGuiID dock_tasklist;
         ImGuiID dock_main;
         ImGuiID dock_label_info;
-        ImGui::DockBuilderSplitNode(id, ImGuiDir_Left, SidebarRatio, &dock_tasklist, &dock_main);
+        const float viewport_width = viewport->Size.x;
         ImGui::DockBuilderSplitNode(
-            dock_main, ImGuiDir_Right, LabelInfoRatioX, &dock_label_info, &dock_main
+            id, ImGuiDir_Left, TasklistPx / viewport_width, &dock_tasklist, &dock_main
+        );
+        ImGui::DockBuilderSplitNode(
+            dock_main,
+            ImGuiDir_Right,
+            LabelInfoPx / (viewport_width - TasklistPx),
+            &dock_label_info,
+            &dock_main
         );
 
         ImGui::DockBuilderDockWindow(TaskListWindowId, dock_tasklist);
         ImGui::DockBuilderDockWindow(MainWindowId, dock_main);
-        ImGui::DockBuilderDockWindow(LabelInfoWindowId, dock_label_info);
+        ImGui::DockBuilderDockWindow(LabelSidebarWindowId, dock_label_info);
         ImGui::DockBuilderFinish(id);
     } else {
         ImGui::DockSpaceOverViewport(id, ImGui::GetMainViewport(), DockspaceFlags);
