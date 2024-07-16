@@ -1,7 +1,7 @@
 #ifndef RECAP_LABELLER_APP_INCLUDE_HPP
 #define RECAP_LABELLER_APP_INCLUDE_HPP
 
-#include "app/annotation-manager.hpp"
+#include "app/annotation-store.hpp"
 #include "models/annotation.hpp"
 #include "models/data.hpp"
 #include "models/task-info.hpp"
@@ -81,7 +81,7 @@ private:
 class App {
 public:
     App(const std::vector<models::SwallowTaskInfo>& swallow_tasks,
-        SwallowAnnotationManager annotation_manager,
+        SwallowAnnotationStore annotation_store,
         const std::filesystem::path& data_dir);
 
     [[nodiscard]] const std::vector<SwallowLabellingTask>& tasks() const { return m_swallow_tasks; }
@@ -110,7 +110,7 @@ public:
 
 private:
     std::vector<SwallowLabellingTask> m_swallow_tasks;
-    SwallowAnnotationManager m_annotation_manager;
+    SwallowAnnotationStore m_annotation_store;
     std::size_t m_num_annotated_tasks;
     std::unique_ptr<ActiveTaskVariant> m_active_task;
     NewActiveTaskObservable m_new_active_task_observable;

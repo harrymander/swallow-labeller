@@ -1,6 +1,6 @@
 #include "old-gui.hpp"
 
-#include "annotation-manager.hpp"
+#include "annotation-store.hpp"
 #include "data.hpp"
 #include "gui/action-queue.hpp"
 #include "gui/widgets/util.hpp"
@@ -39,8 +39,7 @@ namespace {
 class TaskList {
 public:
     TaskList(
-        const std::vector<SwallowTaskInfo>& all_tasks,
-        const SwallowAnnotationManager& annotation_mgr
+        const std::vector<SwallowTaskInfo>& all_tasks, const SwallowAnnotationStore& annotation_mgr
     )
     {
         std::vector<TaskStrWrapper> annotated;
@@ -196,7 +195,7 @@ public:
         const std::filesystem::path& data_dir,
         std::size_t& task_index,
         TaskList& task_list,
-        SwallowAnnotationManager& annotation_mgr_
+        SwallowAnnotationStore& annotation_mgr_
     ) :
         task_index(task_index),
         task(task_list.task_at(task_index)),
@@ -305,7 +304,7 @@ private:
     std::size_t& task_index;
     SwallowTaskInfo task;
     TaskList& task_list;
-    SwallowAnnotationManager& annotation_mgr;
+    SwallowAnnotationStore& annotation_mgr;
     std::string path_str;
     bool new_annotation;
     Variant error_or_plotter;
@@ -353,7 +352,7 @@ class OldGui::Impl {
 public:
     Impl(
         std::vector<SwallowTaskInfo> tasks_,
-        SwallowAnnotationManager& annotation_mgr,
+        SwallowAnnotationStore& annotation_mgr,
         std::filesystem::path data_dir,
         bool shuffle
     ) :
@@ -600,14 +599,14 @@ private:
 #endif
 
     std::filesystem::path data_dir;
-    SwallowAnnotationManager& annotation_mgr;
+    SwallowAnnotationStore& annotation_mgr;
     TaskList task_list;
     std::unique_ptr<TaskView> task_view;
 };
 
 OldGui::OldGui(
     std::vector<SwallowTaskInfo> tasks,
-    SwallowAnnotationManager& annotation_mgr,
+    SwallowAnnotationStore& annotation_mgr,
     std::filesystem::path data_dir,
     bool shuffle
 ) :

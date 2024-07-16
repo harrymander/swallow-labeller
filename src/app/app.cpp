@@ -1,6 +1,6 @@
 #include "app.hpp"
 
-#include "annotation-manager.hpp"
+#include "annotation-store.hpp"
 #include "models/data.hpp"
 #include "models/task-info.hpp"
 
@@ -22,14 +22,14 @@ namespace {
 
 std::vector<SwallowLabellingTask> labelling_tasks(
     const std::vector<models::SwallowTaskInfo>& tasks_info,
-    const SwallowAnnotationManager& annotation_manager,
+    const SwallowAnnotationStore& annotation_store,
     const fs::path& data_dir
 )
 {
     std::vector<SwallowLabellingTask> tasks;
     for (const auto& info : tasks_info) {
         const models::SwallowAnnotation *annotation =
-            annotation_manager.get_annotation(info.get_id());
+            annotation_store.get_annotation(info.get_id());
         tasks.emplace_back(
             info, data_dir, annotation ? std::make_optional(*annotation) : std::nullopt
         );
@@ -67,11 +67,11 @@ void SwallowLabellingTask::clear_error_msg()
 
 App::App(
     const std::vector<models::SwallowTaskInfo>& swallow_tasks,
-    SwallowAnnotationManager annotation_manager,
+    SwallowAnnotationStore annotation_store,
     const fs::path& data_dir
 ) :
-    m_swallow_tasks(labelling_tasks(swallow_tasks, annotation_manager, data_dir)),
-    m_annotation_manager(std::move(annotation_manager)),
+    m_swallow_tasks(labelling_tasks(swallow_tasks, annotation_store, data_dir)),
+    m_annotation_store(std::move(annotation_store)),
     m_num_annotated_tasks(std::count_if(
         m_swallow_tasks.begin(),
         m_swallow_tasks.end(),

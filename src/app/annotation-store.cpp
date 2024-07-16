@@ -1,4 +1,4 @@
-#include "annotation-manager.hpp"
+#include "annotation-store.hpp"
 
 #include "models/annotation.hpp"
 
@@ -11,14 +11,13 @@
 
 namespace recap::labeller {
 
-SwallowAnnotationManager::SwallowAnnotationManager(
+SwallowAnnotationStore::SwallowAnnotationStore(
     std::filesystem::path path, models::SwallowAnnotationsMap annotations
 ) :
     path(std::move(path)), annotations(std::move(annotations))
 {}
 
-const models::SwallowAnnotation *SwallowAnnotationManager::get_annotation(const std::string& id
-) const
+const models::SwallowAnnotation *SwallowAnnotationStore::get_annotation(const std::string& id) const
 {
     const auto it = annotations.find(id);
     if (it == annotations.end()) {
@@ -27,7 +26,7 @@ const models::SwallowAnnotation *SwallowAnnotationManager::get_annotation(const 
     return &it->second;
 }
 
-bool SwallowAnnotationManager::annotation_saved(
+bool SwallowAnnotationStore::annotation_saved(
     const std::string& id, const models::SwallowAnnotation& annotation
 ) const
 {
@@ -39,7 +38,7 @@ bool SwallowAnnotationManager::annotation_saved(
     return false;
 }
 
-bool SwallowAnnotationManager::add_annotation(
+bool SwallowAnnotationStore::add_annotation(
     const std::string& id, models::SwallowAnnotation annotation
 )
 {
@@ -59,7 +58,7 @@ bool SwallowAnnotationManager::add_annotation(
     return true;
 }
 
-void SwallowAnnotationManager::remove_annotation(const std::string& id)
+void SwallowAnnotationStore::remove_annotation(const std::string& id)
 {
     const auto it = annotations.find(id);
     if (it != annotations.end()) {
@@ -70,7 +69,7 @@ void SwallowAnnotationManager::remove_annotation(const std::string& id)
     }
 }
 
-void SwallowAnnotationManager::sync_to_file() const
+void SwallowAnnotationStore::sync_to_file() const
 {
     std::ofstream stream;
     stream.exceptions(std::ios::badbit | std::ios::failbit);

@@ -1,4 +1,4 @@
-#include "app/annotation-manager.hpp"
+#include "app/annotation-store.hpp"
 #include "app/app.hpp"
 #include "gui/gui.hpp"
 #include "models/annotation.hpp"
@@ -136,7 +136,7 @@ std::optional<models::SwallowAnnotationsMap> load_annotations(const std::filesys
     return std::nullopt;
 }
 
-std::optional<SwallowAnnotationManager> make_annotations_mgr(const argparse::ArgumentParser& parser)
+std::optional<SwallowAnnotationStore> make_annotations_store(const argparse::ArgumentParser& parser)
 {
     auto existing_path = parser.present("--existing-annotations");
     auto annotations_path = std::filesystem::path(parser.get("--annotations")).make_preferred();
@@ -162,11 +162,11 @@ std::optional<SwallowAnnotationManager> make_annotations_mgr(const argparse::Arg
         spdlog::info("No existing annotations, creating annotations file at {}", annotations_path);
     }
 
-    SwallowAnnotationManager manager(annotations_path, annotations);
+    SwallowAnnotationStore store(annotations_path, annotations);
     try {
         // Sync to file to check that writing works
-        manager.sync_to_file();
-        return manager;
+        store.sync_to_file();
+        return store;
     } catch (const std::runtime_error& e) {
         spdlog::critical("Error writing to annotations file: {}", e.what());
     }
@@ -194,12 +194,12 @@ int main(int argc, const char *argv[])
     if (!labelling_tasks.has_value()) {
         return 1;
     }
-    auto annotations_mgr = make_annotations_mgr(program);
-    if (!annotations_mgr.has_value()) {
+    auto annotations_store = make_annotations_store(program);
+    if (!annotations_store.has_value()) {
         return 1;
     }
 
-    app::App app(*labelling_tasks, *annotations_mgr, data_dir);
+    app::App app(*labelling_tasks, *annotations_store, data_dir);
     gui::Gui gui(app);
     return platform::run(gui);
 }

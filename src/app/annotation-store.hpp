@@ -1,5 +1,5 @@
-#ifndef INCLUDE_RECAP_LABELLER_ANNOTATION_MANAGER_HPP
-#define INCLUDE_RECAP_LABELLER_ANNOTATION_MANAGER_HPP
+#ifndef INCLUDE_RECAP_LABELLER_ANNOTATION_STORE_HPP
+#define INCLUDE_RECAP_LABELLER_ANNOTATION_STORE_HPP
 
 #include "models/annotation.hpp"
 
@@ -7,9 +7,9 @@
 
 namespace recap::labeller {
 
-class SwallowAnnotationManager {
+class SwallowAnnotationStore {
 public:
-    SwallowAnnotationManager(std::filesystem::path path, models::SwallowAnnotationsMap annotations);
+    SwallowAnnotationStore(std::filesystem::path path, models::SwallowAnnotationsMap annotations);
 
     /**
      * Retrieves annotation with annotation_id and returns pointer to it, or nullptr if no
@@ -49,4 +49,4 @@ private:
 
 }; // namespace recap::labeller
 
-#endif // INCLUDE_RECAP_LABELLER_ANNOTATION_MANAGER_HPP
+#endif // INCLUDE_RECAP_LABELLER_ANNOTATION_STORE_HPP
