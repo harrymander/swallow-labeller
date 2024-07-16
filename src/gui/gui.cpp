@@ -192,8 +192,6 @@ void Gui::setup_dockspace() const
             ImGuiID dock_main;
             ImGuiID dock_label_info;
             const float viewport_width = viewport->Size.x;
-            spdlog::debug("{}", TasklistPx / viewport_width);
-            spdlog::debug("{}", LabelInfoPx / (viewport_width - TasklistPx));
             ImGui::DockBuilderSplitNode(
                 id,
                 ImGuiDir_Left,
