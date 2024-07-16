@@ -32,7 +32,6 @@ imgui_compressed_c_array(
 )
 
 add_executable(recap-labeller
-    src/annotation.cpp
     src/annotation-manager.cpp
     src/app.cpp
     src/data.cpp
@@ -43,8 +42,9 @@ add_executable(recap-labeller
     src/gui/widgets/plot-range-selector.cpp
     src/gui/widgets/plot-range.cpp
     src/gui/widgets/util.cpp
-    src/labelling-task.cpp
     src/main.cpp
+    src/models/annotation.cpp
+    src/models/task-info.cpp
     ${FONTAWESOME_CPP_FILE}
     ${SOURCE_SANS_CPP_FILE}
 )

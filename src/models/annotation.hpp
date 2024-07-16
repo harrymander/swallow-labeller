@@ -1,5 +1,5 @@
-#ifndef RECAP_LABELLER_ANNOTATION_HPP_INCLUDE
-#define RECAP_LABELLER_ANNOTATION_HPP_INCLUDE
+#ifndef RECAP_LABELLER_MODELS_ANNOTATION_HPP_INCLUDE
+#define RECAP_LABELLER_MODELS_ANNOTATION_HPP_INCLUDE
 
 #include "time-range.hpp"
 
@@ -11,7 +11,7 @@
 #include <variant>
 #include <vector>
 
-namespace recap::labeller {
+namespace recap::labeller::models {
 
 enum class SRCPattern {
     ExEx,
@@ -58,6 +58,6 @@ void dump_swallow_annotations_map_json(
     std::ostream& os, const SwallowAnnotationsMap& map, int indent = -1
 );
 
-}; // namespace recap::labeller
+}; // namespace recap::labeller::models
 
-#endif // RECAP_LABELLER_ANNOTATION_HPP_INCLUDE
+#endif // RECAP_LABELLER_MODELS_ANNOTATION_HPP_INCLUDE

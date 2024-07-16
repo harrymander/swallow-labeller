@@ -539,7 +539,7 @@ const char *swallow_task_icon(const app::SwallowLabellingTask& task)
 
 std::string task_info_str(const app::SwallowLabellingTask& task)
 {
-    const SwallowTaskInfo& info = task.info();
+    const models::SwallowTaskInfo& info = task.info();
     return fmt::format(
         "{}Subject #{}, {}\nRepeat #{}, swallow #{}",
         swallow_task_icon(task),

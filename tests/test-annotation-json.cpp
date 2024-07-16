@@ -1,11 +1,11 @@
-#include "annotation.hpp"
+#include "models/annotation.hpp"
 
 #include <gtest/gtest.h>
 
 #include <stdexcept>
 #include <variant>
 
-using namespace recap::labeller;
+using namespace recap::labeller::models;
 
 TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndEarClick)
 {

@@ -1,5 +1,5 @@
-#ifndef INCLUDE_LABELLING_TASK_HPP
-#define INCLUDE_LABELLING_TASK_HPP
+#ifndef RECAP_LABELLER_MODELS_TASK_INFO_HPP_INCLUDE
+#define RECAP_LABELLER_MODELS_TASK_INFO_HPP_INCLUDE
 
 #include "time-range.hpp"
 
@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-namespace recap::labeller {
+namespace recap::labeller::models {
 
 enum class SwallowTestType {
     TidalBreathing,
@@ -39,6 +39,6 @@ struct SwallowTaskInfo {
 
 std::vector<SwallowTaskInfo> load_swallow_task_info_json(std::istream& stream);
 
-}; // namespace recap::labeller
+}; // namespace recap::labeller::models
 
-#endif // INCLUDE_LABELLING_TASK_HPP
+#endif // RECAP_LABELLER_MODELS_TASK_INFO_HPP_INCLUDE

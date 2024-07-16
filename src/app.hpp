@@ -2,9 +2,9 @@
 #define RECAP_LABELLER_APP_INCLUDE_HPP
 
 #include "annotation-manager.hpp"
-#include "annotation.hpp"
 #include "data.hpp"
-#include "labelling-task.hpp"
+#include "models/annotation.hpp"
+#include "models/task-info.hpp"
 #include "observable.hpp"
 
 #include <spdlog/spdlog.h>
@@ -20,20 +20,20 @@ namespace recap::labeller::app {
 class SwallowLabellingTask {
 public:
     SwallowLabellingTask(
-        recap::labeller::SwallowTaskInfo task_info,
+        models::SwallowTaskInfo task_info,
         const std::filesystem::path& data_dir,
-        std::optional<SwallowAnnotation> annotation
+        std::optional<models::SwallowAnnotation> annotation
     );
 
     [[nodiscard]] const std::optional<std::string>& error_msg() const { return m_error_msg; }
 
-    [[nodiscard]] const recap::labeller::SwallowTaskInfo& info() const { return m_info; }
+    [[nodiscard]] const models::SwallowTaskInfo& info() const { return m_info; }
 
     [[nodiscard]] const std::string& data_path() const { return m_data_path; }
 
     [[nodiscard]] bool is_annotated() const { return m_annotation.has_value(); }
 
-    [[nodiscard]] const std::optional<SwallowAnnotation>& annotation() const
+    [[nodiscard]] const std::optional<models::SwallowAnnotation>& annotation() const
     {
         return m_annotation;
     }
@@ -44,14 +44,14 @@ public:
 private:
     std::optional<std::string> m_error_msg = std::nullopt;
 
-    recap::labeller::SwallowTaskInfo m_info;
-    std::optional<SwallowAnnotation> m_annotation;
+    models::SwallowTaskInfo m_info;
+    std::optional<models::SwallowAnnotation> m_annotation;
     std::string m_data_path;
 };
 
 class ActiveSwallowLabellingTaskErrorView {
 public:
-    [[nodiscard]] const SwallowTaskInfo& info() const { return m_task.info(); }
+    [[nodiscard]] const models::SwallowTaskInfo& info() const { return m_task.info(); }
 
     [[nodiscard]] const std::string& error_msg() const { return *m_task.error_msg(); }
 
@@ -67,7 +67,7 @@ class ActiveSwallowLabellingTaskView {
 public:
     [[nodiscard]] const SwallowTaskData& data() const { return m_data; }
 
-    [[nodiscard]] const SwallowTaskInfo& info() const { return m_task.info(); }
+    [[nodiscard]] const models::SwallowTaskInfo& info() const { return m_task.info(); }
 
 private:
     friend class App;
@@ -80,7 +80,7 @@ private:
 
 class App {
 public:
-    App(const std::vector<SwallowTaskInfo>& swallow_tasks,
+    App(const std::vector<models::SwallowTaskInfo>& swallow_tasks,
         SwallowAnnotationManager annotation_manager,
         const std::filesystem::path& data_dir);
 

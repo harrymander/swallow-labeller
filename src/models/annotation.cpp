@@ -1,6 +1,6 @@
 #include "annotation.hpp"
 
-#include "variant-visitor.hpp"
+#include "../variant-visitor.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -48,7 +48,7 @@ template <typename T, typename E> struct adl_serializer<std::variant<T, E>> {
 
 NLOHMANN_JSON_NAMESPACE_END
 
-namespace recap::labeller {
+namespace recap::labeller::models {
 
 namespace {
 
@@ -180,4 +180,4 @@ void dump_swallow_annotations_map_json(
     os << json.dump(indent);
 }
 
-}; // namespace recap::labeller
+}; // namespace recap::labeller::models

@@ -1,6 +1,6 @@
 #include "annotation-manager.hpp"
 
-#include "annotation.hpp"
+#include "models/annotation.hpp"
 
 #include <spdlog/fmt/std.h>
 #include <spdlog/spdlog.h>
@@ -12,12 +12,13 @@
 namespace recap::labeller {
 
 SwallowAnnotationManager::SwallowAnnotationManager(
-    std::filesystem::path path, SwallowAnnotationsMap annotations
+    std::filesystem::path path, models::SwallowAnnotationsMap annotations
 ) :
     path(std::move(path)), annotations(std::move(annotations))
 {}
 
-const SwallowAnnotation *SwallowAnnotationManager::get_annotation(const std::string& id) const
+const models::SwallowAnnotation *SwallowAnnotationManager::get_annotation(const std::string& id
+) const
 {
     const auto it = annotations.find(id);
     if (it == annotations.end()) {
@@ -27,18 +28,20 @@ const SwallowAnnotation *SwallowAnnotationManager::get_annotation(const std::str
 }
 
 bool SwallowAnnotationManager::annotation_saved(
-    const std::string& id, const SwallowAnnotation& annotation
+    const std::string& id, const models::SwallowAnnotation& annotation
 ) const
 {
-    const SwallowAnnotation *existing = get_annotation(id);
+    const models::SwallowAnnotation *existing = get_annotation(id);
     if (existing) {
-        SwallowAnnotation normed = annotation;
+        models::SwallowAnnotation normed = annotation;
         return *existing == normed;
     }
     return false;
 }
 
-bool SwallowAnnotationManager::add_annotation(const std::string& id, SwallowAnnotation annotation)
+bool SwallowAnnotationManager::add_annotation(
+    const std::string& id, models::SwallowAnnotation annotation
+)
 {
     const auto it = annotations.find(id);
     if (it != annotations.end()) {

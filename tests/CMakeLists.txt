@@ -51,7 +51,7 @@ gtest_discover_tests(test-data)
 add_executable(
     test-tasks-parsing
     test-tasks-parsing.cpp
-    ../src/labelling-task.cpp
+    ../src/models/task-info.cpp
 )
 target_include_directories(test-tasks-parsing PRIVATE ../src)
 target_link_libraries(
@@ -77,7 +77,7 @@ gtest_discover_tests(test-observable)
 add_executable(
     test-annotation-json
     test-annotation-json.cpp
-    ../src/annotation.cpp
+    ../src/models/annotation.cpp
 )
 target_link_libraries(
     test-annotation-json

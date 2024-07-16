@@ -2,7 +2,7 @@
 
 #include "annotation-manager.hpp"
 #include "data.hpp"
-#include "labelling-task.hpp"
+#include "models/task-info.hpp"
 
 #include <fmt/core.h>
 
@@ -21,14 +21,15 @@ namespace fs = std::filesystem;
 namespace {
 
 std::vector<SwallowLabellingTask> labelling_tasks(
-    const std::vector<SwallowTaskInfo>& tasks_info,
+    const std::vector<models::SwallowTaskInfo>& tasks_info,
     const SwallowAnnotationManager& annotation_manager,
     const fs::path& data_dir
 )
 {
     std::vector<SwallowLabellingTask> tasks;
     for (const auto& info : tasks_info) {
-        const SwallowAnnotation *annotation = annotation_manager.get_annotation(info.get_id());
+        const models::SwallowAnnotation *annotation =
+            annotation_manager.get_annotation(info.get_id());
         tasks.emplace_back(
             info, data_dir, annotation ? std::make_optional(*annotation) : std::nullopt
         );
@@ -39,9 +40,9 @@ std::vector<SwallowLabellingTask> labelling_tasks(
 }; // namespace
 
 SwallowLabellingTask::SwallowLabellingTask(
-    recap::labeller::SwallowTaskInfo task_info,
+    models::SwallowTaskInfo task_info,
     const fs::path& data_dir,
-    std::optional<SwallowAnnotation> annotation
+    std::optional<models::SwallowAnnotation> annotation
 ) :
     m_info(std::move(task_info)), m_annotation(std::move(annotation))
 {
@@ -65,7 +66,7 @@ void SwallowLabellingTask::clear_error_msg()
 }
 
 App::App(
-    const std::vector<SwallowTaskInfo>& swallow_tasks,
+    const std::vector<models::SwallowTaskInfo>& swallow_tasks,
     SwallowAnnotationManager annotation_manager,
     const fs::path& data_dir
 ) :

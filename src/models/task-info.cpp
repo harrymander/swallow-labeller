@@ -1,4 +1,4 @@
-#include "labelling-task.hpp"
+#include "task-info.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace recap::labeller {
+namespace recap::labeller::models {
 
 using Json = nlohmann::json;
 
@@ -61,4 +61,4 @@ std::vector<SwallowTaskInfo> load_swallow_task_info_json(std::istream& stream)
     return parse_json<std::vector<SwallowTaskInfo>>(stream);
 }
 
-}; // namespace recap::labeller
+}; // namespace recap::labeller::models

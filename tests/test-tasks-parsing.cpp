@@ -1,4 +1,4 @@
-#include "labelling-task.hpp"
+#include "models/task-info.hpp"
 
 #include <gtest/gtest.h>
 
@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <vector>
 
-using namespace recap::labeller;
+using namespace recap::labeller::models;
 
 static void load_from_path(const char *path, std::vector<SwallowTaskInfo>& tasks)
 {
