@@ -10,7 +10,6 @@
 #include <fmt/core.h>
 #include <imgui.h>
 
-#include <optional>
 #include <string>
 
 namespace recap::labeller::gui {
@@ -52,7 +51,7 @@ private:
     };
 
     bool m_first_draw = true;
-    std::optional<std::string> m_ini_path = std::nullopt;
+    std::string m_ini_path;
     bool m_stop_requested = false;
     bool m_ready_to_stop = false;
     bool m_show_imgui_demo_window = false;
@@ -78,6 +77,7 @@ private:
     Plotter m_flow_plotter;
     Plotter m_audio_plotter;
 
+    void setup_imgui_ini();
     void setup_dockspace() const;
     void draw_main_window();
     void draw_task_list();

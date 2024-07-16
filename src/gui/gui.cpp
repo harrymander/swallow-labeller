@@ -19,7 +19,6 @@
 
 #include <cstdlib>
 #include <filesystem>
-#include <optional>
 
 #define FILE_ERR_ICON ICON_FA_FILE_CIRCLE_EXCLAMATION
 #define ERR_ICON ICON_FA_TRIANGLE_EXCLAMATION
@@ -28,36 +27,6 @@
 #define ICON_TEXT_SPACE "  "
 
 namespace recap::labeller::gui {
-
-namespace {
-
-std::optional<std::string> get_custom_ini_path()
-{
-    const char *const env = std::getenv("RECAP_LABELLER_IMGUI_INI_PATH");
-    if (env) {
-        std::filesystem::path path(env);
-        if (std::filesystem::is_directory(path)) {
-            spdlog::error("Invalid ImGui INI path: '{}' is a directory", path);
-        } else if (!std::filesystem::is_directory(path.parent_path())) {
-            spdlog::error(
-                "Invalid ImGui INI path: parent directory '{}' does not exist or not a directory",
-                path.parent_path()
-            );
-        } else {
-            std::string path_str = path.make_preferred().string();
-            spdlog::info("Custom ImGui INI path: {}", path_str);
-            return path_str;
-        }
-
-        spdlog::warn("Ignoring RECAP_LABELLER_IMGUI_INI_PATH, using default ImGui INI path");
-    } else {
-        spdlog::debug("RECAP_LABELLER_IMGUI_INI_PATH not set, using default ImGui INI path");
-    }
-
-    return std::nullopt;
-}
-
-}; // namespace
 
 Gui::Gui(app::App& app) :
     m_app(app),
@@ -73,15 +42,57 @@ Gui::Gui(app::App& app) :
 
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_DockingEnable;
-    auto custom_ini_path = get_custom_ini_path();
-    if (custom_ini_path) {
-        m_ini_path = std::move(*custom_ini_path);
-        io.IniFilename = m_ini_path->c_str();
-    }
+    setup_imgui_ini();
 
     setup_fonts();
 
     on_new_active_task(m_app.active_task_view());
+}
+
+namespace {
+
+bool is_valid_ini_path(const std::filesystem::path& path)
+{
+    namespace fs = std::filesystem;
+    if (fs::is_directory(path)) {
+        spdlog::error("Invalid INI path: '{}' is a directory", path);
+        return false;
+    }
+
+    const auto parent = path.parent_path();
+    if (!parent.empty() && !fs::is_directory(parent)) {
+        spdlog::error(
+            "Invalid INI path: parent directory '{}' does not exist or is not a directory", parent
+        );
+        return false;
+    }
+
+    return true;
+}
+
+}; // namespace
+
+void Gui::setup_imgui_ini()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    const char *const env = std::getenv("RECAP_LABELLER_IMGUI_INI_PATH");
+    if (env) {
+        if (*env) {
+            std::filesystem::path path(env);
+            if (is_valid_ini_path(path)) {
+                m_ini_path = path.make_preferred().string();
+                spdlog::info("Custom ImGui INI path: '{}'", m_ini_path);
+                io.IniFilename = m_ini_path.c_str();
+            } else {
+                spdlog::error("Using default ImGui INI path");
+            }
+        } else {
+            spdlog::info("RECAP_LABELLER_IMGUI_INI_PATH empty: disabling INI file");
+            io.IniFilename = nullptr;
+        }
+    } else {
+        spdlog::debug("RECAP_LABELLER_IMGUI_INI_PATH not set, using default ImGui INI path");
+    }
 }
 
 Gui::~Gui()
