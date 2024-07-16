@@ -574,10 +574,16 @@ void Gui::draw_task_list()
     const std::size_t active_index = m_app.active_task_index();
     if (ImGui::BeginListBox("##task_info_list", {-1, -1})) {
         for (std::size_t i = 0; i < tasks.size(); i++) {
-            const std::string str = task_info_str(tasks[i]);
+            const auto& task = tasks[i];
+            const std::string str = task_info_str(task);
             if (m_task_list_text_filter.PassFilter(str.c_str())) {
                 if (ImGui::Selectable(str.c_str(), active_index == i)) {
                     m_app.set_active_task_index(i);
+                }
+                const auto& err = task.error_msg();
+                if (err.has_value() && ImGui::BeginItemTooltip()) {
+                    ImGui::Text(ERR_ICON ICON_TEXT_SPACE "%s", err->c_str());
+                    ImGui::EndTooltip();
                 }
             }
         }
