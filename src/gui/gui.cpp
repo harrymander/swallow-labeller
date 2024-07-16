@@ -90,7 +90,7 @@ void Gui::stop()
     m_ready_to_stop = true;
 }
 
-static const char *const SidebarWindowId = "##sidebarwindow";
+static const char *const TaskListWindowId = "##tasklistwindow";
 static const char *const MainWindowId = "##mainwindow";
 static const char *const LabelInfoWindowId = "##labelinfowindow";
 
@@ -106,7 +106,7 @@ void Gui::draw()
     }
     setup_dockspace();
 
-    if (ImGui::Begin(SidebarWindowId, nullptr, WindowFlags)) {
+    if (ImGui::Begin(TaskListWindowId, nullptr, WindowFlags)) {
         draw_task_list();
         ImGui::End();
     }
@@ -152,15 +152,15 @@ void Gui::setup_dockspace() const
         ImGui::DockBuilderRemoveNode(id);
         ImGui::DockBuilderAddNode(id);
 
-        ImGuiID dock_sidebar;
+        ImGuiID dock_tasklist;
         ImGuiID dock_main;
         ImGuiID dock_label_info;
-        ImGui::DockBuilderSplitNode(id, ImGuiDir_Left, SidebarRatio, &dock_sidebar, &dock_main);
+        ImGui::DockBuilderSplitNode(id, ImGuiDir_Left, SidebarRatio, &dock_tasklist, &dock_main);
         ImGui::DockBuilderSplitNode(
             dock_main, ImGuiDir_Right, LabelInfoRatioX, &dock_label_info, &dock_main
         );
 
-        ImGui::DockBuilderDockWindow(SidebarWindowId, dock_sidebar);
+        ImGui::DockBuilderDockWindow(TaskListWindowId, dock_tasklist);
         ImGui::DockBuilderDockWindow(MainWindowId, dock_main);
         ImGui::DockBuilderDockWindow(LabelInfoWindowId, dock_label_info);
         ImGui::DockBuilderFinish(id);
