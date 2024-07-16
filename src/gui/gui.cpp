@@ -554,6 +554,17 @@ void Gui::draw_task_list()
 {
     m_task_list_text_filter.Draw("##task_info_list_filter");
 
+    // TODO: currently these buttons will advance to next/prev regardless of annotated state and
+    // whether tasks are shown (due to filter). Need to lift task list state out of Gui.
+    ImGui::SameLine();
+    if (ImGui::ArrowButton("##prev_task", ImGuiDir_Left)) {
+        m_app.decrement_active_task_index();
+    }
+    ImGui::SameLine();
+    if (ImGui::ArrowButton("##next_task", ImGuiDir_Right)) {
+        m_app.increment_active_task_index();
+    }
+
     const auto& tasks = m_app.tasks();
     const std::size_t num_annotated = m_app.num_annotated_tasks();
     ImGui::Text(
