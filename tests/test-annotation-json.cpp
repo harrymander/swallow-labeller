@@ -73,8 +73,10 @@ TEST(TestSwallowAnnotationJson, TestParsingWithEarClickAndNoApnea)
         "ear_clicks": [{"start": 12, "end": 100}, {"start": 200, "end": 300}]
     })");
 
-    ASSERT_TRUE(std::holds_alternative<ApneaError>(annotation.swallow_apnea));
-    ASSERT_EQ(std::get<ApneaError>(annotation.swallow_apnea), ApneaError::ApneaCutoff);
+    ASSERT_TRUE(std::holds_alternative<SwallowApneaError>(annotation.swallow_apnea));
+    ASSERT_EQ(
+        std::get<SwallowApneaError>(annotation.swallow_apnea), SwallowApneaError::ApneaCutoff
+    );
 
     ASSERT_TRUE(std::holds_alternative<std::vector<TimeRange>>(annotation.ear_clicks));
     auto clicks = std::get<std::vector<TimeRange>>(annotation.ear_clicks);
@@ -89,8 +91,10 @@ TEST(TestSwallowAnnotationJson, TestParsingWithoutApneaAndEarClick)
         "ear_clicks": { "error": "audio-error" }
     })");
 
-    ASSERT_TRUE(std::holds_alternative<ApneaError>(annotation.swallow_apnea));
-    ASSERT_EQ(std::get<ApneaError>(annotation.swallow_apnea), ApneaError::ApneaCutoff);
+    ASSERT_TRUE(std::holds_alternative<SwallowApneaError>(annotation.swallow_apnea));
+    ASSERT_EQ(
+        std::get<SwallowApneaError>(annotation.swallow_apnea), SwallowApneaError::ApneaCutoff
+    );
 
     ASSERT_TRUE(std::holds_alternative<EarClickError>(annotation.ear_clicks));
     EXPECT_EQ(std::get<EarClickError>(annotation.ear_clicks), EarClickError::AudioError);
@@ -166,7 +170,7 @@ TEST(TestSwallowAnnotationJson, TestSerializingWithApneaAndNoEarClick)
 TEST(TestSwallowAnnotationJson, TestSerializingWithEarClickAndNoApnea)
 {
     SwallowAnnotation annotation{
-        .swallow_apnea = ApneaError::ApneaCutoff,
+        .swallow_apnea = SwallowApneaError::ApneaCutoff,
         .ear_clicks = std::vector<TimeRange>{{12, 100}, {200, 300}},
     };
     ASSERT_SERIALIZE_DERIALIZE_EQ(annotation);
@@ -175,7 +179,7 @@ TEST(TestSwallowAnnotationJson, TestSerializingWithEarClickAndNoApnea)
 TEST(TestSwallowAnnotationJson, TestSerializingWithoutApneaAndEarClick)
 {
     SwallowAnnotation annotation{
-        .swallow_apnea = ApneaError::NoSwallow,
+        .swallow_apnea = SwallowApneaError::NoSwallow,
         .ear_clicks = EarClickError::NoEarClick,
     };
     ASSERT_SERIALIZE_DERIALIZE_EQ(annotation);

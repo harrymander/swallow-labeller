@@ -100,10 +100,10 @@ static const EnumStrConverter<SRCPattern, 4> SRCPatternStrConverter({{
     {SRCPattern::InIn, "in-in"},
 }});
 
-static const EnumStrConverter<ApneaError, 3> ApneaErrorStrConverter({{
-    {ApneaError::FlowError, "flow-error"},
-    {ApneaError::NoSwallow, "no-swallow"},
-    {ApneaError::ApneaCutoff, "apnea-cutoff"},
+static const EnumStrConverter<SwallowApneaError, 3> ApneaErrorStrConverter({{
+    {SwallowApneaError::FlowError, "flow-error"},
+    {SwallowApneaError::NoSwallow, "no-swallow"},
+    {SwallowApneaError::ApneaCutoff, "apnea-cutoff"},
 }});
 
 static const EnumStrConverter<EarClickError, 2> EarClickErrorStrConverter({{
@@ -126,7 +126,7 @@ static const EnumStrConverter<EarClickError, 2> EarClickErrorStrConverter({{
     }
 
 DEFINE_JSON_ENUM_CONVERTERS(SRCPattern, SRCPatternStrConverter);
-DEFINE_JSON_ENUM_CONVERTERS(ApneaError, ApneaErrorStrConverter);
+DEFINE_JSON_ENUM_CONVERTERS(SwallowApneaError, ApneaErrorStrConverter);
 DEFINE_JSON_ENUM_CONVERTERS(EarClickError, EarClickErrorStrConverter);
 #undef DEFINE_JSON_ENUM_CONVERTERS
 

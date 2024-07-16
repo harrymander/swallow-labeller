@@ -28,7 +28,7 @@ struct SwallowApneaAnnotation {
     bool operator==(const SwallowApneaAnnotation&) const = default;
 };
 
-enum class ApneaError {
+enum class SwallowApneaError {
     FlowError,
     NoSwallow,
     ApneaCutoff,
@@ -40,7 +40,7 @@ enum class EarClickError {
 };
 
 struct SwallowAnnotation {
-    std::variant<SwallowApneaAnnotation, ApneaError> swallow_apnea;
+    std::variant<SwallowApneaAnnotation, SwallowApneaError> swallow_apnea;
     std::variant<std::vector<TimeRange>, EarClickError> ear_clicks;
 
     bool operator==(const SwallowAnnotation&) const = default;
