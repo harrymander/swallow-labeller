@@ -32,6 +32,7 @@ add_custom_target(
         --tasks ${DEMO_TASKS_JSON}
         --data-dir ${DEMO_DATA_DIR}
         --annotations ${DEMO_ANNOTATIONS_JSON}
+    WORKING_DIRECTORY ${DEMO_DIR}
     COMMENT
 "\nRunning demo:
   Tasks JSON: ${DEMO_TASKS_JSON}
