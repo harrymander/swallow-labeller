@@ -11,7 +11,7 @@
 
 namespace recap::labeller::gui::widgets {
 
-template <class T> class RadioButtonField;
+template <class T> struct RadioButtonField;
 
 template <class T, class ConstIt>
 bool radio_button_enums(
@@ -20,7 +20,7 @@ bool radio_button_enums(
 {
     ScopedImID scoped_id(id);
     bool changed = false;
-    for (ConstIt it = begin; it != end; it++) {
+    for (auto it = begin; it != end; it++) {
         if (it != begin && horizontal) {
             ImGui::SameLine();
         }
@@ -55,7 +55,7 @@ template <class T> struct RadioButtonField {
 template <class T, class Container>
 bool radio_button_enums(const char *id, T& value, const Container& options, bool horizontal = false)
 {
-    return radio_button_enums(id, value, options.data(), options.end(), horizontal);
+    return radio_button_enums(id, value, options.begin(), options.end(), horizontal);
 }
 
 }; // namespace recap::labeller::gui::widgets
