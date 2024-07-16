@@ -114,17 +114,17 @@ void Gui::draw()
 
     if (ImGui::Begin(TaskListWindowId, nullptr, WindowFlags)) {
         draw_task_list();
-        ImGui::End();
     }
+    ImGui::End();
 
     if (ImGui::Begin(MainWindowId, nullptr, WindowFlags)) {
         draw_main_window();
-        ImGui::End();
     }
+    ImGui::End();
 
     if (ImGui::Begin(LabelInfoWindowId, nullptr, WindowFlags)) {
-        ImGui::End();
     }
+    ImGui::End();
 
     if (m_show_imgui_demo_window) {
         ImGui::ShowDemoWindow(&m_show_imgui_demo_window);
