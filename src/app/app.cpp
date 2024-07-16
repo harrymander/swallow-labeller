@@ -10,7 +10,6 @@
 #include <cmath>
 #include <exception>
 #include <filesystem>
-#include <fstream>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -132,8 +131,7 @@ void App::load_active_task()
         m_active_task = make_unique_active_task<ActiveSwallowLabellingTaskErrorView>(task);
     } else {
         try {
-            std::ifstream stream(task.data_path());
-            auto data = SwallowTaskData::from_numpy(cnpy::npz_load(stream));
+            auto data = SwallowTaskData::from_numpy(cnpy::npz_load(task.data_path()));
             spdlog::debug("Loaded data from {}", task.data_path());
             task.clear_error_msg();
             m_active_task = make_unique_active_task<ActiveSwallowLabellingTaskView>(task, data);
