@@ -1,4 +1,4 @@
-#include "data.hpp"
+#include "models/data.hpp"
 #include "test-data-paths.h"
 
 #include <gtest/gtest.h>

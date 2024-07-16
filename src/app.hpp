@@ -2,10 +2,10 @@
 #define RECAP_LABELLER_APP_INCLUDE_HPP
 
 #include "annotation-manager.hpp"
-#include "data.hpp"
 #include "models/annotation.hpp"
+#include "models/data.hpp"
 #include "models/task-info.hpp"
-#include "observable.hpp"
+#include "util/observable.hpp"
 
 #include <spdlog/spdlog.h>
 

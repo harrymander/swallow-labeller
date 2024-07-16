@@ -1,8 +1,8 @@
 #ifndef INCLUDE_RECAP_LABELLER_GUI_WIDGETS_PLOT_RANGE_MAKER_HPP
 #define INCLUDE_RECAP_LABELLER_GUI_WIDGETS_PLOT_RANGE_MAKER_HPP
 
-#include "plot-range.hpp"
-#include "util.hpp"
+#include "gui/widgets/plot-range.hpp"
+#include "gui/widgets/util.hpp"
 
 #include <imgui.h>
 

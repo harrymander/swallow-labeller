@@ -2,7 +2,7 @@
 
 #include "plot-range.hpp"
 
-#include "util.hpp"
+#include "gui/widgets/util.hpp"
 
 #include <imgui.h>
 #include <implot.h>

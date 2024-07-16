@@ -1,7 +1,7 @@
 #include "plot-range-dragger.hpp"
 
-#include "../../util.hpp"
-#include "util.hpp"
+#include "gui/widgets/util.hpp"
+#include "util/util.hpp"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -19,8 +19,6 @@ namespace {
 
 constexpr float EdgeWidthPx = 8;
 constexpr float HalfEdgeWidthPx = EdgeWidthPx / 2;
-
-using recap::util::minmax_pointers;
 
 // Coordinates in pixels
 bool drag_range(ImGuiID id, float& x0, float& x1, const ImRect& limits, bool& held)

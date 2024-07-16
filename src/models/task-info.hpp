@@ -1,7 +1,7 @@
 #ifndef RECAP_LABELLER_MODELS_TASK_INFO_HPP_INCLUDE
 #define RECAP_LABELLER_MODELS_TASK_INFO_HPP_INCLUDE
 
-#include "time-range.hpp"
+#include "models/time-range.hpp"
 
 #include <istream>
 #include <map>

@@ -1,14 +1,14 @@
 #ifndef RECAP_LABELLER_GUI_HPP
 #define RECAP_LABELLER_GUI_HPP
 
-#include "../app.hpp"
-#include "imgui.h"
-#include "widgets/color-scheme-selector.hpp"
-#include "widgets/plot-range-dragger.hpp"
-#include "widgets/plot-range-selector.hpp"
-#include "widgets/plot-range.hpp"
+#include "app.hpp"
+#include "gui/widgets/color-scheme-selector.hpp"
+#include "gui/widgets/plot-range-dragger.hpp"
+#include "gui/widgets/plot-range-selector.hpp"
+#include "gui/widgets/plot-range.hpp"
 
 #include <fmt/core.h>
+#include <imgui.h>
 
 #include <optional>
 #include <string>

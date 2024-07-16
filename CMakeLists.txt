@@ -34,7 +34,6 @@ imgui_compressed_c_array(
 add_executable(recap-labeller
     src/annotation-manager.cpp
     src/app.cpp
-    src/data.cpp
     src/gui/action-queue.cpp
     src/gui/font.cpp
     src/gui/gui.cpp
@@ -44,10 +43,12 @@ add_executable(recap-labeller
     src/gui/widgets/util.cpp
     src/main.cpp
     src/models/annotation.cpp
+    src/models/data.cpp
     src/models/task-info.cpp
     ${FONTAWESOME_CPP_FILE}
     ${SOURCE_SANS_CPP_FILE}
 )
+target_include_directories(recap-labeller PRIVATE src)
 target_compile_features(recap-labeller PRIVATE cxx_std_20)
 target_link_libraries(recap-labeller PRIVATE
     argparse
@@ -74,9 +75,9 @@ if(LINUX)
         recap-labeller
         PRIVATE imgui::backend::opengl imgui::backend::glfw
     )
-    target_sources(recap-labeller PRIVATE src/platform-glfw-opengl3.cpp)
+    target_sources(recap-labeller PRIVATE src/platform/glfw-opengl3.cpp)
 elseif(WIN32 AND MSVC)
-    target_sources(recap-labeller PUBLIC src/platform-win32-dx12.cpp)
+    target_sources(recap-labeller PUBLIC src/platform/win32-dx12.cpp)
     target_link_libraries(recap-labeller PUBLIC imgui::backend::win32-native)
     set_target_properties(recap-labeller PROPERTIES WIN32_EXECUTABLE false)
     target_compile_options(recap-labeller PUBLIC /nologo /W4)

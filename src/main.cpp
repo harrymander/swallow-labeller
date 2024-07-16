@@ -3,7 +3,7 @@
 #include "gui/gui.hpp"
 #include "models/annotation.hpp"
 #include "models/task-info.hpp"
-#include "platform.hpp"
+#include "platform/platform.hpp"
 
 #include <argparse/argparse.hpp>
 #include <spdlog/fmt/std.h>

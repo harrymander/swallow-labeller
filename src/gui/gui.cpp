@@ -2,11 +2,11 @@
 
 #include "gui.hpp"
 
-#include "../util.hpp"
-#include "../variant-visitor.hpp"
-#include "font.hpp"
-#include "widgets/plot-range-selector.hpp"
-#include "widgets/plot-range.hpp"
+#include "gui/font.hpp"
+#include "gui/widgets/plot-range-selector.hpp"
+#include "gui/widgets/plot-range.hpp"
+#include "util/util.hpp"
+#include "util/variant-visitor.hpp"
 
 #include <IconsFontAwesome6.h>
 #include <fmt/format.h>
@@ -314,7 +314,7 @@ void draw_plot_hovered(const double *x, size_t n, const double *y, fmt::format_s
     const auto mouse = ImPlot::GetPlotMousePos();
     if (mouse.x > x[0]) {
         const double *const end = x + n;
-        const double *xclosest = util::binary_search_closest(x, end, mouse.x);
+        const double *xclosest = binary_search_closest(x, end, mouse.x);
         if (xclosest != end) {
             draw_plot_cursor(*xclosest, y[xclosest - x], yfmt);
         }

@@ -1,6 +1,6 @@
 #include "annotation.hpp"
 
-#include "../variant-visitor.hpp"
+#include "util/variant-visitor.hpp"
 
 #include <nlohmann/json.hpp>
 

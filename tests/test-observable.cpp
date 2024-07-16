@@ -1,4 +1,4 @@
-#include "observable.hpp"
+#include "util/observable.hpp"
 
 #include <gtest/gtest.h>
 

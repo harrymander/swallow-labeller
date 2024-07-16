@@ -5,7 +5,7 @@
 #include <iterator>
 #include <utility>
 
-namespace recap::util {
+namespace recap::labeller {
 
 template <class Comparable>
 inline std::pair<Comparable *, Comparable *> minmax_pointers(Comparable *v1, Comparable *v2)
@@ -26,6 +26,6 @@ inline BidirIt binary_search_closest(BidirIt first, BidirIt last, const T& value
     return found;
 }
 
-}; // namespace recap::util
+}; // namespace recap::labeller
 
 #endif // RECAP_UTIL_HPP_INCLUDE

@@ -1,8 +1,8 @@
 #ifndef INCLUDE_RECAP_LABELLER_GUI_WIDGETS_DRAG_RANGE
 #define INCLUDE_RECAP_LABELLER_GUI_WIDGETS_DRAG_RANGE
 
-#include "plot-range.hpp"
-#include "util.hpp"
+#include "gui/widgets/plot-range.hpp"
+#include "gui/widgets/util.hpp"
 
 #include <imgui.h>
 

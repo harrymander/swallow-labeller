@@ -1,9 +1,9 @@
-#ifndef RECAP_OPTUTIL_HPP_INCLUDE
-#define RECAP_OPTUTIL_HPP_INCLUDE
+#ifndef RECAP_LABELLER_UTIL_OPTUTIL_HPP_INCLUDE
+#define RECAP_LABELLER_UTIL_OPTUTIL_HPP_INCLUDE
 
 #include <optional>
 
-namespace recap::optutil {
+namespace recap::labeller::optutil {
 
 template <class T> inline T value_or_default(const std::optional<T>& opt)
 {
@@ -25,6 +25,6 @@ inline R map_or(const std::optional<T>& opt, Map map_func, const R& default_valu
     return opt.has_value() ? map_func(*opt) : default_value;
 }
 
-}; // namespace recap::optutil
+}; // namespace recap::labeller::optutil
 
-#endif // RECAP_OPTUTIL_HPP_INCLUDE
+#endif // RECAP_LABELLER_UTIL_OPTUTIL_HPP_INCLUDE

@@ -43,7 +43,9 @@ add_custom_command(
     COMMENT "Generating test Numpy data files"
 )
 
-add_executable(test-data test-data.cpp ../src/data.cpp ${DATA_TEST_FILE_HEADER})
+add_executable(
+    test-data test-data.cpp ../src/models/data.cpp ${DATA_TEST_FILE_HEADER}
+)
 target_include_directories(test-data PRIVATE ../src ${DATA_TEST_FILE_DIR})
 target_link_libraries(test-data PRIVATE GTest::gtest_main cnpy::cnpy)
 gtest_discover_tests(test-data)

@@ -1,12 +1,12 @@
-#ifndef RECAP_STRUTIL_HPP_INCLUDE
-#define RECAP_STRUTIL_HPP_INCLUDE
+#ifndef RECAP_LABELLER_UTIL_STRUTIL_HPP_INCLUDE
+#define RECAP_LABELLER_UTIL_STRUTIL_HPP_INCLUDE
 
 #include <algorithm>
 #include <cctype>
 #include <locale>
 #include <string>
 
-namespace recap::strutil {
+namespace recap::labeller::strutil {
 
 // trim from start (in place)
 inline void ltrim(std::string& s)
@@ -39,6 +39,6 @@ inline std::string trimmed(std::string s)
     return s;
 }
 
-}; // namespace recap::strutil
+}; // namespace recap::labeller::strutil
 
-#endif // RECAP_STRUTIL_HPP_INCLUDE
+#endif // RECAP_LABELLER_UTIL_STRUTIL_HPP_INCLUDE
