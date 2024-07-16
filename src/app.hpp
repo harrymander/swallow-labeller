@@ -118,12 +118,7 @@ private:
     void load_active_task();
 
     template <typename T, typename... Args>
-    static std::unique_ptr<ActiveTaskVariant> make_unique_active_task_variant(Args&&...args)
-    {
-        return std::unique_ptr<ActiveTaskVariant>(
-            new ActiveTaskVariant(T(std::forward<Args>(args)...))
-        );
-    }
+    static std::unique_ptr<ActiveTaskVariant> make_unique_active_task(Args&&...);
 };
 
 }; // namespace recap::labeller::app

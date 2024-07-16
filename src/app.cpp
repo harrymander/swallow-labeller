@@ -101,26 +101,31 @@ void App::reload_active_task()
     load_active_task();
 }
 
+template <typename T, typename... Args>
+std::unique_ptr<App::ActiveTaskVariant> App::make_unique_active_task(Args&&...args)
+{
+    auto *const ptr = new ActiveTaskVariant(T(std::forward<Args>(args)...));
+    return std::unique_ptr<ActiveTaskVariant>(ptr);
+}
+
 void App::load_active_task()
 {
     SwallowLabellingTask& task = m_swallow_tasks[m_active_task_index];
     const auto path = fs::path(task.data_path());
     if (!fs::is_regular_file(path)) {
         task.set_error_msg("Data file not found");
-        m_active_task = make_unique_active_task_variant<ActiveSwallowLabellingTaskErrorView>(task);
+        m_active_task = make_unique_active_task<ActiveSwallowLabellingTaskErrorView>(task);
     } else {
         try {
             std::ifstream stream(task.data_path());
             auto data = SwallowTaskData::from_numpy(cnpy::npz_load(stream));
             spdlog::debug("Loaded data from {}", task.data_path());
             task.clear_error_msg();
-            m_active_task =
-                make_unique_active_task_variant<ActiveSwallowLabellingTaskView>(task, data);
+            m_active_task = make_unique_active_task<ActiveSwallowLabellingTaskView>(task, data);
         } catch (const std::exception& e) {
             spdlog::error("Error loading data file from {}: {}", task.data_path(), e.what());
             task.set_error_msg(fmt::format("Error loading data file: {}", e.what()));
-            m_active_task =
-                make_unique_active_task_variant<ActiveSwallowLabellingTaskErrorView>(task);
+            m_active_task = make_unique_active_task<ActiveSwallowLabellingTaskErrorView>(task);
         }
     }
 
