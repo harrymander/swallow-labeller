@@ -5,6 +5,7 @@ import json
 import os.path
 import random
 from io import BytesIO
+from typing import Optional
 
 import numpy as np
 
@@ -84,7 +85,7 @@ def corrupt_task_data(data) -> dict[str, np.ndarray]:
 def gen_random_task(
     subject: int,
     data_dir: str,
-    action: str | None,
+    action: Optional[str],
 ) -> SwallowTask:
     test_type = random.choice(('tidal', 'cued'))
     repeatnum = random.randrange(3) + 1
