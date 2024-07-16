@@ -98,7 +98,7 @@ void Gui::stop()
 
 static const char *const TaskListWindowId = "##tasklistwindow";
 static const char *const MainWindowId = "##mainwindow";
-static const char *const LabelSidebarWindowId = "##labelinfowindow";
+static const char *const LabelInfoWindowId = "##labelinfowindow";
 
 void Gui::draw()
 {
@@ -179,7 +179,7 @@ void Gui::setup_dockspace() const
 
             ImGui::DockBuilderDockWindow(TaskListWindowId, dock_tasklist);
             ImGui::DockBuilderDockWindow(MainWindowId, dock_main);
-            ImGui::DockBuilderDockWindow(LabelSidebarWindowId, dock_label_info);
+            ImGui::DockBuilderDockWindow(LabelInfoWindowId, dock_label_info);
             ImGui::DockBuilderFinish(id);
         } else {
             spdlog::debug("Not setting up dockspace since sizes already set in imgui.ini");
