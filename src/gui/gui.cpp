@@ -552,10 +552,12 @@ std::string task_info_str(const app::SwallowLabellingTask& task)
 
 void Gui::draw_task_list()
 {
+    m_task_list_text_filter.Draw("##task_info_list_filter");
+
     const auto& tasks = m_app.tasks();
     const std::size_t num_annotated = m_app.num_annotated_tasks();
     ImGui::Text(
-        ANNOTATED_TASK_ICON ICON_TEXT_SPACE "%zu task%s out of %zu annotated",
+        ANNOTATED_TASK_ICON ICON_TEXT_SPACE "Annotated: %zu task%s out of %zu",
         num_annotated,
         num_annotated == 1 ? "" : "s",
         tasks.size()
@@ -570,7 +572,6 @@ void Gui::draw_task_list()
     }
     ImGui::EndDisabled();
 
-    m_task_list_text_filter.Draw("Filter##task_info_list_filter");
     const std::size_t active_index = m_app.active_task_index();
     if (ImGui::BeginListBox("##task_info_list", {-1, -1})) {
         for (std::size_t i = 0; i < tasks.size(); i++) {
