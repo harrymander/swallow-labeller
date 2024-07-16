@@ -5,6 +5,7 @@
 #include "gui/font.hpp"
 #include "gui/widgets/plot-range-selector.hpp"
 #include "gui/widgets/plot-range.hpp"
+#include "gui/widgets/util.hpp"
 #include "util/util.hpp"
 #include "util/variant-visitor.hpp"
 
@@ -100,41 +101,44 @@ static const char *const TaskListWindowId = "##tasklistwindow";
 static const char *const MainWindowId = "##mainwindow";
 static const char *const LabelInfoWindowId = "##labelinfowindow";
 
-void Gui::draw()
+namespace {
+
+template <typename DrawFunc> void draw_window(const char *id, DrawFunc&& draw)
 {
     constexpr ImGuiWindowFlags WindowFlags =
         (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove
          | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus);
 
+    if (ImGui::Begin(id, nullptr, WindowFlags)) {
+        draw();
+    }
+    ImGui::End();
+}
+
+template <typename ShowFunc> void show_window(bool& open, ShowFunc&& show)
+{
+    if (open) {
+        show(&open);
+    }
+}
+
+}; // namespace
+
+void Gui::draw()
+{
     if (ImGui::BeginMainMenuBar()) {
         draw_menu_bar();
         ImGui::EndMainMenuBar();
     }
     setup_dockspace();
 
-    if (ImGui::Begin(TaskListWindowId, nullptr, WindowFlags)) {
-        draw_task_list();
-    }
-    ImGui::End();
+    draw_window(TaskListWindowId, [this]() { draw_task_list(); });
+    draw_window(MainWindowId, [this]() { draw_main_window(); });
+    draw_window(LabelInfoWindowId, []() { /* TODO */ });
 
-    if (ImGui::Begin(MainWindowId, nullptr, WindowFlags)) {
-        draw_main_window();
-    }
-    ImGui::End();
-
-    if (ImGui::Begin(LabelInfoWindowId, nullptr, WindowFlags)) {
-    }
-    ImGui::End();
-
-    if (m_show_imgui_demo_window) {
-        ImGui::ShowDemoWindow(&m_show_imgui_demo_window);
-    }
-    if (m_show_imgui_metrics) {
-        ImGui::ShowMetricsWindow(&m_show_imgui_metrics);
-    }
-    if (m_show_implot_demo_window) {
-        ImPlot::ShowDemoWindow(&m_show_implot_demo_window);
-    }
+    show_window(m_show_imgui_demo_window, ImGui::ShowDemoWindow);
+    show_window(m_show_imgui_metrics, ImGui::ShowMetricsWindow);
+    show_window(m_show_implot_demo_window, ImPlot::ShowDemoWindow);
 
     m_first_draw = false;
 }
@@ -420,23 +424,15 @@ Gui::Plotter::Plotter(
     m_ylabel(std::move(ylabel)), m_cursor_format(cursor_format), m_xrange(xrange)
 {}
 
-bool Gui::Plotter::begin(const char *id, float height)
+template <typename DrawFunc> void Gui::Plotter::draw(const char *id, float height, DrawFunc&& draw)
 {
     constexpr ImPlotFlags Flags =
         ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus;
-    ImGui::PushID(id);
+    widgets::ScopedImID scoped_id(id);
     if (ImPlot::BeginPlot("##plot", {-1, height}, Flags)) {
-        return true;
+        draw();
+        ImPlot::EndPlot();
     }
-    ImGui::PopID();
-    return false;
-}
-
-// Only call if begin returns true!
-void Gui::Plotter::end()
-{
-    ImPlot::EndPlot();
-    ImGui::PopID();
 }
 
 void Gui::Plotter::plot_data(
@@ -467,14 +463,12 @@ void Gui::draw_plots(const SwallowTaskData& data)
         - ImGui::GetStyle().ItemSpacing.y;
 
     if (ImPlot::BeginAlignedPlots("##aligned_plots")) {
-        if (m_flow_plotter.begin("##flow_plot", plot_height)) {
+        m_flow_plotter.draw("##flow_plot", plot_height, [this, &data]() {
             m_flow_plotter.plot_data(data.flow_time, data.flow, data);
-            m_flow_plotter.end();
-        }
-        if (m_audio_plotter.begin("##audio_plot", plot_height)) {
+        });
+        m_audio_plotter.draw("##audio_plot", plot_height, [this, &data]() {
             m_audio_plotter.plot_data(data.audio_time, data.audio, data);
-            m_audio_plotter.end();
-        }
+        });
         ImPlot::EndAlignedPlots();
     }
 

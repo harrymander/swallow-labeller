@@ -38,11 +38,11 @@ private:
             std::string ylabel, fmt::format_string<double> cursor_format, widgets::PlotRange& xrange
         );
 
-        static bool begin(const char *id, float height);
+        template <typename DrawFunc> void draw(const char *id, float height, DrawFunc&& draw);
+
         void plot_data(
             const std::vector<double>& x, const std::vector<double>& y, const SwallowTaskData& data
         );
-        static void end();
 
     private:
         std::string m_ylabel;
