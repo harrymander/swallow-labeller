@@ -38,7 +38,7 @@ private:
             std::string ylabel, fmt::format_string<double> cursor_format, widgets::PlotRange& xrange
         );
 
-        static bool begin(const char *id);
+        static bool begin(const char *id, float height);
         void plot_data(
             const std::vector<double>& x, const std::vector<double>& y, const SwallowTaskData& data
         );

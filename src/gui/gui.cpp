@@ -406,12 +406,12 @@ Gui::Plotter::Plotter(
     m_ylabel(std::move(ylabel)), m_cursor_format(cursor_format), m_xrange(xrange)
 {}
 
-bool Gui::Plotter::begin(const char *id)
+bool Gui::Plotter::begin(const char *id, float height)
 {
     constexpr ImPlotFlags Flags =
         ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus;
     ImGui::PushID(id);
-    if (ImPlot::BeginPlot("##plot", {-1, 0}, Flags)) {
+    if (ImPlot::BeginPlot("##plot", {-1, height}, Flags)) {
         return true;
     }
     ImGui::PopID();
@@ -448,17 +448,19 @@ void Gui::Plotter::plot_data(
 void Gui::draw_plots(const SwallowTaskData& data)
 {
     constexpr float SummaryPlotHeight = 75;
+    constexpr unsigned int NumPlots = 2;
+    const float plot_height = (ImGui::GetContentRegionAvail().y - SummaryPlotHeight) / NumPlots
+        - ImGui::GetStyle().ItemSpacing.y;
 
     if (ImPlot::BeginAlignedPlots("##aligned_plots")) {
-        if (m_flow_plotter.begin("##flow_plot")) {
+        if (m_flow_plotter.begin("##flow_plot", plot_height)) {
             m_flow_plotter.plot_data(data.flow_time, data.flow, data);
             m_flow_plotter.end();
         }
-        if (m_audio_plotter.begin("##audio_plot")) {
+        if (m_audio_plotter.begin("##audio_plot", plot_height)) {
             m_audio_plotter.plot_data(data.audio_time, data.audio, data);
             m_audio_plotter.end();
         }
-
         ImPlot::EndAlignedPlots();
     }
 
