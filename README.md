@@ -25,6 +25,6 @@ The following command uses vcpkg to install `zlib`, so the `vcpkg` submodule
 must be cloned.
 
 ```
-cmake --preset windows
+cmake --preset windows-static
 cmake --build build --config Release --parallel
 ```
