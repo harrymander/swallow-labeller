@@ -1,13 +1,14 @@
-#include <array>
 #define IMGUI_DEFINE_MATH_OPERATORS
 
-#include "app/app.hpp"
 #include "gui.hpp"
+
+#include "app/app.hpp"
 #include "gui/font.hpp"
 #include "gui/widgets/plot-range-selector.hpp"
 #include "gui/widgets/plot-range.hpp"
 #include "gui/widgets/radio-button-enum.hpp"
 #include "gui/widgets/util.hpp"
+#include "models/time-range.hpp"
 #include "util/util.hpp"
 #include "util/variant-visitor.hpp"
 
@@ -19,6 +20,7 @@
 #include <spdlog/fmt/std.h>
 #include <spdlog/spdlog.h>
 
+#include <array>
 #include <cstdlib>
 #include <filesystem>
 #include <variant>
@@ -237,7 +239,7 @@ void Gui::draw_main_window()
     );
 
     VariantVisitor{
-        [this](const app::ActiveSwallowLabellingTaskView& task) { draw_plots(task); },
+        [this](app::ActiveSwallowLabellingTaskView& task) { draw_plots(task); },
         [this](const app::ActiveSwallowLabellingTaskErrorView& error) {
             ImGui::Text(ERR_ICON ICON_TEXT_SPACE "%s", error.error_msg().c_str());
             if (ImGui::Button("Retry...")) {
@@ -436,18 +438,25 @@ void Gui::on_new_active_task(const app::App::ActiveTaskVariant& new_task)
 {
     constexpr double EventBufferSecs = 6;
 
-    m_plot_summary_range = VariantVisitor{
-        [](const app::ActiveSwallowLabellingTaskView& task) -> widgets::PlotRange {
+    VariantVisitor{
+        [this](const app::ActiveSwallowLabellingTaskView& task) {
             const auto& info = task.info();
             const auto& time = task.data().flow_time;
-            return widgets::PlotRange{
+            m_plot_summary_range = {
                 std::max(info.event_range_secs.start - EventBufferSecs, time.front()),
                 std::min(info.event_range_secs.end + EventBufferSecs, time.back()),
             };
+
+            const auto *apnea_range = task.swallow_anpea_range();
+            if (apnea_range) {
+                m_apnea_temp_range = {apnea_range->start, apnea_range->end};
+            } else {
+                m_apnea_temp_range = {NAN, NAN};
+            }
         },
-        [this](const app::ActiveSwallowLabellingTaskErrorView&) -> widgets::PlotRange {
+        [this](const app::ActiveSwallowLabellingTaskErrorView&) {
             m_plot_summary_selector.reset();
-            return widgets::PlotRange{NAN, NAN};
+            m_plot_summary_range = {NAN, NAN};
         },
     }(new_task);
 
@@ -493,28 +502,19 @@ void Gui::Plotter::plot_data(
     draw_plot_delta_selector("##delta_selector", m_delta_selector, DeltaSelectorColor);
 }
 
-void Gui::draw_plots(const app::ActiveSwallowLabellingTaskView& task_view)
+void Gui::draw_plots(app::ActiveSwallowLabellingTaskView& task_view)
 {
     constexpr float SummaryPlotHeight = 75;
     constexpr unsigned int NumPlots = 2;
     const float plot_height = (ImGui::GetContentRegionAvail().y - SummaryPlotHeight) / NumPlots
         - ImGui::GetStyle().ItemSpacing.y;
 
-    const auto& data = task_view.data();
     if (ImPlot::BeginAlignedPlots("##aligned_plots")) {
-        m_flow_plotter.draw("##flow_plot", plot_height, [this, &data, &task_view]() {
-            m_flow_plotter.plot_data(data.flow_time, data.flow, data);
-            if (task_view.can_add_new_swallow_apnea_range()) {
-                add_plot_text(HINT_ICON ICON_TEXT_SPACE
-                              "Hold Ctrl and left click and drag to add apnea label");
-            }
+        m_flow_plotter.draw("##flow_plot", plot_height, [this, &task_view]() {
+            draw_flow_plot(task_view);
         });
-        m_audio_plotter.draw("##audio_plot", plot_height, [this, &data, &task_view]() {
-            m_audio_plotter.plot_data(data.audio_time, data.audio, data);
-            if (task_view.can_add_new_ear_click_range()) {
-                add_plot_text(HINT_ICON ICON_TEXT_SPACE
-                              "Hold Ctrl and left click and drag to add ear click label(s)");
-            }
+        m_audio_plotter.draw("##audio_plot", plot_height, [this, &task_view]() {
+            draw_audio_plot(task_view);
         });
         ImPlot::EndAlignedPlots();
     }
@@ -523,9 +523,70 @@ void Gui::draw_plots(const app::ActiveSwallowLabellingTaskView& task_view)
         constexpr ImPlotAxisFlags AxFlags = ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_AutoFit;
         ImPlot::SetupAxes(nullptr, nullptr, AxFlags, AxFlags);
         draw_plot_summary_selector();
+        const auto& data = task_view.data();
         plot_line("##summary_flow_plot_line", data.flow_time, data.flow);
         plot_event("##summary_event", data);
         ImPlot::EndPlot();
+    }
+}
+
+namespace {
+
+void draw_plot_time_range(const models::TimeRange& range, const ImColor& color)
+{
+    widgets::draw_plot_range(range.start, range.end, color);
+}
+
+}; // namespace
+
+void Gui::draw_flow_plot(app::ActiveSwallowLabellingTaskView& task_view)
+{
+    static constexpr ImColor ApneaSelectingColor = ImColor(1.0F, 1.0F, 0.0F, 0.1F);
+    static constexpr ImColor ApneaSelectedColor = ImColor(1.0F, 1.0F, 0.0F, 0.4F);
+
+    const auto& data = task_view.data();
+    m_flow_plotter.plot_data(data.flow_time, data.flow, data);
+    if (task_view.can_add_new_swallow_apnea_range()) {
+        add_plot_text(HINT_ICON ICON_TEXT_SPACE
+                      "Hold Ctrl and left click and drag to add apnea label");
+    }
+
+    if (task_view.can_add_new_swallow_apnea_range()) {
+        const auto *selecting_range = m_apnea_range_selector.range();
+        if (selecting_range) {
+            widgets::draw_plot_range(*selecting_range, ApneaSelectingColor);
+        }
+        auto new_range = m_apnea_range_selector.update(
+            "##apnea_range_selector", 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl
+        );
+        if (new_range) {
+            task_view.add_swallow_apnea_range(new_range->start, new_range->end);
+        }
+    }
+
+    const auto *range = task_view.swallow_anpea_range();
+    if (range) {
+        if (task_view.can_edit_swallow_apnea_range()) {
+            if (!m_apnea_range_dragger.is_editing()) {
+                m_apnea_temp_range = {range->start, range->end};
+            }
+            widgets::draw_plot_range(m_apnea_temp_range, ApneaSelectedColor);
+            if (m_apnea_range_dragger.update("##apnea_range_dragger", m_apnea_temp_range)) {
+                task_view.set_swallow_apnea_range(m_apnea_temp_range.start, m_apnea_temp_range.end);
+            }
+        } else {
+            draw_plot_time_range(*range, ApneaSelectedColor);
+        }
+    }
+}
+
+void Gui::draw_audio_plot(app::ActiveSwallowLabellingTaskView& task_view)
+{
+    const auto& data = task_view.data();
+    m_audio_plotter.plot_data(data.audio_time, data.audio, data);
+    if (task_view.can_add_new_ear_click_range()) {
+        add_plot_text(HINT_ICON ICON_TEXT_SPACE
+                      "Hold Ctrl and left click and drag to add ear click label(s)");
     }
 }
 

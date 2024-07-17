@@ -77,6 +77,13 @@ private:
     Plotter m_flow_plotter;
     Plotter m_audio_plotter;
 
+    widgets::PlotRangeSelector m_apnea_range_selector;
+    widgets::PlotRange m_apnea_temp_range = {NAN, NAN};
+    widgets::PlotRangeDragger m_apnea_range_dragger;
+
+    widgets::PlotRangeSelector m_earclick_range_selector;
+    widgets::PlotRangeDragger m_earclick_range_dragger;
+
     void setup_imgui_ini();
     void setup_dockspace() const;
     void draw_main_window();
@@ -84,7 +91,9 @@ private:
     void draw_menu_bar();
     static void draw_debug_info();
 
-    void draw_plots(const app::ActiveSwallowLabellingTaskView& task_view);
+    void draw_plots(app::ActiveSwallowLabellingTaskView& task_view);
+    void draw_flow_plot(app::ActiveSwallowLabellingTaskView& task_view);
+    void draw_audio_plot(app::ActiveSwallowLabellingTaskView& task_view);
     void draw_plot_summary_selector();
     void on_new_active_task(const app::App::ActiveTaskVariant& new_task);
 

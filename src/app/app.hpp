@@ -104,6 +104,19 @@ public:
     [[nodiscard]] bool can_add_new_swallow_apnea_range() const;
     [[nodiscard]] bool can_edit_swallow_apnea_range() const;
     [[nodiscard]] std::optional<std::string_view> swallow_apnea_label_error() const;
+    [[nodiscard]] const models::TimeRange *swallow_anpea_range() const;
+    void set_swallow_apnea_range(models::TimeRange range);
+    void add_swallow_apnea_range(models::TimeRange range);
+
+    void set_swallow_apnea_range(double start, double end)
+    {
+        set_swallow_apnea_range({start, end});
+    }
+
+    void add_swallow_apnea_range(double start, double end)
+    {
+        add_swallow_apnea_range({start, end});
+    }
 
     [[nodiscard]] EarClickAnnotationStatus ear_click_annotation_status() const
     {

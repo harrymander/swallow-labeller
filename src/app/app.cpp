@@ -8,6 +8,7 @@
 #include <fmt/core.h>
 
 #include <cmath>
+#include <cstddef>
 #include <exception>
 #include <filesystem>
 #include <memory>
@@ -166,17 +167,16 @@ namespace {
 
 }; // namespace
 
-bool ActiveSwallowLabellingTaskView::can_add_new_swallow_apnea_range() const
-{
-    return (
-        apnea_status_is_src_pattern(m_swallow_apnea_status)
-        && timerange_allnan(m_swallow_apnea_range)
-    );
-}
-
 bool ActiveSwallowLabellingTaskView::can_edit_swallow_apnea_range() const
 {
-    return apnea_status_is_src_pattern(m_swallow_apnea_status);
+    return apnea_status_is_src_pattern(m_swallow_apnea_status)
+        && !timerange_allnan(m_swallow_apnea_range);
+}
+
+bool ActiveSwallowLabellingTaskView::can_add_new_swallow_apnea_range() const
+{
+    return apnea_status_is_src_pattern(m_swallow_apnea_status)
+        && timerange_allnan(m_swallow_apnea_range);
 }
 
 std::optional<std::string_view> ActiveSwallowLabellingTaskView::swallow_apnea_label_error() const
@@ -200,6 +200,35 @@ std::optional<std::string_view> ActiveSwallowLabellingTaskView::earclick_label_e
     }
 
     return std::nullopt;
+}
+
+const models::TimeRange *ActiveSwallowLabellingTaskView::swallow_anpea_range() const
+{
+    if (can_edit_swallow_apnea_range()) {
+        return &m_swallow_apnea_range;
+    }
+
+    return nullptr;
+}
+
+void ActiveSwallowLabellingTaskView::set_swallow_apnea_range(models::TimeRange range)
+{
+    if (can_edit_swallow_apnea_range()) {
+        m_swallow_apnea_range = range;
+        spdlog::debug("Set swallow apnea range to: [{}, {}]", range.start, range.end);
+    } else {
+        spdlog::error("Cannot set swallow apnea range");
+    }
+}
+
+void ActiveSwallowLabellingTaskView::add_swallow_apnea_range(models::TimeRange range)
+{
+    if (can_add_new_swallow_apnea_range()) {
+        m_swallow_apnea_range = range;
+        spdlog::debug("Set swallow apnea range to: [{}, {}]", range.start, range.end);
+    } else {
+        spdlog::error("Cannot add swallow apnea range");
+    }
 }
 
 }; // namespace recap::labeller::app
