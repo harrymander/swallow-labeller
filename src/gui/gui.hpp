@@ -98,7 +98,9 @@ private:
     void draw_plots(app::ActiveSwallowLabellingTaskView& task_view);
     void draw_flow_plot(app::ActiveSwallowLabellingTaskView& task_view);
     void draw_apnea_label_region(
-        const app::ActiveSwallowLabellingTaskView& task_view, float height = 0
+        const app::ActiveSwallowLabellingTaskView& task_view,
+        float height = 0,
+        bool selected_color = false
     ) const;
     void draw_audio_plot(app::ActiveSwallowLabellingTaskView& task_view);
     void draw_plot_summary_selector();
@@ -110,7 +112,9 @@ private:
         const std::vector<app::EarClickLabel>& labels
     );
     void draw_earclick_label_regions(
-        const app::ActiveSwallowLabellingTaskView& task_view, float height = 0
+        const app::ActiveSwallowLabellingTaskView& task_view,
+        float height = 0,
+        bool selected_color = false
     ) const;
 };
 
