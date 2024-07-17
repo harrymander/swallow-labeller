@@ -30,11 +30,10 @@ std::vector<SwallowLabellingTask> labelling_tasks(
 )
 {
     std::vector<SwallowLabellingTask> tasks;
+    tasks.reserve(tasks_info.size());
     for (const auto& info : tasks_info) {
-        const models::SwallowAnnotation *annotation =
-            annotation_store.get_annotation(info.get_id());
         tasks.emplace_back(
-            info, data_dir, annotation ? std::make_optional(*annotation) : std::nullopt
+            info, data_dir, annotation_store.get_annotation(info.get_id()) != nullptr
         );
     }
     return tasks;
@@ -43,11 +42,9 @@ std::vector<SwallowLabellingTask> labelling_tasks(
 }; // namespace
 
 SwallowLabellingTask::SwallowLabellingTask(
-    models::SwallowTaskInfo task_info,
-    const fs::path& data_dir,
-    std::optional<models::SwallowAnnotation> annotation
+    models::SwallowTaskInfo task_info, const fs::path& data_dir, bool is_annotated
 ) :
-    m_info(std::move(task_info)), m_annotation(std::move(annotation))
+    m_info(std::move(task_info)), m_is_annotated(is_annotated)
 {
     fs::path path = (data_dir / fs::path(m_info.npz_file.path)).make_preferred();
     m_data_path = path.string();

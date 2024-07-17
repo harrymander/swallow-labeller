@@ -24,9 +24,7 @@ namespace recap::labeller::app {
 class SwallowLabellingTask {
 public:
     SwallowLabellingTask(
-        models::SwallowTaskInfo task_info,
-        const std::filesystem::path& data_dir,
-        std::optional<models::SwallowAnnotation> annotation
+        models::SwallowTaskInfo task_info, const std::filesystem::path& data_dir, bool is_annotated
     );
 
     [[nodiscard]] const std::optional<std::string>& error_msg() const { return m_error_msg; }
@@ -35,21 +33,18 @@ public:
 
     [[nodiscard]] const std::string& data_path() const { return m_data_path; }
 
-    [[nodiscard]] bool is_annotated() const { return m_annotation.has_value(); }
-
-    [[nodiscard]] const std::optional<models::SwallowAnnotation>& annotation() const
-    {
-        return m_annotation;
-    }
+    [[nodiscard]] bool is_annotated() const { return m_is_annotated; }
 
     void set_error_msg(std::string str);
     void clear_error_msg();
+
+    void set_annotated(bool annotated) { m_is_annotated = annotated; }
 
 private:
     std::optional<std::string> m_error_msg = std::nullopt;
 
     models::SwallowTaskInfo m_info;
-    std::optional<models::SwallowAnnotation> m_annotation;
+    bool m_is_annotated;
     std::string m_data_path;
 };
 
