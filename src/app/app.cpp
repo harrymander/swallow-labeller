@@ -288,17 +288,19 @@ void ActiveSwallowLabellingTaskView::remove_ear_click_label(EarClickLabel::ID id
     }
 }
 
-void ActiveSwallowLabellingTaskView::add_ear_click_label(double start, double end)
+std::optional<EarClickLabel::ID>
+ActiveSwallowLabellingTaskView::add_ear_click_label(double start, double end)
 {
-    if (can_add_new_ear_click_range()) {
-        m_ear_click_labels.emplace_back(m_next_ear_click_label_id, models::TimeRange{start, end});
-        spdlog::debug(
-            "Added ear click with ID {}: [{}, {}]", m_next_ear_click_label_id, start, end
-        );
-        m_next_ear_click_label_id++;
-    } else {
+    if (!can_add_new_ear_click_range()) {
         spdlog::error("Cannot add ear click label");
+        return std::nullopt;
     }
+
+    const EarClickLabel::ID new_id = m_next_ear_click_label_id;
+    m_ear_click_labels.emplace_back(new_id, models::TimeRange{start, end});
+    spdlog::debug("Added ear click with ID {}: [{}, {}]", new_id, start, end);
+    m_next_ear_click_label_id++;
+    return new_id;
 }
 
 void ActiveSwallowLabellingTaskView::set_ear_click_label(

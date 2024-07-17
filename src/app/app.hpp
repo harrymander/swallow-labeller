@@ -2,6 +2,7 @@
 #define RECAP_LABELLER_APP_INCLUDE_HPP
 
 #include "app/annotation-store.hpp"
+#include "imgui.h"
 #include "models/annotation.hpp"
 #include "models/data.hpp"
 #include "models/task-info.hpp"
@@ -141,7 +142,7 @@ public:
 
     [[nodiscard]] const std::vector<EarClickLabel> *ear_click_labels() const;
     [[nodiscard]] const EarClickLabel *ear_click_label(EarClickLabel::ID id) const;
-    void add_ear_click_label(double start, double end);
+    std::optional<EarClickLabel::ID> add_ear_click_label(double start, double end);
     void set_ear_click_label(EarClickLabel::ID id, double start, double end);
     void remove_ear_click_label(EarClickLabel::ID id);
 

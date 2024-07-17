@@ -618,7 +618,10 @@ void Gui::draw_audio_plot(app::ActiveSwallowLabellingTaskView& task_view)
                 "##earclick_new_range_selector", 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl
             );
             if (new_range) {
-                task_view.add_ear_click_label(new_range->start, new_range->end);
+                auto new_id = task_view.add_ear_click_label(new_range->start, new_range->end);
+                if (new_id) {
+                    m_selected_ear_click_id = new_id;
+                }
             }
         }
     }
