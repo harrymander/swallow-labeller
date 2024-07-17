@@ -635,6 +635,7 @@ void Gui::draw_audio_plot(app::ActiveSwallowLabellingTaskView& task_view)
             }
         } else {
             spdlog::error("No range for ID = {}", *m_selected_ear_click_id);
+            m_selected_ear_click_id.reset();
         }
     }
 }
