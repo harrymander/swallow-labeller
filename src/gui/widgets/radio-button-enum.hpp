@@ -14,9 +14,8 @@ namespace recap::labeller::gui::widgets {
 template <class T> struct RadioButtonField;
 
 template <class T, class ConstIt>
-bool radio_button_enums(
-    const char *id, T& value, ConstIt begin, ConstIt end, bool horizontal = false
-)
+inline bool
+radio_button_enums(const char *id, T& value, ConstIt begin, ConstIt end, bool horizontal = false)
 {
     ScopedImID scoped_id(id);
     bool changed = false;
@@ -29,7 +28,8 @@ bool radio_button_enums(
         const bool pressed = ImGui::RadioButton(field.label, enabled);
         if (!enabled
             && (pressed
-                || (field.key != ImGuiKey_None && !item_disabled() && ImGui::Shortcut(field.key))))
+                || (field.key != ImGuiKey_None && !item_disabled()
+                    && ImGui::Shortcut(field.key, ImGuiInputFlags_RouteGlobal))))
         {
             value = field.value;
             changed = true;
@@ -53,7 +53,8 @@ template <class T> struct RadioButtonField {
 };
 
 template <class T, class Container>
-bool radio_button_enums(const char *id, T& value, const Container& options, bool horizontal = false)
+inline bool
+radio_button_enums(const char *id, T& value, const Container& options, bool horizontal = false)
 {
     return radio_button_enums(id, value, options.begin(), options.end(), horizontal);
 }
