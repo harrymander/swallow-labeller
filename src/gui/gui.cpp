@@ -537,32 +537,21 @@ void Gui::draw_plots(app::ActiveSwallowLabellingTaskView& task_view)
     }
 }
 
-namespace {
-
-void draw_plot_time_range(const models::TimeRange& range, const ImColor& color)
-{
-    widgets::draw_plot_range(range.start, range.end, color);
-}
-
-}; // namespace
-
 void Gui::draw_flow_plot(app::ActiveSwallowLabellingTaskView& task_view)
 {
-    static constexpr ImColor ApneaSelectingColor = ImColor(1.0F, 1.0F, 0.0F, 0.1F);
-    static constexpr ImColor ApneaSelectedColor = ImColor(1.0F, 1.0F, 0.0F, 0.4F);
-
     const auto& data = task_view.data();
     m_flow_plotter.plot_data(data.flow_time, data.flow, data);
+
+    if (task_view.can_add_new_ear_click_range() || task_view.can_edit_swallow_apnea_range()) {
+        draw_apnea_label_region(task_view);
+    }
+
     if (task_view.can_add_new_swallow_apnea_range()) {
         add_plot_text(HINT_ICON ICON_TEXT_SPACE
                       "Hold Ctrl and left click and drag to add apnea label");
     }
 
     if (task_view.can_add_new_swallow_apnea_range()) {
-        const auto *selecting_range = m_apnea_range_selector.range();
-        if (selecting_range) {
-            widgets::draw_plot_range(*selecting_range, ApneaSelectingColor);
-        }
         auto new_range = m_apnea_range_selector.update(
             "##apnea_range_selector", 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl
         );
@@ -572,17 +561,34 @@ void Gui::draw_flow_plot(app::ActiveSwallowLabellingTaskView& task_view)
     }
 
     const auto *range = task_view.swallow_anpea_range();
-    if (range) {
-        if (task_view.can_edit_swallow_apnea_range()) {
-            if (!m_apnea_range_dragger.is_editing()) {
-                m_apnea_temp_range = {range->start, range->end};
+    if (range && task_view.can_edit_swallow_apnea_range()) {
+        if (!m_apnea_range_dragger.is_editing()) {
+            m_apnea_temp_range = {range->start, range->end};
+        }
+        if (m_apnea_range_dragger.update("##apnea_range_dragger", m_apnea_temp_range)) {
+            task_view.set_swallow_apnea_range(m_apnea_temp_range.start, m_apnea_temp_range.end);
+        }
+    }
+}
+
+void Gui::draw_apnea_label_region(
+    const app::ActiveSwallowLabellingTaskView& task_view, float height
+) const
+{
+    static constexpr ImColor ApneaSelectingColor = ImColor(1.0F, 1.0F, 0.0F, 0.1F);
+    static constexpr ImColor ApneaSelectedColor = ImColor(1.0F, 1.0F, 0.0F, 0.4F);
+
+    const auto *selecting_range = m_apnea_range_selector.range();
+    if (selecting_range) {
+        widgets::draw_plot_range(*selecting_range, ApneaSelectingColor, height);
+    } else {
+        const auto *range = task_view.swallow_anpea_range();
+        if (range) {
+            if (m_apnea_range_dragger.is_editing()) {
+                widgets::draw_plot_range(m_apnea_temp_range, ApneaSelectedColor, height);
+            } else {
+                widgets::draw_plot_range(range->start, range->end, ApneaSelectedColor, height);
             }
-            widgets::draw_plot_range(m_apnea_temp_range, ApneaSelectedColor);
-            if (m_apnea_range_dragger.update("##apnea_range_dragger", m_apnea_temp_range)) {
-                task_view.set_swallow_apnea_range(m_apnea_temp_range.start, m_apnea_temp_range.end);
-            }
-        } else {
-            draw_plot_time_range(*range, ApneaSelectedColor);
         }
     }
 }
