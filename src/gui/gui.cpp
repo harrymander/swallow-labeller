@@ -610,18 +610,13 @@ void Gui::draw_audio_plot(app::ActiveSwallowLabellingTaskView& task_view)
     if (task_view.can_add_new_ear_click_range()) {
         add_plot_text(HINT_ICON ICON_TEXT_SPACE
                       "Hold Ctrl and left click and drag to add ear click label(s)");
-
-        if (m_selected_ear_click_id.has_value()) {
-            m_earclick_range_selector.reset();
-        } else {
-            auto new_range = m_earclick_range_selector.update(
-                "##earclick_new_range_selector", 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl
-            );
-            if (new_range) {
-                auto new_id = task_view.add_ear_click_label(new_range->start, new_range->end);
-                if (new_id) {
-                    m_selected_ear_click_id = new_id;
-                }
+        auto new_range = m_earclick_range_selector.update(
+            "##earclick_new_range_selector", 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl
+        );
+        if (new_range) {
+            auto new_id = task_view.add_ear_click_label(new_range->start, new_range->end);
+            if (new_id) {
+                m_selected_ear_click_id = new_id;
             }
         }
     }
