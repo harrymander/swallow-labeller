@@ -94,6 +94,11 @@ inline double plot_pixels_to_xaxis(float x)
     return ImPlot::GetCurrentPlot()->XAxis(0).PixelsToPlot(x);
 }
 
+inline bool global_shortcut(ImGuiKeyChord chord)
+{
+    return ImGui::Shortcut(chord, ImGuiInputFlags_RouteGlobal);
+}
+
 }; // namespace recap::labeller::gui::widgets
 
 #endif // RECAP_LABELLER_IMGUI_UTIL_HPP_INCLUDE

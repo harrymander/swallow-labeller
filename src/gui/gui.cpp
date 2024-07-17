@@ -829,7 +829,7 @@ void Gui::draw_debug_info()
 
 bool shortcut_toggle(ImGuiKeyChord chord, bool& val)
 {
-    if (ImGui::Shortcut(chord)) {
+    if (widgets::global_shortcut(chord)) {
         val = !val;
         return true;
     }
@@ -857,7 +857,7 @@ void draw_swallow_apnea_annotation_selection(app::ActiveSwallowLabellingTaskView
         }};
     for (const auto& opt : src_options) {
         bool selected = opt.value == status;
-        if (ImGui::RadioButton(opt.label, selected) || ImGui::Shortcut(opt.key)) {
+        if (ImGui::RadioButton(opt.label, selected) || widgets::global_shortcut(opt.key)) {
             if (!selected) {
                 status = opt.value;
                 status_changed = true;

@@ -28,8 +28,7 @@ radio_button_enums(const char *id, T& value, ConstIt begin, ConstIt end, bool ho
         const bool pressed = ImGui::RadioButton(field.label, enabled);
         if (!enabled
             && (pressed
-                || (field.key != ImGuiKey_None && !item_disabled()
-                    && ImGui::Shortcut(field.key, ImGuiInputFlags_RouteGlobal))))
+                || (field.key != ImGuiKey_None && !item_disabled() && global_shortcut(field.key))))
         {
             value = field.value;
             changed = true;
