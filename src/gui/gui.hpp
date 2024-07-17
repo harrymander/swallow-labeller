@@ -110,7 +110,7 @@ private:
         const std::vector<app::EarClickLabel>& labels
     );
     void draw_earclick_label_regions(
-        const std::vector<app::EarClickLabel>& labels, float height = 0
+        const app::ActiveSwallowLabellingTaskView& task_view, float height = 0
     ) const;
 };
 

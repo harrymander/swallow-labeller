@@ -32,6 +32,7 @@
 #define ANNOTATED_TASK_ICON ICON_FA_SQUARE_CHECK
 #define HINT_ICON ICON_FA_LIGHTBULB
 #define ICON_TEXT_SPACE "  "
+constexpr float LabelSummaryHeight = 8; // Same as default ImPlotStyle::DigitalBitHeight
 
 namespace recap::labeller::gui {
 
@@ -542,9 +543,8 @@ void Gui::draw_flow_plot(app::ActiveSwallowLabellingTaskView& task_view)
     const auto& data = task_view.data();
     m_flow_plotter.plot_data(data.flow_time, data.flow, data);
 
-    if (task_view.can_add_new_ear_click_range() || task_view.can_edit_swallow_apnea_range()) {
-        draw_apnea_label_region(task_view);
-    }
+    draw_apnea_label_region(task_view);
+    draw_earclick_label_regions(task_view, LabelSummaryHeight);
 
     if (task_view.can_add_new_swallow_apnea_range()) {
         add_plot_text(HINT_ICON ICON_TEXT_SPACE
@@ -578,6 +578,10 @@ void Gui::draw_apnea_label_region(
     static constexpr ImColor ApneaSelectingColor = ImColor(1.0F, 1.0F, 0.0F, 0.1F);
     static constexpr ImColor ApneaSelectedColor = ImColor(1.0F, 1.0F, 0.0F, 0.4F);
 
+    if (!(task_view.can_add_new_ear_click_range() || task_view.can_edit_swallow_apnea_range())) {
+        return;
+    }
+
     const auto *selecting_range = m_apnea_range_selector.range();
     if (selecting_range) {
         widgets::draw_plot_range(*selecting_range, ApneaSelectingColor, height);
@@ -598,10 +602,8 @@ void Gui::draw_audio_plot(app::ActiveSwallowLabellingTaskView& task_view)
     const auto& data = task_view.data();
     m_audio_plotter.plot_data(data.audio_time, data.audio, data);
 
-    const auto *labels = task_view.ear_click_labels();
-    if (labels) {
-        draw_earclick_label_regions(*labels);
-    }
+    draw_earclick_label_regions(task_view);
+    draw_apnea_label_region(task_view, LabelSummaryHeight);
 
     if (task_view.can_add_new_ear_click_range()) {
         add_plot_text(HINT_ICON ICON_TEXT_SPACE
@@ -637,14 +639,20 @@ void Gui::draw_audio_plot(app::ActiveSwallowLabellingTaskView& task_view)
     }
 }
 
-void Gui::draw_earclick_label_regions(const std::vector<app::EarClickLabel>& labels, float height)
-    const
+void Gui::draw_earclick_label_regions(
+    const app::ActiveSwallowLabellingTaskView& task_view, float height
+) const
 {
     constexpr ImColor Color = ImColor(0.0F, 1.0F, 0.0F, 0.1F);
     constexpr ImColor ColorHovered = ImColor(0.0F, 1.0F, 0.0F, 0.25F);
     constexpr ImColor ColorSelected = ImColor(0.0F, 1.0F, 0.0F, 0.4F);
 
-    for (const auto& label : labels) {
+    const auto *labels = task_view.ear_click_labels();
+    if (labels == nullptr) {
+        return;
+    }
+
+    for (const auto& label : *labels) {
         if (m_earclick_range_dragger.is_editing() && m_selected_ear_click_id == label.id)
             [[unlikely]] {
             widgets::draw_plot_range(m_earclick_temp_range, ColorSelected, height);
@@ -669,6 +677,7 @@ void Gui::draw_earclick_label_regions(const std::vector<app::EarClickLabel>& lab
 void Gui::draw_plot_summary_selector()
 {
     constexpr ImColor SummaryColor = {.5F, .5F, .5F, .6F};
+
     (void) m_plot_summary_selector.update("##plot_summary_selector");
     const widgets::PlotRange *new_range = m_plot_summary_selector.range();
     if (new_range) {
@@ -677,6 +686,13 @@ void Gui::draw_plot_summary_selector()
         (void) m_plot_summary_dragger.update("##plot_summary_dragger", m_plot_summary_range);
     }
     widgets::draw_plot_range(m_plot_summary_range, SummaryColor);
+
+    const auto *task_view =
+        std::get_if<app::ActiveSwallowLabellingTaskView>(&m_app.active_task_view());
+    if (task_view) {
+        draw_apnea_label_region(*task_view, LabelSummaryHeight);
+        draw_earclick_label_regions(*task_view, LabelSummaryHeight);
+    }
 }
 
 void Gui::set_scaling_factor(float scaling_factor)
