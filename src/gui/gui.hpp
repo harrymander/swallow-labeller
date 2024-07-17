@@ -10,6 +10,7 @@
 #include <fmt/core.h>
 #include <imgui.h>
 
+#include <optional>
 #include <string>
 
 namespace recap::labeller::gui {
@@ -83,6 +84,9 @@ private:
 
     widgets::PlotRangeSelector m_earclick_range_selector;
     widgets::PlotRangeDragger m_earclick_range_dragger;
+    widgets::PlotRange m_earclick_temp_range = {NAN, NAN};
+    std::optional<app::EarClickLabel::ID> m_selected_ear_click_id = std::nullopt;
+    std::optional<app::EarClickLabel::ID> m_hovered_ear_click_id = std::nullopt;
 
     void setup_imgui_ini();
     void setup_dockspace() const;
@@ -98,6 +102,13 @@ private:
     void on_new_active_task(const app::App::ActiveTaskVariant& new_task);
 
     void draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view);
+    void draw_earclick_labels_listbox(
+        app::ActiveSwallowLabellingTaskView& task_view,
+        const std::vector<app::EarClickLabel>& labels
+    );
+    void draw_earclick_label_regions(
+        const std::vector<app::EarClickLabel>& labels, float height = 0
+    ) const;
 };
 
 }; // namespace recap::labeller::gui

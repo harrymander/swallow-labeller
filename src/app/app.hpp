@@ -10,6 +10,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include <cstddef>
 #include <filesystem>
 #include <memory>
 #include <optional>
@@ -81,6 +82,13 @@ enum class EarClickAnnotationStatus {
     NoEarClick,
 };
 
+struct EarClickLabel {
+    using ID = std::size_t;
+
+    ID id;
+    models::TimeRange range;
+};
+
 class ActiveSwallowLabellingTaskView {
 public:
     [[nodiscard]] const SwallowTaskData& data() const { return m_data; }
@@ -128,13 +136,14 @@ public:
         m_ear_click_status = status;
     }
 
-    [[nodiscard]] const std::vector<models::TimeRange>& ear_click_ranges() const
-    {
-        return m_ear_click_ranges;
-    }
-
     [[nodiscard]] bool can_add_new_ear_click_range() const;
     [[nodiscard]] std::optional<std::string_view> earclick_label_error() const;
+
+    [[nodiscard]] const std::vector<EarClickLabel> *ear_click_labels() const;
+    [[nodiscard]] const EarClickLabel *ear_click_label(EarClickLabel::ID id) const;
+    void add_ear_click_label(double start, double end);
+    void set_ear_click_label(EarClickLabel::ID id, double start, double end);
+    void remove_ear_click_label(EarClickLabel::ID id);
 
 private:
     friend class App;
@@ -149,7 +158,8 @@ private:
     models::TimeRange m_swallow_apnea_range = {NAN, NAN};
 
     EarClickAnnotationStatus m_ear_click_status = EarClickAnnotationStatus::Ok;
-    std::vector<models::TimeRange> m_ear_click_ranges;
+    std::vector<EarClickLabel> m_ear_click_labels;
+    EarClickLabel::ID m_next_ear_click_label_id = 0;
 };
 
 class App {

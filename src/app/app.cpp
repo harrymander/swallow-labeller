@@ -7,6 +7,7 @@
 
 #include <fmt/core.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <exception>
@@ -195,7 +196,7 @@ bool ActiveSwallowLabellingTaskView::can_add_new_ear_click_range() const
 
 std::optional<std::string_view> ActiveSwallowLabellingTaskView::earclick_label_error() const
 {
-    if (can_add_new_ear_click_range() && m_ear_click_ranges.empty()) {
+    if (can_add_new_ear_click_range() && m_ear_click_labels.empty()) {
         return "Missing ear click label(s)";
     }
 
@@ -228,6 +229,94 @@ void ActiveSwallowLabellingTaskView::add_swallow_apnea_range(models::TimeRange r
         spdlog::debug("Set swallow apnea range to: [{}, {}]", range.start, range.end);
     } else {
         spdlog::error("Cannot add swallow apnea range");
+    }
+}
+
+namespace {
+
+std::vector<EarClickLabel>::const_iterator
+find_ear_click(const std::vector<EarClickLabel>& ear_clicks, EarClickLabel::ID id)
+{
+    auto it = std::lower_bound(
+        ear_clicks.begin(),
+        ear_clicks.end(),
+        id,
+        [](const auto& l1, const auto val) { return l1.id < val; }
+    );
+    if (it != ear_clicks.end() && it->id == id) {
+        return it;
+    }
+    return ear_clicks.end();
+}
+
+}; // namespace
+
+const std::vector<EarClickLabel> *ActiveSwallowLabellingTaskView::ear_click_labels() const
+{
+    return can_add_new_ear_click_range() ? &m_ear_click_labels : nullptr;
+}
+
+const EarClickLabel *ActiveSwallowLabellingTaskView::ear_click_label(EarClickLabel::ID id) const
+{
+    if (!can_add_new_ear_click_range()) {
+        return nullptr;
+    }
+
+    const auto it = find_ear_click(m_ear_click_labels, id);
+    if (it == m_ear_click_labels.end()) {
+        spdlog::error("No ear click label with ID {}", id);
+        return nullptr;
+    }
+
+    return &(*it);
+}
+
+void ActiveSwallowLabellingTaskView::remove_ear_click_label(EarClickLabel::ID id)
+{
+    if (!can_add_new_ear_click_range()) {
+        spdlog::error("Cannot delete ear click labels!");
+        return;
+    }
+
+    const auto it = find_ear_click(m_ear_click_labels, id);
+    if (it == m_ear_click_labels.end()) {
+        spdlog::error("No ear click label with ID {} - nothing to remove!", id);
+    } else {
+        const auto& range = it->range;
+        m_ear_click_labels.erase(it);
+        spdlog::debug("Removed ear click label with ID {}: [{}, {}]", id, range.start, range.end);
+    }
+}
+
+void ActiveSwallowLabellingTaskView::add_ear_click_label(double start, double end)
+{
+    if (can_add_new_ear_click_range()) {
+        m_ear_click_labels.emplace_back(m_next_ear_click_label_id, models::TimeRange{start, end});
+        spdlog::debug(
+            "Added ear click with ID {}: [{}, {}]", m_next_ear_click_label_id, start, end
+        );
+        m_next_ear_click_label_id++;
+    } else {
+        spdlog::error("Cannot add ear click label");
+    }
+}
+
+void ActiveSwallowLabellingTaskView::set_ear_click_label(
+    EarClickLabel::ID id, double start, double end
+)
+{
+    if (!can_add_new_ear_click_range()) {
+        spdlog::error("Cannot change ear click labels");
+        return;
+    }
+
+    const auto const_it = find_ear_click(m_ear_click_labels, id);
+    if (const_it == m_ear_click_labels.end()) {
+        spdlog::error("No ear click label with ID {} - nothing to change!", id);
+    } else {
+        auto it = m_ear_click_labels.begin() + (const_it - m_ear_click_labels.cbegin());
+        it->range = {start, end};
+        spdlog::debug("Changed ear click label with ID {}: [{}, {}]", id, start, end);
     }
 }
 

@@ -9,6 +9,7 @@
 #include "gui/widgets/radio-button-enum.hpp"
 #include "gui/widgets/util.hpp"
 #include "models/time-range.hpp"
+#include "util/optutil.hpp"
 #include "util/util.hpp"
 #include "util/variant-visitor.hpp"
 
@@ -453,16 +454,22 @@ void Gui::on_new_active_task(const app::App::ActiveTaskVariant& new_task)
             } else {
                 m_apnea_temp_range = {NAN, NAN};
             }
+            spdlog::debug(
+                "Set new summary range to [{}, {}]",
+                m_plot_summary_range.start,
+                m_plot_summary_range.end
+            );
         },
         [this](const app::ActiveSwallowLabellingTaskErrorView&) {
             m_plot_summary_selector.reset();
             m_plot_summary_range = {NAN, NAN};
+            m_apnea_temp_range = {NAN, NAN};
         },
     }(new_task);
 
-    spdlog::debug(
-        "Set new summary range to [{}, {}]", m_plot_summary_range.start, m_plot_summary_range.end
-    );
+    m_earclick_temp_range = {NAN, NAN};
+    m_hovered_ear_click_id.reset();
+    m_selected_ear_click_id.reset();
 }
 
 Gui::Plotter::Plotter(
@@ -584,9 +591,72 @@ void Gui::draw_audio_plot(app::ActiveSwallowLabellingTaskView& task_view)
 {
     const auto& data = task_view.data();
     m_audio_plotter.plot_data(data.audio_time, data.audio, data);
+
+    const auto *labels = task_view.ear_click_labels();
+    if (labels) {
+        draw_earclick_label_regions(*labels);
+    }
+
     if (task_view.can_add_new_ear_click_range()) {
         add_plot_text(HINT_ICON ICON_TEXT_SPACE
                       "Hold Ctrl and left click and drag to add ear click label(s)");
+
+        if (m_selected_ear_click_id.has_value()) {
+            m_earclick_range_selector.reset();
+        } else {
+            auto new_range = m_earclick_range_selector.update(
+                "##earclick_new_range_selector", 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl
+            );
+            if (new_range) {
+                task_view.add_ear_click_label(new_range->start, new_range->end);
+            }
+        }
+    }
+
+    if (task_view.can_add_new_ear_click_range() && m_selected_ear_click_id.has_value()) {
+        const auto *range = task_view.ear_click_label(*m_selected_ear_click_id);
+        if (range) {
+            if (!m_earclick_range_dragger.is_editing()) {
+                m_earclick_temp_range = {range->range.start, range->range.end};
+            }
+            if (m_earclick_range_dragger.update("##earclick_range_dragger", m_earclick_temp_range))
+            {
+                task_view.set_ear_click_label(
+                    *m_selected_ear_click_id, m_earclick_temp_range.start, m_earclick_temp_range.end
+                );
+            }
+        } else {
+            spdlog::error("No range for ID = {}", *m_selected_ear_click_id);
+        }
+    }
+}
+
+void Gui::draw_earclick_label_regions(const std::vector<app::EarClickLabel>& labels, float height)
+    const
+{
+    constexpr ImColor Color = ImColor(0.0F, 1.0F, 0.0F, 0.1F);
+    constexpr ImColor ColorHovered = ImColor(0.0F, 1.0F, 0.0F, 0.25F);
+    constexpr ImColor ColorSelected = ImColor(0.0F, 1.0F, 0.0F, 0.4F);
+
+    for (const auto& label : labels) {
+        if (m_earclick_range_dragger.is_editing() && m_selected_ear_click_id == label.id)
+            [[unlikely]] {
+            widgets::draw_plot_range(m_earclick_temp_range, ColorSelected, height);
+        } else {
+            widgets::draw_plot_range(
+                label.range.start,
+                label.range.end,
+                m_selected_ear_click_id == label.id ?
+                    ColorSelected :
+                    (m_hovered_ear_click_id == label.id ? ColorHovered : Color),
+                height
+            );
+        }
+    }
+
+    const auto *selector_range = m_earclick_range_selector.range();
+    if (selector_range) {
+        widgets::draw_plot_range(*selector_range, Color, height);
     }
 }
 
@@ -831,6 +901,76 @@ void Gui::draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view)
     app::EarClickAnnotationStatus ear_click_status = task_view.ear_click_annotation_status();
     if (ear_click_annotation_status_radio(ear_click_status)) {
         task_view.set_ear_click_annotation_status(ear_click_status);
+    }
+    const auto *labels = task_view.ear_click_labels();
+    if (task_view.can_add_new_ear_click_range() && labels) {
+        if (labels->empty()) {
+            ImGui::TextWrapped(HINT_ICON ICON_TEXT_SPACE
+                               "No ear click labels - hold Ctrl and left click on audio plot to "
+                               "add one, or select the relevant option above");
+        } else {
+            widgets::ScopedImID scoped_id("##earclick_label_list");
+            if (ImGui::BeginListBox("##listbox", {-1, -1})) {
+                draw_earclick_labels_listbox(task_view, *labels);
+                ImGui::EndListBox();
+            }
+        }
+    }
+}
+
+void Gui::draw_earclick_labels_listbox(
+    app::ActiveSwallowLabellingTaskView& task_view, const std::vector<app::EarClickLabel>& labels
+)
+{
+    static const char *remove_button_str = ICON_FA_TRASH_CAN;
+    constexpr float ButtonCornerRadius = 5;
+    constexpr ImVec2 SelectableTextAlign = {0, 0.5};
+    widgets::ScopedImStyle styles{
+        {ImGuiStyleVar_SelectableTextAlign, SelectableTextAlign},
+        {ImGuiStyleVar_FrameRounding, ButtonCornerRadius},
+    };
+
+    const float label_height = ImGui::GetTextLineHeightWithSpacing();
+    const float label_width = ImGui::GetContentRegionAvail().x
+        - (ImGui::CalcTextSize(remove_button_str).x + 2 * ImGui::GetStyle().ItemSpacing.x);
+
+    std::optional<app::EarClickLabel::ID> id_to_remove = std::nullopt;
+    m_hovered_ear_click_id.reset();
+    for (const auto& label : labels) {
+        widgets::ScopedImID label_id_scope(static_cast<int>(label.id));
+        std::string str = fmt::format("Ear click {}", label.id);
+        const bool selected = optutil::has_value_and_equal(m_selected_ear_click_id, label.id);
+        if (ImGui::Selectable(str.c_str(), selected, 0, {label_width, label_height})) {
+            if (selected) {
+                spdlog::debug("De-selecting ear click label ID={}", label.id);
+                m_selected_ear_click_id.reset();
+            } else {
+                spdlog::debug("Selecting ear click label ID={}", label.id);
+                m_selected_ear_click_id = label.id;
+            }
+        }
+        if (ImGui::IsItemHovered()) {
+            m_hovered_ear_click_id = label.id;
+        }
+
+        ImGui::SameLine();
+        if (widgets::ButtonRed(remove_button_str)) {
+            id_to_remove = label.id;
+        }
+        if (ImGui::IsItemHovered()) {
+            m_hovered_ear_click_id = label.id;
+        }
+        ImGui::SetItemTooltip("Delete label");
+    }
+
+    if (id_to_remove.has_value()) {
+        task_view.remove_ear_click_label(*id_to_remove);
+        if (id_to_remove == m_selected_ear_click_id) {
+            m_selected_ear_click_id.reset();
+        }
+        if (id_to_remove == m_hovered_ear_click_id) {
+            m_hovered_ear_click_id.reset();
+        }
     }
 }
 
