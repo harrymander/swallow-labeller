@@ -159,7 +159,7 @@ private:
 
     EarClickAnnotationStatus m_ear_click_status = EarClickAnnotationStatus::Ok;
     std::vector<EarClickLabel> m_ear_click_labels;
-    EarClickLabel::ID m_next_ear_click_label_id = 0;
+    EarClickLabel::ID m_next_ear_click_label_id = 1;
 };
 
 class App {
