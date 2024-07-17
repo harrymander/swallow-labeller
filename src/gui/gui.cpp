@@ -960,7 +960,9 @@ void Gui::draw_earclick_labels_listbox(
     m_hovered_ear_click_id.reset();
     for (const auto& label : labels) {
         widgets::ScopedImID label_id_scope(static_cast<int>(label.id));
-        std::string str = fmt::format("Ear click {}", label.id);
+        std::string str = fmt::format(
+            "Ear click {} [{:.3f}, {:.3f} s]", label.id, label.range.start, label.range.end
+        );
         const bool selected = optutil::has_value_and_equal(m_selected_ear_click_id, label.id);
         if (ImGui::Selectable(str.c_str(), selected, 0, {label_width, label_height})) {
             if (selected) {
