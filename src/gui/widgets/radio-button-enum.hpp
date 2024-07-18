@@ -42,7 +42,7 @@ radio_button_enums(const char *id, T& value, ConstIt begin, ConstIt end, bool ho
 template <class T> struct RadioButtonField {
     static_assert(std::is_enum_v<T>, "T must be an enum");
 
-    RadioButtonField(const char *label, T value, ImGuiKey key = ImGuiKey_None) :
+    constexpr RadioButtonField(const char *label, T value, ImGuiKey key = ImGuiKey_None) :
         label(label), value(value), key(key)
     {}
 

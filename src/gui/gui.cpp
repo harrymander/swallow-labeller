@@ -848,14 +848,14 @@ void draw_swallow_apnea_annotation_selection(app::ActiveSwallowLabellingTaskView
     bool is_ambiguous = task_view.swallow_is_ambiguous();
     bool status_changed = false;
 
-    static std::array<widgets::RadioButtonField<app::SwallowApneaAnnotationStatus>, 4> src_options =
-        {{
-            {"ex-ex [1]", ExEx, ImGuiKey_1},
-            {"ex-in [2]", ExIn, ImGuiKey_2},
-            {"in-ex [3]", InEx, ImGuiKey_3},
-            {"in-in [4]", InIn, ImGuiKey_4},
-        }};
-    for (const auto& opt : src_options) {
+    using Option = widgets::RadioButtonField<app::SwallowApneaAnnotationStatus>;
+    constexpr std::array SrcOptions = {
+        Option("ex-ex [1]", ExEx, ImGuiKey_1),
+        Option("ex-in [2]", ExIn, ImGuiKey_2),
+        Option("in-ex [3]", InEx, ImGuiKey_3),
+        Option("in-in [4]", InIn, ImGuiKey_4),
+    };
+    for (const auto& opt : SrcOptions) {
         bool selected = opt.value == status;
         if (ImGui::RadioButton(opt.label, selected) || widgets::global_shortcut(opt.key)) {
             if (!selected) {
@@ -876,13 +876,12 @@ void draw_swallow_apnea_annotation_selection(app::ActiveSwallowLabellingTaskView
     }
 
     ImGui::Spacing();
-    static std::array<widgets::RadioButtonField<app::SwallowApneaAnnotationStatus>, 3>
-        other_options = {{
-            {"No swallow", NoSwallow},
-            {"Apnea cut-off", ApneaCutoff},
-            {"FlowError", FlowError},
-        }};
-    if (widgets::radio_button_enums("##other_options", status, other_options)) {
+    constexpr std::array OtherOptions = {
+        Option("No swallow", NoSwallow),
+        Option("Apnea cut-off", ApneaCutoff),
+        Option("FlowError", FlowError),
+    };
+    if (widgets::radio_button_enums("##other_options", status, OtherOptions)) {
         status_changed = true;
     }
 
@@ -894,12 +893,13 @@ void draw_swallow_apnea_annotation_selection(app::ActiveSwallowLabellingTaskView
 bool ear_click_annotation_status_radio(app::EarClickAnnotationStatus& status)
 {
     using enum app::EarClickAnnotationStatus;
-    static std::array<widgets::RadioButtonField<app::EarClickAnnotationStatus>, 3> options = {{
-        {"Ok [e]", Ok, ImGuiKey_E},
-        {"No ear click [w]", NoEarClick, ImGuiKey_W},
-        {"Audio error", AudioError},
-    }};
-    return widgets::radio_button_enums("##earclick_annotation_status", status, options);
+    using Option = widgets::RadioButtonField<app::EarClickAnnotationStatus>;
+    constexpr std::array Options = {
+        Option("Ok [e]", Ok, ImGuiKey_E),
+        Option("No ear click [w]", NoEarClick, ImGuiKey_W),
+        Option("Audio error", AudioError),
+    };
+    return widgets::radio_button_enums("##earclick_annotation_status", status, Options);
 }
 
 }; // namespace

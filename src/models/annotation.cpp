@@ -62,7 +62,7 @@ namespace {
  */
 template <typename E, std::size_t N> class EnumStrConverter {
 public:
-    explicit EnumStrConverter(std::array<std::pair<E, std::string_view>, N> items) noexcept :
+    explicit constexpr EnumStrConverter(std::array<std::pair<E, const char *>, N> items) noexcept :
         items{std::move(items)}
     {}
 
@@ -90,26 +90,26 @@ public:
     }
 
 private:
-    std::array<std::pair<E, std::string_view>, N> items;
+    std::array<std::pair<E, const char *>, N> items;
 };
 
-static const EnumStrConverter<SRCPattern, 4> SRCPatternStrConverter({{
-    {SRCPattern::ExEx, "ex-ex"},
-    {SRCPattern::ExIn, "ex-in"},
-    {SRCPattern::InEx, "in-ex"},
-    {SRCPattern::InIn, "in-in"},
-}});
+constexpr EnumStrConverter SRCPatternStrConverter{std::array{
+    std::make_pair(SRCPattern::ExEx, "ex-ex"),
+    std::make_pair(SRCPattern::ExIn, "ex-in"),
+    std::make_pair(SRCPattern::InEx, "in-ex"),
+    std::make_pair(SRCPattern::InIn, "in-in"),
+}};
 
-static const EnumStrConverter<SwallowApneaError, 3> ApneaErrorStrConverter({{
-    {SwallowApneaError::FlowError, "flow-error"},
-    {SwallowApneaError::NoSwallow, "no-swallow"},
-    {SwallowApneaError::ApneaCutoff, "apnea-cutoff"},
-}});
+constexpr EnumStrConverter ApneaErrorStrConverter{std::array{
+    std::make_pair(SwallowApneaError::FlowError, "flow-error"),
+    std::make_pair(SwallowApneaError::NoSwallow, "no-swallow"),
+    std::make_pair(SwallowApneaError::ApneaCutoff, "apnea-cutoff"),
+}};
 
-static const EnumStrConverter<EarClickError, 2> EarClickErrorStrConverter({{
-    {EarClickError::NoEarClick, "no-ear-click"},
-    {EarClickError::AudioError, "audio-error"},
-}});
+constexpr EnumStrConverter EarClickErrorStrConverter{std::array{
+    std::make_pair(EarClickError::NoEarClick, "no-ear-click"),
+    std::make_pair(EarClickError::AudioError, "audio-error"),
+}};
 
 }; // namespace
 
