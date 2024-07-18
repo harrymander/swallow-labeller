@@ -32,8 +32,10 @@ std::vector<SwallowLabellingTask> labelling_tasks(
     std::vector<SwallowLabellingTask> tasks;
     tasks.reserve(tasks_info.size());
     for (const auto& info : tasks_info) {
-        tasks.emplace_back(
-            info, data_dir, annotation_store.get_annotation(info.get_id()) != nullptr
+        tasks.emplace_back( // cppcheck-suppress useStlAlgorithm
+            info,
+            data_dir,
+            annotation_store.get_annotation(info.get_id()) != nullptr
         );
     }
     return tasks;
