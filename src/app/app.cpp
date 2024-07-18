@@ -165,10 +165,15 @@ namespace {
 
 }; // namespace
 
-bool ActiveSwallowLabellingTaskView::can_edit_swallow_apnea_range() const
+bool ActiveSwallowLabellingTaskView::can_set_swallow_apnea_range() const
 {
     return apnea_status_is_src_pattern(m_swallow_apnea_status)
         && !timerange_allnan(m_swallow_apnea_range);
+}
+
+bool ActiveSwallowLabellingTaskView::can_delete_swallow_apnea_range() const
+{
+    return can_set_swallow_apnea_range();
 }
 
 bool ActiveSwallowLabellingTaskView::can_add_new_swallow_apnea_range() const
@@ -202,7 +207,7 @@ std::optional<std::string_view> ActiveSwallowLabellingTaskView::earclick_label_e
 
 const models::TimeRange *ActiveSwallowLabellingTaskView::swallow_anpea_range() const
 {
-    if (can_edit_swallow_apnea_range()) {
+    if (can_set_swallow_apnea_range()) {
         return &m_swallow_apnea_range;
     }
 
@@ -211,7 +216,7 @@ const models::TimeRange *ActiveSwallowLabellingTaskView::swallow_anpea_range() c
 
 void ActiveSwallowLabellingTaskView::set_swallow_apnea_range(models::TimeRange range)
 {
-    if (can_edit_swallow_apnea_range()) {
+    if (can_set_swallow_apnea_range()) {
         m_swallow_apnea_range = range;
         spdlog::debug("Set swallow apnea range to: [{}, {}]", range.start, range.end);
     } else {
@@ -226,6 +231,20 @@ void ActiveSwallowLabellingTaskView::add_swallow_apnea_range(models::TimeRange r
         spdlog::debug("Set swallow apnea range to: [{}, {}]", range.start, range.end);
     } else {
         spdlog::error("Cannot add swallow apnea range");
+    }
+}
+
+void ActiveSwallowLabellingTaskView::delete_swallow_apnea_range()
+{
+    if (can_delete_swallow_apnea_range()) {
+        spdlog::debug(
+            "Deleted swallow apnea range: [{}, {}]",
+            m_swallow_apnea_range.start,
+            m_swallow_apnea_range.end
+        );
+        m_swallow_apnea_range = {NAN, NAN};
+    } else {
+        spdlog::error("Cannot delete swallow apnea range");
     }
 }
 

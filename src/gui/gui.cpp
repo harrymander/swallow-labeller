@@ -31,6 +31,7 @@
 #define DEBUG_INFO_ICON ICON_FA_GEAR
 #define ANNOTATED_TASK_ICON ICON_FA_SQUARE_CHECK
 #define HINT_ICON ICON_FA_LIGHTBULB
+#define DELETE_ICON ICON_FA_TRASH_CAN
 #define ICON_TEXT_SPACE "  "
 constexpr float LabelSummaryHeight = 8; // Same as default ImPlotStyle::DigitalBitHeight
 
@@ -561,7 +562,7 @@ void Gui::draw_flow_plot(app::ActiveSwallowLabellingTaskView& task_view)
     }
 
     const auto *range = task_view.swallow_anpea_range();
-    if (range && task_view.can_edit_swallow_apnea_range()) {
+    if (range && task_view.can_set_swallow_apnea_range()) {
         if (!m_apnea_range_dragger.is_editing()) {
             m_apnea_temp_range = {range->start, range->end};
         }
@@ -578,7 +579,7 @@ void Gui::draw_apnea_label_region(
     static constexpr ImColor SelectingColor = ImColor(1.0F, 1.0F, 0.0F, 0.1F);
     static constexpr ImColor SelectedColor = ImColor(1.0F, 1.0F, 0.0F, 0.4F);
 
-    if (!(task_view.can_add_new_ear_click_range() || task_view.can_edit_swallow_apnea_range())) {
+    if (!(task_view.can_add_new_ear_click_range() || task_view.can_set_swallow_apnea_range())) {
         return;
     }
 
@@ -827,6 +828,8 @@ void Gui::draw_debug_info()
     );
 }
 
+namespace {
+
 bool shortcut_toggle(ImGuiKeyChord chord, bool& val)
 {
     if (widgets::global_shortcut(chord)) {
@@ -835,8 +838,6 @@ bool shortcut_toggle(ImGuiKeyChord chord, bool& val)
     }
     return false;
 }
-
-namespace {
 
 void draw_swallow_apnea_annotation_selection(app::ActiveSwallowLabellingTaskView& task_view)
 {
@@ -902,6 +903,26 @@ bool ear_click_annotation_status_radio(app::EarClickAnnotationStatus& status)
     return widgets::radio_button_enums("##earclick_annotation_status", status, Options);
 }
 
+bool delete_button()
+{
+    constexpr float ButtonCornerRadius = 5;
+    widgets::ScopedImStyle style(ImGuiStyleVar_FrameRounding, ButtonCornerRadius);
+    return widgets::ButtonRed(DELETE_ICON);
+}
+
+bool delete_button(const char *id)
+{
+    widgets::ScopedImID id_scope(id);
+    return delete_button();
+}
+
+template <typename... Args> bool delete_label_button(Args&&...args)
+{
+    const bool clicked = delete_button(std::forward<Args>(args)...);
+    ImGui::SetItemTooltip("Delete label");
+    return clicked;
+}
+
 }; // namespace
 
 void Gui::draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view)
@@ -914,6 +935,21 @@ void Gui::draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view)
     ImGui::SeparatorText("Swallow apnea");
     if (const auto& error = task_view.swallow_apnea_label_error()) {
         ImGui::TextUnformatted(fmt::format(ERR_ICON ICON_TEXT_SPACE "{}", *error).c_str());
+    }
+    const auto *apnea_range = task_view.swallow_anpea_range();
+    if (apnea_range) {
+        ImGui::Text(
+            "Apnea: [%.3f, %.3f] s (Δ = %.3f s)",
+            apnea_range->start,
+            apnea_range->end,
+            apnea_range->end - apnea_range->start
+        );
+        if (task_view.can_delete_swallow_apnea_range()) {
+            ImGui::SameLine();
+            if (delete_label_button("##delete_swallow_apnea_range")) {
+                task_view.delete_swallow_apnea_range();
+            }
+        }
     }
     draw_swallow_apnea_annotation_selection(task_view);
 
@@ -945,13 +981,9 @@ void Gui::draw_earclick_labels_listbox(
     app::ActiveSwallowLabellingTaskView& task_view, const std::vector<app::EarClickLabel>& labels
 )
 {
-    static const char *remove_button_str = ICON_FA_TRASH_CAN;
-    constexpr float ButtonCornerRadius = 5;
+    static const char *remove_button_str = DELETE_ICON;
     constexpr ImVec2 SelectableTextAlign = {0, 0.5};
-    widgets::ScopedImStyle styles{
-        {ImGuiStyleVar_SelectableTextAlign, SelectableTextAlign},
-        {ImGuiStyleVar_FrameRounding, ButtonCornerRadius},
-    };
+    widgets::ScopedImStyle selectable_style(ImGuiStyleVar_SelectableTextAlign, SelectableTextAlign);
 
     const float label_height = ImGui::GetTextLineHeightWithSpacing();
     const float label_width = ImGui::GetContentRegionAvail().x
@@ -962,7 +994,11 @@ void Gui::draw_earclick_labels_listbox(
     for (const auto& label : labels) {
         widgets::ScopedImID label_id_scope(static_cast<int>(label.id));
         std::string str = fmt::format(
-            "Ear click {} [{:.3f}, {:.3f} s]", label.id, label.range.start, label.range.end
+            "Ear click {} [{:.3f}, {:.3f} s] (Δ = {:.3f} s)",
+            label.id,
+            label.range.start,
+            label.range.end,
+            label.range.end - label.range.start
         );
         const bool selected = optutil::has_value_and_equal(m_selected_ear_click_id, label.id);
         if (ImGui::Selectable(str.c_str(), selected, 0, {label_width, label_height})) {
@@ -979,13 +1015,12 @@ void Gui::draw_earclick_labels_listbox(
         }
 
         ImGui::SameLine();
-        if (widgets::ButtonRed(remove_button_str)) {
+        if (delete_label_button()) {
             id_to_remove = label.id;
         }
         if (ImGui::IsItemHovered()) {
             m_hovered_ear_click_id = label.id;
         }
-        ImGui::SetItemTooltip("Delete label");
     }
 
     if (id_to_remove.has_value()) {

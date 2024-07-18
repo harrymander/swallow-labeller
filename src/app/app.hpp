@@ -106,11 +106,13 @@ public:
     void set_swallow_is_ambiguous(bool is_ambiguous) { m_swallow_is_ambiguous = is_ambiguous; }
 
     [[nodiscard]] bool can_add_new_swallow_apnea_range() const;
-    [[nodiscard]] bool can_edit_swallow_apnea_range() const;
+    [[nodiscard]] bool can_set_swallow_apnea_range() const;
+    [[nodiscard]] bool can_delete_swallow_apnea_range() const;
     [[nodiscard]] std::optional<std::string_view> swallow_apnea_label_error() const;
     [[nodiscard]] const models::TimeRange *swallow_anpea_range() const;
-    void set_swallow_apnea_range(models::TimeRange range);
     void add_swallow_apnea_range(models::TimeRange range);
+    void set_swallow_apnea_range(models::TimeRange range);
+    void delete_swallow_apnea_range();
 
     void set_swallow_apnea_range(double start, double end)
     {
