@@ -20,7 +20,6 @@
 
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 
-#include <atomic>
 #include <cerrno>
 #include <csignal>
 #include <cstring>
@@ -41,7 +40,7 @@ static void glfw_error_callback(int error, const char *description)
     spdlog::error("GLFW error {}: {}\n", error, description);
 }
 
-static volatile ::sig_atomic_t signal_stop = 0;
+static volatile std::sig_atomic_t signal_stop = 0;
 
 static void signal_handler(int sig)
 {

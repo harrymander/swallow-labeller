@@ -13,7 +13,6 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/stopwatch.h>
 
-#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iostream>

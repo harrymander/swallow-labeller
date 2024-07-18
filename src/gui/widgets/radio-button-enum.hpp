@@ -6,7 +6,6 @@
 #include <imgui.h>
 #include <spdlog/spdlog.h>
 
-#include <initializer_list>
 #include <type_traits>
 
 namespace recap::labeller::gui::widgets {

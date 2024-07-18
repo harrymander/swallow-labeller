@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include <cctype>
-#include <locale>
 #include <string>
 
 namespace recap::labeller::strutil {

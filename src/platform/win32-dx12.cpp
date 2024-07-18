@@ -23,7 +23,6 @@
 
 #include <cmath>
 #include <cstdlib>
-#include <filesystem>
 #include <system_error>
 
 #ifdef _DEBUG

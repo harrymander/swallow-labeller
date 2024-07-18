@@ -4,7 +4,6 @@
 
 #include <cstdint>
 #include <stdexcept>
-#include <string_view>
 #include <vector>
 
 namespace recap::labeller {
