@@ -221,6 +221,7 @@ private:
     SwallowAnnotationStore m_annotation_store;
     std::unique_ptr<ActiveTaskVariant> m_active_task;
     NewActiveTaskObservable m_new_active_task_observable;
+    SwallowAnnotationStore::ErrorObservable::Observer m_annotation_store_error_observer;
 
     std::size_t m_active_task_index = 0;
 

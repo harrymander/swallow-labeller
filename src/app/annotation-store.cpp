@@ -32,13 +32,12 @@ bool SwallowAnnotationStore::annotation_saved(
 {
     const models::SwallowAnnotation *existing = get_annotation(id);
     if (existing) {
-        models::SwallowAnnotation normed = annotation;
-        return *existing == normed;
+        return *existing == annotation;
     }
     return false;
 }
 
-bool SwallowAnnotationStore::add_annotation(
+void SwallowAnnotationStore::add_annotation(
     const std::string& id, models::SwallowAnnotation annotation
 )
 {
@@ -47,15 +46,15 @@ bool SwallowAnnotationStore::add_annotation(
         const auto& existing = it->second;
         if (existing == annotation) {
             spdlog::debug("Annotation for id={} unchanged", id);
-            return false;
+            return;
         }
 
         spdlog::debug("Annotation for id={} changed", id);
     } else {
         spdlog::debug("New annotation for id={}", id);
     }
-    annotations[id] = annotation;
-    return true;
+    annotations[id] = std::move(annotation);
+    sync_to_file_notify();
 }
 
 void SwallowAnnotationStore::remove_annotation(const std::string& id)
@@ -64,6 +63,7 @@ void SwallowAnnotationStore::remove_annotation(const std::string& id)
     if (it != annotations.end()) {
         spdlog::debug("Removing annotation for id={}", id);
         annotations.erase(it);
+        sync_to_file_notify();
     } else {
         spdlog::warn("No annotation for id={} - nothing to remove!", id);
     }
@@ -77,6 +77,17 @@ void SwallowAnnotationStore::sync_to_file() const
     dump_swallow_annotations_map_json(stream, annotations);
     stream << '\n';
     spdlog::debug("Wrote {} annotations to {}", annotations.size(), path);
+}
+
+void SwallowAnnotationStore::sync_to_file_notify() const
+{
+    try {
+        sync_to_file();
+    } catch (const std::exception& e) {
+        std::string err = e.what();
+        spdlog::error("Error writing annotations to file: {}", err);
+        m_error_observable.notify(err);
+    }
 }
 
 }; // namespace recap::labeller
