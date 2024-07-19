@@ -23,19 +23,15 @@ namespace fs = std::filesystem;
 
 namespace {
 
-std::vector<SwallowLabellingTask> labelling_tasks(
-    const std::vector<models::SwallowTaskInfo>& tasks_info,
-    const SwallowAnnotationStore& annotation_store,
-    const fs::path& data_dir
-)
+std::vector<SwallowLabellingTask>
+labelling_tasks(const std::vector<models::SwallowTaskInfo>& tasks_info, const fs::path& data_dir)
 {
     std::vector<SwallowLabellingTask> tasks;
     tasks.reserve(tasks_info.size());
     for (const auto& info : tasks_info) {
         tasks.emplace_back( // cppcheck-suppress useStlAlgorithm
             info,
-            data_dir,
-            annotation_store.get_annotation(info.get_id()) != nullptr
+            data_dir
         );
     }
     return tasks;
@@ -44,9 +40,9 @@ std::vector<SwallowLabellingTask> labelling_tasks(
 }; // namespace
 
 SwallowLabellingTask::SwallowLabellingTask(
-    models::SwallowTaskInfo task_info, const fs::path& data_dir, bool is_annotated
+    models::SwallowTaskInfo task_info, const fs::path& data_dir
 ) :
-    m_info(std::move(task_info)), m_is_annotated(is_annotated)
+    m_info(std::move(task_info))
 {
     fs::path path = (data_dir / fs::path(m_info.npz_file.path)).make_preferred();
     m_data_path = path.string();
@@ -72,13 +68,8 @@ App::App(
     SwallowAnnotationStore annotation_store,
     const fs::path& data_dir
 ) :
-    m_swallow_tasks(labelling_tasks(swallow_tasks, annotation_store, data_dir)),
-    m_annotation_store(std::move(annotation_store)),
-    m_num_annotated_tasks(std::count_if(
-        m_swallow_tasks.begin(),
-        m_swallow_tasks.end(),
-        [](const auto& task) { return task.is_annotated(); }
-    ))
+    m_swallow_tasks(labelling_tasks(swallow_tasks, data_dir)),
+    m_annotation_store(std::move(annotation_store))
 {
     load_active_task();
 }

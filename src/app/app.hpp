@@ -2,8 +2,6 @@
 #define RECAP_LABELLER_APP_INCLUDE_HPP
 
 #include "app/annotation-store.hpp"
-#include "imgui.h"
-#include "models/annotation.hpp"
 #include "models/data.hpp"
 #include "models/task-info.hpp"
 #include "models/time-range.hpp"
@@ -16,16 +14,13 @@
 #include <memory>
 #include <optional>
 #include <string_view>
-#include <utility>
 #include <vector>
 
 namespace recap::labeller::app {
 
 class SwallowLabellingTask {
 public:
-    SwallowLabellingTask(
-        models::SwallowTaskInfo task_info, const std::filesystem::path& data_dir, bool is_annotated
-    );
+    SwallowLabellingTask(models::SwallowTaskInfo task_info, const std::filesystem::path& data_dir);
 
     [[nodiscard]] const std::optional<std::string>& error_msg() const { return m_error_msg; }
 
@@ -33,18 +28,15 @@ public:
 
     [[nodiscard]] const std::string& data_path() const { return m_data_path; }
 
-    [[nodiscard]] bool is_annotated() const { return m_is_annotated; }
+    [[nodiscard]] const std::string& annotation_id() const { return m_info.get_id(); }
 
     void set_error_msg(std::string str);
     void clear_error_msg();
-
-    void set_annotated(bool annotated) { m_is_annotated = annotated; }
 
 private:
     std::optional<std::string> m_error_msg = std::nullopt;
 
     models::SwallowTaskInfo m_info;
-    bool m_is_annotated;
     std::string m_data_path;
 };
 
@@ -168,7 +160,7 @@ public:
 
     [[nodiscard]] const std::vector<SwallowLabellingTask>& tasks() const { return m_swallow_tasks; }
 
-    [[nodiscard]] std::size_t num_annotated_tasks() const { return m_num_annotated_tasks; }
+    [[nodiscard]] std::size_t num_annotated_tasks() const { return m_annotation_store.size(); }
 
     [[nodiscard]] std::size_t active_task_index() const { return m_active_task_index; }
 
@@ -190,10 +182,14 @@ public:
 
     void reload_active_task();
 
+    [[nodiscard]] bool task_has_annotation(const SwallowLabellingTask& task)
+    {
+        return m_annotation_store.has_annotation(task.info().get_id());
+    }
+
 private:
     std::vector<SwallowLabellingTask> m_swallow_tasks;
     SwallowAnnotationStore m_annotation_store;
-    std::size_t m_num_annotated_tasks;
     std::unique_ptr<ActiveTaskVariant> m_active_task;
     NewActiveTaskObservable m_new_active_task_observable;
 

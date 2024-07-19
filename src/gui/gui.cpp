@@ -734,25 +734,25 @@ void Gui::draw_menu_bar()
 
 namespace {
 
-const char *swallow_task_icon(const app::SwallowLabellingTask& task)
+const char *swallow_task_icon(const app::SwallowLabellingTask& task, bool is_annotated)
 {
     if (task.error_msg().has_value()) {
         return FILE_ERR_ICON ICON_TEXT_SPACE;
     }
 
-    if (task.is_annotated()) {
+    if (is_annotated) {
         return ANNOTATED_TASK_ICON ICON_TEXT_SPACE;
     }
 
     return "";
 }
 
-std::string task_info_str(const app::SwallowLabellingTask& task)
+std::string task_info_str(const app::SwallowLabellingTask& task, bool is_annotated)
 {
     const models::SwallowTaskInfo& info = task.info();
     return fmt::format(
         "{}Subject #{}, {}\nRepeat #{}, swallow #{}",
-        swallow_task_icon(task),
+        swallow_task_icon(task, is_annotated),
         info.subject,
         swallow_test_type_string(info.test_type),
         info.repeatnum,
@@ -799,7 +799,7 @@ void Gui::draw_task_list()
     if (ImGui::BeginListBox("##task_info_list", {-1, -1})) {
         for (std::size_t i = 0; i < tasks.size(); i++) {
             const auto& task = tasks[i];
-            const std::string str = task_info_str(task);
+            const std::string str = task_info_str(task, m_app.task_has_annotation(task));
             if (m_task_list_text_filter.PassFilter(str.c_str())) {
                 if (ImGui::Selectable(str.c_str(), active_index == i)) {
                     m_app.set_active_task_index(i);
