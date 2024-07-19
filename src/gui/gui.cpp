@@ -562,7 +562,7 @@ void Gui::draw_flow_plot(app::ActiveSwallowLabellingTaskView& task_view)
     }
 
     const auto *range = task_view.swallow_anpea_range();
-    if (range && task_view.can_set_swallow_apnea_range()) {
+    if (range && task_view.can_edit_swallow_apnea_range()) {
         if (!m_apnea_range_dragger.is_editing()) {
             m_apnea_temp_range = {range->start, range->end};
         }
@@ -579,7 +579,7 @@ void Gui::draw_apnea_label_region(
     static constexpr ImColor SelectingColor = ImColor(1.0F, 1.0F, 0.0F, 0.1F);
     static constexpr ImColor SelectedColor = ImColor(1.0F, 1.0F, 0.0F, 0.4F);
 
-    if (!(task_view.can_add_new_ear_click_range() || task_view.can_set_swallow_apnea_range())) {
+    if (!(task_view.can_add_new_ear_click_range() || task_view.can_edit_swallow_apnea_range())) {
         return;
     }
 
@@ -947,6 +947,11 @@ void Gui::draw_annotation_submit(app::ActiveSwallowLabellingTaskView& task_view)
         ImGui::SameLine();
         if (widgets::ButtonRed(del_str, {del_button_width, button_height})) {
             task_view.delete_annotation();
+
+            // TODO: should delegate this to App somehow, or at least encapsulate resetting
+            // annotation state
+            m_selected_ear_click_id.reset();
+            m_hovered_ear_click_id.reset();
         }
         ImGui::SetItemTooltip("Delete annotation");
     }

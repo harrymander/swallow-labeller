@@ -2,6 +2,7 @@
 #define RECAP_LABELLER_APP_INCLUDE_HPP
 
 #include "app/annotation-store.hpp"
+#include "models/annotation.hpp"
 #include "models/data.hpp"
 #include "models/task-info.hpp"
 #include "models/time-range.hpp"
@@ -85,20 +86,23 @@ public:
 
     [[nodiscard]] SwallowApneaAnnotationStatus swallow_apnea_annotation_status() const
     {
-        return m_swallow_apnea_status;
+        return m_annotation.swallow_apnea_status;
     }
 
     void set_swallow_apnea_annotation_status(SwallowApneaAnnotationStatus status)
     {
-        m_swallow_apnea_status = status;
+        m_annotation.swallow_apnea_status = status;
     }
 
-    [[nodiscard]] bool swallow_is_ambiguous() const { return m_swallow_is_ambiguous; }
+    [[nodiscard]] bool swallow_is_ambiguous() const { return m_annotation.swallow_is_ambiguous; }
 
-    void set_swallow_is_ambiguous(bool is_ambiguous) { m_swallow_is_ambiguous = is_ambiguous; }
+    void set_swallow_is_ambiguous(bool is_ambiguous)
+    {
+        m_annotation.swallow_is_ambiguous = is_ambiguous;
+    }
 
     [[nodiscard]] bool can_add_new_swallow_apnea_range() const;
-    [[nodiscard]] bool can_set_swallow_apnea_range() const;
+    [[nodiscard]] bool can_edit_swallow_apnea_range() const;
     [[nodiscard]] bool can_delete_swallow_apnea_range() const;
     [[nodiscard]] std::optional<std::string_view> swallow_apnea_label_error() const;
     [[nodiscard]] const models::TimeRange *swallow_anpea_range() const;
@@ -118,12 +122,12 @@ public:
 
     [[nodiscard]] EarClickAnnotationStatus ear_click_annotation_status() const
     {
-        return m_ear_click_status;
+        return m_annotation.ear_click_status;
     }
 
     void set_ear_click_annotation_status(EarClickAnnotationStatus status)
     {
-        m_ear_click_status = status;
+        m_annotation.ear_click_status = status;
     }
 
     [[nodiscard]] bool can_add_new_ear_click_range() const;
@@ -138,17 +142,18 @@ public:
     // TODO
     [[nodiscard]] bool can_delete_annotation() const { return true; }
 
-    // TODO
-    [[nodiscard]] bool can_save_annotation() const { return true; }
+    [[nodiscard]] bool can_save_annotation() const;
 
-    // TODO
-    void save_annotation() {}
+    void save_annotation();
 
-    // TODO
-    void delete_annotation() {}
+    void delete_annotation();
 
 private:
     friend class App;
+
+    [[nodiscard]] bool has_apnea_range() const;
+    [[nodiscard]] bool valid_apnea_annotation() const;
+    [[nodiscard]] bool valid_earclick_annotation() const;
 
     ActiveSwallowLabellingTaskView(
         SwallowLabellingTask& task, SwallowTaskData data, SwallowAnnotationStore& annotation_store
@@ -158,13 +163,22 @@ private:
     SwallowTaskData m_data;
     SwallowAnnotationStore& m_annotation_store;
 
-    SwallowApneaAnnotationStatus m_swallow_apnea_status = SwallowApneaAnnotationStatus::ExEx;
-    bool m_swallow_is_ambiguous = false;
-    models::TimeRange m_swallow_apnea_range = {NAN, NAN};
+    struct Annotation {
+        Annotation() = default;
+        explicit Annotation(const models::SwallowAnnotation& annotation);
 
-    EarClickAnnotationStatus m_ear_click_status = EarClickAnnotationStatus::Ok;
-    std::vector<EarClickLabel> m_ear_click_labels;
-    EarClickLabel::ID m_next_ear_click_label_id = 1;
+        [[nodiscard]] models::SwallowAnnotation to_model() const;
+
+        SwallowApneaAnnotationStatus swallow_apnea_status = SwallowApneaAnnotationStatus::ExEx;
+        bool swallow_is_ambiguous = false;
+        models::TimeRange swallow_apnea_range = {NAN, NAN};
+
+        EarClickAnnotationStatus ear_click_status = EarClickAnnotationStatus::Ok;
+        std::vector<EarClickLabel> ear_click_labels;
+        EarClickLabel::ID next_ear_click_label_id = 1;
+    };
+
+    Annotation m_annotation;
 };
 
 class App {

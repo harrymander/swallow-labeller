@@ -1,9 +1,12 @@
 #include "app.hpp"
 
 #include "annotation-store.hpp"
+#include "models/annotation.hpp"
 #include "models/data.hpp"
 #include "models/task-info.hpp"
 #include "models/time-range.hpp"
+#include "spdlog/spdlog.h"
+#include "util/variant-visitor.hpp"
 
 #include <fmt/core.h>
 
@@ -14,6 +17,7 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -143,15 +147,218 @@ ActiveSwallowLabellingTaskView::ActiveSwallowLabellingTaskView(
     SwallowLabellingTask& task, SwallowTaskData data, SwallowAnnotationStore& annotation_store
 ) :
     m_task(task), m_data(std::move(data)), m_annotation_store(annotation_store)
+{
+    const auto *annotation = m_annotation_store.get_annotation(task.annotation_id());
+    if (annotation) {
+        m_annotation = Annotation(*annotation);
+    }
+}
+
+namespace {
+
+SwallowApneaAnnotationStatus apnea_status_from_annotation(
+    const std::variant<models::SwallowApneaAnnotation, models::SwallowApneaError>& v
+)
+{
+    using namespace models;
+
+    return VariantVisitor{
+        [](const SwallowApneaAnnotation& annotation) {
+            switch (annotation.pattern) {
+            case SRCPattern::ExEx:
+                return SwallowApneaAnnotationStatus::ExEx;
+            case SRCPattern::ExIn:
+                return SwallowApneaAnnotationStatus::ExIn;
+            case SRCPattern::InEx:
+                return SwallowApneaAnnotationStatus::InEx;
+            case SRCPattern::InIn:
+                break;
+            }
+            return SwallowApneaAnnotationStatus::InIn;
+        },
+        [](const SwallowApneaError& error) {
+            switch (error) {
+            case SwallowApneaError::FlowError:
+                return SwallowApneaAnnotationStatus::FlowError;
+            case SwallowApneaError::NoSwallow:
+                return SwallowApneaAnnotationStatus::NoSwallow;
+            case SwallowApneaError::ApneaCutoff:
+                break;
+            }
+            return SwallowApneaAnnotationStatus::ApneaCutoff;
+        },
+    }(v);
+}
+
+EarClickAnnotationStatus ear_click_status_from_annotation(
+    const std::variant<std::vector<models::TimeRange>, models::EarClickError>& v
+)
+{
+    using namespace models;
+
+    return VariantVisitor{
+        [](const std::vector<TimeRange>&) { return EarClickAnnotationStatus::Ok; },
+        [](const EarClickError& error) {
+            switch (error) {
+            case EarClickError::NoEarClick:
+                return EarClickAnnotationStatus::NoEarClick;
+            case EarClickError::AudioError:
+                break;
+            }
+            return EarClickAnnotationStatus::AudioError;
+        },
+    }(v);
+}
+
+}; // namespace
+
+ActiveSwallowLabellingTaskView::Annotation::Annotation(const models::SwallowAnnotation& annotation
+) :
+    swallow_apnea_status(apnea_status_from_annotation(annotation.swallow_apnea)),
+    swallow_is_ambiguous(VariantVisitor{
+        [](const models::SwallowApneaAnnotation& annotation) { return annotation.is_ambiguous; },
+        [](auto) { return false; },
+    }(annotation.swallow_apnea)),
+    swallow_apnea_range(VariantVisitor{
+        [](const models::SwallowApneaAnnotation& annotation) { return annotation.time; },
+        [](auto) {
+            return models::TimeRange{NAN, NAN};
+        },
+    }(annotation.swallow_apnea)),
+    ear_click_status(ear_click_status_from_annotation(annotation.ear_clicks)),
+    ear_click_labels(VariantVisitor{
+        [](const std::vector<models::TimeRange>& ranges) {
+            EarClickLabel::ID id = 1;
+            std::vector<EarClickLabel> result;
+            result.reserve(ranges.size());
+            for (const auto& range : ranges) {
+                result.emplace_back(id++, range);
+            }
+            return result;
+        },
+        [](auto) { return std::vector<EarClickLabel>{}; },
+    }(annotation.ear_clicks)),
+    next_ear_click_label_id(ear_click_labels.empty() ? 1 : ear_click_labels.back().id + 1)
 {}
 
 namespace {
+
+// This is a mess... need to look into a better way to convert between enums (maybe
+// https://github.com/Neargye/magic_enum ?)
 
 [[nodiscard]] inline bool apnea_status_is_src_pattern(SwallowApneaAnnotationStatus status)
 {
     using enum SwallowApneaAnnotationStatus;
     return status == ExEx || status == InEx || status == ExIn || status == InIn;
 }
+
+[[nodiscard]] std::variant<models::SwallowApneaAnnotation, models::SwallowApneaError>
+swallow_apnea_annotation_model(
+    bool is_ambiguous, SwallowApneaAnnotationStatus status, models::TimeRange range
+)
+{
+    using namespace models;
+
+    SRCPattern pattern;
+    switch (status) {
+    case SwallowApneaAnnotationStatus::ExEx:
+        pattern = SRCPattern::ExEx;
+        break;
+    case SwallowApneaAnnotationStatus::ExIn:
+        pattern = SRCPattern::ExIn;
+        break;
+    case SwallowApneaAnnotationStatus::InEx:
+        pattern = SRCPattern::InEx;
+        break;
+    case SwallowApneaAnnotationStatus::InIn:
+        pattern = SRCPattern::InIn;
+        break;
+    default: {
+        static const char *err = "Cannot create swallow annotation model from error status";
+        spdlog::critical(err);
+        throw std::logic_error(err);
+    }
+    }
+
+    return SwallowApneaAnnotation{
+        .is_ambiguous = is_ambiguous,
+        .pattern = pattern,
+        .time = range,
+    };
+}
+
+[[nodiscard]] std::variant<models::SwallowApneaAnnotation, models::SwallowApneaError>
+swallow_apnea_error_model(SwallowApneaAnnotationStatus status)
+{
+    using namespace models;
+
+    switch (status) {
+    case SwallowApneaAnnotationStatus::FlowError:
+        return SwallowApneaError::FlowError;
+    case SwallowApneaAnnotationStatus::NoSwallow:
+        return SwallowApneaError::NoSwallow;
+    case SwallowApneaAnnotationStatus::ApneaCutoff:
+        return SwallowApneaError::ApneaCutoff;
+
+    case SwallowApneaAnnotationStatus::ExEx:
+    case SwallowApneaAnnotationStatus::ExIn:
+    case SwallowApneaAnnotationStatus::InEx:
+    case SwallowApneaAnnotationStatus::InIn:
+        break;
+    }
+
+    static const char *err = "Cannot create swallow error model from pattern status";
+    spdlog::critical(err);
+    throw std::logic_error(err);
+}
+
+[[nodiscard]] std::variant<std::vector<models::TimeRange>, models::EarClickError>
+ear_clicks_annotation_model(
+    EarClickAnnotationStatus status, const std::vector<EarClickLabel>& labels
+)
+{
+    using namespace models;
+
+    switch (status) {
+    case EarClickAnnotationStatus::NoEarClick:
+        return EarClickError::NoEarClick;
+    case EarClickAnnotationStatus::AudioError:
+        return EarClickError::AudioError;
+    case EarClickAnnotationStatus::Ok:
+        break;
+    }
+
+    if (labels.empty()) {
+        // Could throw an exception like above, but will play it safe
+        spdlog::error("Ear click status is Ok, but no labels! Returning NoEarClick error");
+        return EarClickError::NoEarClick;
+    }
+
+    std::vector<TimeRange> ranges;
+    ranges.reserve(labels.size());
+    for (const auto& label : labels) {
+        ranges.push_back(label.range);
+    }
+    return ranges;
+}
+
+}; // namespace
+
+models::SwallowAnnotation ActiveSwallowLabellingTaskView::Annotation::to_model() const
+{
+    using namespace models;
+
+    return {
+        .swallow_apnea = apnea_status_is_src_pattern(swallow_apnea_status) ?
+            swallow_apnea_annotation_model(
+                swallow_is_ambiguous, swallow_apnea_status, swallow_apnea_range
+            ) :
+            swallow_apnea_error_model(swallow_apnea_status),
+        .ear_clicks = ear_clicks_annotation_model(ear_click_status, ear_click_labels),
+    };
+}
+
+namespace {
 
 [[nodiscard]] inline bool timerange_allnan(const models::TimeRange& range)
 {
@@ -160,21 +367,24 @@ namespace {
 
 }; // namespace
 
-bool ActiveSwallowLabellingTaskView::can_set_swallow_apnea_range() const
+bool ActiveSwallowLabellingTaskView::has_apnea_range() const
 {
-    return apnea_status_is_src_pattern(m_swallow_apnea_status)
-        && !timerange_allnan(m_swallow_apnea_range);
+    return !timerange_allnan(m_annotation.swallow_apnea_range);
+}
+
+bool ActiveSwallowLabellingTaskView::can_edit_swallow_apnea_range() const
+{
+    return apnea_status_is_src_pattern(m_annotation.swallow_apnea_status) && has_apnea_range();
 }
 
 bool ActiveSwallowLabellingTaskView::can_delete_swallow_apnea_range() const
 {
-    return can_set_swallow_apnea_range();
+    return can_edit_swallow_apnea_range();
 }
 
 bool ActiveSwallowLabellingTaskView::can_add_new_swallow_apnea_range() const
 {
-    return apnea_status_is_src_pattern(m_swallow_apnea_status)
-        && timerange_allnan(m_swallow_apnea_range);
+    return apnea_status_is_src_pattern(m_annotation.swallow_apnea_status) && !has_apnea_range();
 }
 
 std::optional<std::string_view> ActiveSwallowLabellingTaskView::swallow_apnea_label_error() const
@@ -188,12 +398,12 @@ std::optional<std::string_view> ActiveSwallowLabellingTaskView::swallow_apnea_la
 
 bool ActiveSwallowLabellingTaskView::can_add_new_ear_click_range() const
 {
-    return m_ear_click_status == EarClickAnnotationStatus::Ok;
+    return m_annotation.ear_click_status == EarClickAnnotationStatus::Ok;
 }
 
 std::optional<std::string_view> ActiveSwallowLabellingTaskView::earclick_label_error() const
 {
-    if (can_add_new_ear_click_range() && m_ear_click_labels.empty()) {
+    if (can_add_new_ear_click_range() && m_annotation.ear_click_labels.empty()) {
         return "Missing ear click label(s)";
     }
 
@@ -202,8 +412,8 @@ std::optional<std::string_view> ActiveSwallowLabellingTaskView::earclick_label_e
 
 const models::TimeRange *ActiveSwallowLabellingTaskView::swallow_anpea_range() const
 {
-    if (can_set_swallow_apnea_range()) {
-        return &m_swallow_apnea_range;
+    if (can_edit_swallow_apnea_range()) {
+        return &m_annotation.swallow_apnea_range;
     }
 
     return nullptr;
@@ -211,8 +421,8 @@ const models::TimeRange *ActiveSwallowLabellingTaskView::swallow_anpea_range() c
 
 void ActiveSwallowLabellingTaskView::set_swallow_apnea_range(models::TimeRange range)
 {
-    if (can_set_swallow_apnea_range()) {
-        m_swallow_apnea_range = range;
+    if (can_edit_swallow_apnea_range()) {
+        m_annotation.swallow_apnea_range = range;
         spdlog::debug("Set swallow apnea range to: [{}, {}]", range.start, range.end);
     } else {
         spdlog::error("Cannot set swallow apnea range");
@@ -222,7 +432,7 @@ void ActiveSwallowLabellingTaskView::set_swallow_apnea_range(models::TimeRange r
 void ActiveSwallowLabellingTaskView::add_swallow_apnea_range(models::TimeRange range)
 {
     if (can_add_new_swallow_apnea_range()) {
-        m_swallow_apnea_range = range;
+        m_annotation.swallow_apnea_range = range;
         spdlog::debug("Set swallow apnea range to: [{}, {}]", range.start, range.end);
     } else {
         spdlog::error("Cannot add swallow apnea range");
@@ -234,10 +444,10 @@ void ActiveSwallowLabellingTaskView::delete_swallow_apnea_range()
     if (can_delete_swallow_apnea_range()) {
         spdlog::debug(
             "Deleted swallow apnea range: [{}, {}]",
-            m_swallow_apnea_range.start,
-            m_swallow_apnea_range.end
+            m_annotation.swallow_apnea_range.start,
+            m_annotation.swallow_apnea_range.end
         );
-        m_swallow_apnea_range = {NAN, NAN};
+        m_annotation.swallow_apnea_range = {NAN, NAN};
     } else {
         spdlog::error("Cannot delete swallow apnea range");
     }
@@ -264,7 +474,7 @@ find_ear_click(const std::vector<EarClickLabel>& ear_clicks, EarClickLabel::ID i
 
 const std::vector<EarClickLabel> *ActiveSwallowLabellingTaskView::ear_click_labels() const
 {
-    return can_add_new_ear_click_range() ? &m_ear_click_labels : nullptr;
+    return can_add_new_ear_click_range() ? &m_annotation.ear_click_labels : nullptr;
 }
 
 const EarClickLabel *ActiveSwallowLabellingTaskView::ear_click_label(EarClickLabel::ID id) const
@@ -273,8 +483,8 @@ const EarClickLabel *ActiveSwallowLabellingTaskView::ear_click_label(EarClickLab
         return nullptr;
     }
 
-    const auto it = find_ear_click(m_ear_click_labels, id);
-    if (it == m_ear_click_labels.end()) {
+    const auto it = find_ear_click(m_annotation.ear_click_labels, id);
+    if (it == m_annotation.ear_click_labels.end()) {
         spdlog::error("No ear click label with ID {}", id);
         return nullptr;
     }
@@ -289,12 +499,12 @@ void ActiveSwallowLabellingTaskView::remove_ear_click_label(EarClickLabel::ID id
         return;
     }
 
-    const auto it = find_ear_click(m_ear_click_labels, id);
-    if (it == m_ear_click_labels.end()) {
+    const auto it = find_ear_click(m_annotation.ear_click_labels, id);
+    if (it == m_annotation.ear_click_labels.end()) {
         spdlog::error("No ear click label with ID {} - nothing to remove!", id);
     } else {
         const auto& range = it->range;
-        m_ear_click_labels.erase(it);
+        m_annotation.ear_click_labels.erase(it);
         spdlog::debug("Removed ear click label with ID {}: [{}, {}]", id, range.start, range.end);
     }
 }
@@ -307,10 +517,10 @@ ActiveSwallowLabellingTaskView::add_ear_click_label(double start, double end)
         return std::nullopt;
     }
 
-    const EarClickLabel::ID new_id = m_next_ear_click_label_id;
-    m_ear_click_labels.emplace_back(new_id, models::TimeRange{start, end});
+    const EarClickLabel::ID new_id = m_annotation.next_ear_click_label_id;
+    m_annotation.ear_click_labels.emplace_back(new_id, models::TimeRange{start, end});
     spdlog::debug("Added ear click with ID {}: [{}, {}]", new_id, start, end);
-    m_next_ear_click_label_id++;
+    m_annotation.next_ear_click_label_id++;
     return new_id;
 }
 
@@ -323,14 +533,54 @@ void ActiveSwallowLabellingTaskView::set_ear_click_label(
         return;
     }
 
-    const auto const_it = find_ear_click(m_ear_click_labels, id);
-    if (const_it == m_ear_click_labels.end()) {
+    const auto const_it = find_ear_click(m_annotation.ear_click_labels, id);
+    if (const_it == m_annotation.ear_click_labels.end()) {
         spdlog::error("No ear click label with ID {} - nothing to change!", id);
     } else {
-        auto it = m_ear_click_labels.begin() + (const_it - m_ear_click_labels.cbegin());
+        auto it = m_annotation.ear_click_labels.begin()
+            + (const_it - m_annotation.ear_click_labels.cbegin());
         it->range = {start, end};
         spdlog::debug("Changed ear click label with ID {}: [{}, {}]", id, start, end);
     }
+}
+
+bool ActiveSwallowLabellingTaskView::valid_apnea_annotation() const
+{
+    return !apnea_status_is_src_pattern(m_annotation.swallow_apnea_status) || has_apnea_range();
+}
+
+bool ActiveSwallowLabellingTaskView::valid_earclick_annotation() const
+{
+    return m_annotation.ear_click_status != EarClickAnnotationStatus::Ok
+        || !m_annotation.ear_click_labels.empty();
+}
+
+bool ActiveSwallowLabellingTaskView::can_save_annotation() const
+{
+    return valid_apnea_annotation() && valid_earclick_annotation();
+}
+
+void ActiveSwallowLabellingTaskView::save_annotation()
+{
+    if (!can_save_annotation()) {
+        spdlog::error("Cannot save annotation for task with ID={}", m_task.annotation_id());
+        return;
+    }
+
+    (void) m_annotation_store.add_annotation(m_task.annotation_id(), m_annotation.to_model());
+    spdlog::info("Saved annotation for task with ID={}", m_task.annotation_id());
+}
+
+void ActiveSwallowLabellingTaskView::delete_annotation()
+{
+    if (!can_delete_annotation()) {
+        spdlog::error("Cannot delete annotation for task with ID={}", m_task.annotation_id());
+        return;
+    }
+
+    m_annotation = Annotation();
+    m_annotation_store.remove_annotation(m_task.annotation_id());
+    spdlog::info("Deleted annotation for task with ID={}", m_task.annotation_id());
 }
 
 }; // namespace recap::labeller::app
