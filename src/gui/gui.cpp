@@ -925,8 +925,37 @@ template <typename... Args> bool delete_label_button(Args&&...args)
 
 }; // namespace
 
+void Gui::draw_annotation_submit(app::ActiveSwallowLabellingTaskView& task_view)
+{
+    static const char *del_str = ICON_TEXT_SPACE ICON_FA_TRASH_CAN ICON_TEXT_SPACE;
+    const float del_button_width =
+        ImGui::CalcTextSize(del_str).x + ImGui::GetStyle().ItemInnerSpacing.x * 4;
+    float button_height = del_button_width;
+
+    const bool can_delete = task_view.can_delete_annotation();
+    const float submit_button_width =
+        can_delete ? ImGui::GetContentRegionAvail().x - del_button_width : -1;
+
+    ImGui::BeginDisabled(!task_view.can_save_annotation());
+    if (ImGui::Button("Save [Ctrl+S]", {submit_button_width, button_height})
+        || widgets::global_shortcut(ImGuiMod_Ctrl | ImGuiKey_S))
+    {
+        task_view.save_annotation();
+    }
+    ImGui::EndDisabled();
+    if (can_delete) {
+        ImGui::SameLine();
+        if (widgets::ButtonRed(del_str, {del_button_width, button_height})) {
+            task_view.delete_annotation();
+        }
+        ImGui::SetItemTooltip("Delete annotation");
+    }
+}
+
 void Gui::draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view)
 {
+    draw_annotation_submit(task_view);
+
     ImGui::SeparatorText("Instructions");
     ImGui::TextWrapped("Single apnoea label required, may have multiple ear audio labels.");
     ImGui::TextWrapped("Code pattern using general breathing cycle (i.e. ignoring SNIF/SNRF");

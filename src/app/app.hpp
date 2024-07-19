@@ -135,13 +135,28 @@ public:
     void set_ear_click_label(EarClickLabel::ID id, double start, double end);
     void remove_ear_click_label(EarClickLabel::ID id);
 
+    // TODO
+    [[nodiscard]] bool can_delete_annotation() const { return true; }
+
+    // TODO
+    [[nodiscard]] bool can_save_annotation() const { return true; }
+
+    // TODO
+    void save_annotation() {}
+
+    // TODO
+    void delete_annotation() {}
+
 private:
     friend class App;
 
-    ActiveSwallowLabellingTaskView(SwallowLabellingTask& task, SwallowTaskData data);
+    ActiveSwallowLabellingTaskView(
+        SwallowLabellingTask& task, SwallowTaskData data, SwallowAnnotationStore& annotation_store
+    );
 
     SwallowLabellingTask& m_task;
     SwallowTaskData m_data;
+    SwallowAnnotationStore& m_annotation_store;
 
     SwallowApneaAnnotationStatus m_swallow_apnea_status = SwallowApneaAnnotationStatus::ExEx;
     bool m_swallow_is_ambiguous = false;

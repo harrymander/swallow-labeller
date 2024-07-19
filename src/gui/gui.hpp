@@ -106,6 +106,7 @@ private:
     void draw_plot_summary_selector();
     void on_new_active_task(const app::App::ActiveTaskVariant& new_task);
 
+    void draw_annotation_submit(app::ActiveSwallowLabellingTaskView& task_view);
     void draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view);
     void draw_earclick_labels_listbox(
         app::ActiveSwallowLabellingTaskView& task_view,

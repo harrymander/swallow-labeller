@@ -126,7 +126,9 @@ void App::load_active_task()
             auto data = SwallowTaskData::from_numpy(cnpy::npz_load(task.data_path()));
             spdlog::debug("Loaded data from {}", task.data_path());
             task.clear_error_msg();
-            m_active_task = make_unique_active_task<ActiveSwallowLabellingTaskView>(task, data);
+            m_active_task = make_unique_active_task<ActiveSwallowLabellingTaskView>(
+                task, data, m_annotation_store
+            );
         } catch (const std::exception& e) {
             spdlog::error("Error loading data file from {}: {}", task.data_path(), e.what());
             task.set_error_msg(fmt::format("Error loading data file: {}", e.what()));
@@ -138,9 +140,9 @@ void App::load_active_task()
 }
 
 ActiveSwallowLabellingTaskView::ActiveSwallowLabellingTaskView(
-    SwallowLabellingTask& task, SwallowTaskData data
+    SwallowLabellingTask& task, SwallowTaskData data, SwallowAnnotationStore& annotation_store
 ) :
-    m_task(task), m_data(std::move(data))
+    m_task(task), m_data(std::move(data)), m_annotation_store(annotation_store)
 {}
 
 namespace {
