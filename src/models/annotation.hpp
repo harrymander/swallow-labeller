@@ -5,6 +5,7 @@
 
 #include <istream>
 #include <map>
+#include <optional>
 #include <ostream>
 #include <string>
 #include <string_view>
@@ -42,6 +43,7 @@ enum class EarClickError {
 struct SwallowAnnotation {
     std::variant<SwallowApneaAnnotation, SwallowApneaError> swallow_apnea;
     std::variant<std::vector<TimeRange>, EarClickError> ear_clicks;
+    std::optional<std::string> note;
 
     bool operator==(const SwallowAnnotation&) const = default;
 

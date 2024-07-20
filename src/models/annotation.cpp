@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -15,14 +16,16 @@
 NLOHMANN_JSON_NAMESPACE_BEGIN
 
 /**
+ * These converters are adapted from:
+ * https://json.nlohmann.me/features/arbitrary_types/#how-do-i-convert-third-party-types
+ */
+
+/**
  * JSON parser/serializer for std::variant<T, E>, where T and E can be serialized/deserialized
  * to/from nlohmann::json.
  *
  * E will be serialized as an object with a single field "error" mapping to the serialized object;
  * therefore, T cannot be an object with a single field that is "error".
- *
- * Adapted from:
- * https://json.nlohmann.me/features/arbitrary_types/#how-do-i-convert-third-party-types
  */
 template <typename T, typename E> struct adl_serializer<std::variant<T, E>> {
     using Variant = std::variant<T, E>;
@@ -39,6 +42,30 @@ template <typename T, typename E> struct adl_serializer<std::variant<T, E>> {
     {
         if (j.is_object() && j.contains("error") && j.size() == 1) {
             val = j.at("error").template get<E>();
+        } else {
+            val = j.template get<T>();
+        }
+    }
+};
+
+/**
+ * JSON parser/serializer for std::optional<T> where T can be serialized/deserialized to/from
+ * nlohmann::json. Uses JSON null to represent std::nullopt.
+ */
+template <typename T> struct adl_serializer<std::optional<T>> {
+    static void to_json(json& j, const std::optional<T>& val)
+    {
+        if (val.has_value()) {
+            j = *val;
+        } else {
+            j = nullptr;
+        }
+    }
+
+    static void from_json(const json& j, std::optional<T>& val)
+    {
+        if (j.is_null()) {
+            val = std::nullopt;
         } else {
             val = j.template get<T>();
         }
@@ -138,6 +165,7 @@ void to_json(nlohmann::json& j, const SwallowAnnotation& annotation)
     j = nlohmann::json{
         {"swallow_apnea", annotation.swallow_apnea},
         {"ear_clicks", annotation.ear_clicks},
+        {"note", annotation.note},
     };
 }
 
@@ -145,6 +173,7 @@ void from_json(const nlohmann::json& j, SwallowAnnotation& annotation)
 {
     j.at("swallow_apnea").get_to(annotation.swallow_apnea);
     j.at("ear_clicks").get_to(annotation.ear_clicks);
+    j.at("note").get_to(annotation.note);
 }
 
 SwallowAnnotation SwallowAnnotation::from_json(std::string_view str)

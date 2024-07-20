@@ -143,6 +143,10 @@ public:
     void set_ear_click_label(EarClickLabel::ID id, double start, double end);
     void remove_ear_click_label(EarClickLabel::ID id);
 
+    [[nodiscard]] const std::string& note() const { return m_annotation.note; }
+
+    void set_note(std::string note) { m_annotation.note = std::move(note); }
+
     // TODO
     [[nodiscard]] bool can_delete_annotation() const { return true; }
 
@@ -184,6 +188,8 @@ private:
         EarClickAnnotationStatus ear_click_status = EarClickAnnotationStatus::Ok;
         std::vector<EarClickLabel> ear_click_labels;
         EarClickLabel::ID next_ear_click_label_id = 1;
+
+        std::string note;
     };
 
     Annotation m_annotation;

@@ -87,6 +87,7 @@ private:
         widgets::PlotRange earclick_temp_range = {NAN, NAN};
         std::optional<app::EarClickLabel::ID> selected_ear_click_id = std::nullopt;
         std::optional<app::EarClickLabel::ID> hovered_ear_click_id = std::nullopt;
+        std::string note;
 
         void reset_ear_click();
 

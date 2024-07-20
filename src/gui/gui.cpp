@@ -17,6 +17,7 @@
 #include <fmt/format.h>
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <imgui_stdlib.h>
 #include <implot.h>
 #include <spdlog/fmt/std.h>
 #include <spdlog/spdlog.h>
@@ -477,7 +478,8 @@ Gui::Annotator::Annotator(const app::ActiveSwallowLabellingTaskView& task_view) 
             return widgets::PlotRange{range.start, range.end};
         },
         widgets::PlotRange{NAN, NAN}
-    ))
+    )),
+    note(task_view.note())
 {}
 
 void Gui::Annotator::reset_ear_click()
@@ -1003,12 +1005,24 @@ void Gui::draw_annotation_submit(app::ActiveSwallowLabellingTaskView& task_view)
 
 void Gui::draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view)
 {
+    constexpr float NoteHeightLines = 3;
+
     draw_annotation_submit(task_view);
 
     ImGui::SeparatorText("Instructions");
     ImGui::TextWrapped("Single apnoea label required, may have multiple ear audio labels.");
     ImGui::TextWrapped("Code pattern using general breathing cycle (i.e. ignoring SNIF/SNRF");
     ImGui::TextWrapped("Expiratory flow is positive");
+
+    ImGui::SeparatorText("Note");
+    const float note_height =
+        (NoteHeightLines - 1) * ImGui::GetTextLineHeightWithSpacing() + ImGui::GetTextLineHeight();
+    ImGui::InputTextMultiline("##annotation_note_input", &m_annotator.note, {-1, note_height});
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+        // TODO: this may result in some changes not being registered?
+        spdlog::debug("Annotation note updated");
+        task_view.set_note(m_annotator.note);
+    }
 
     ImGui::SeparatorText("Swallow apnea");
     if (const auto& error = task_view.swallow_apnea_label_error()) {

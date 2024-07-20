@@ -6,6 +6,8 @@
 #include "models/task-info.hpp"
 #include "models/time-range.hpp"
 #include "spdlog/spdlog.h"
+#include "util/optutil.hpp"
+#include "util/strutil.hpp"
 #include "util/variant-visitor.hpp"
 
 #include <fmt/core.h>
@@ -394,7 +396,9 @@ ActiveSwallowLabellingTaskView::Annotation::Annotation(const models::SwallowAnno
         [](auto) { return std::vector<EarClickLabel>{}; },
     }(annotation.ear_clicks)),
 
-    next_ear_click_label_id(ear_click_labels.empty() ? 1 : ear_click_labels.back().id + 1)
+    next_ear_click_label_id(ear_click_labels.empty() ? 1 : ear_click_labels.back().id + 1),
+
+    note(optutil::value_or_default(annotation.note))
 {}
 
 namespace {
@@ -452,6 +456,15 @@ ear_clicks_annotation_model(
     return ranges;
 }
 
+std::optional<std::string> note_annotation_model(std::string note)
+{
+    strutil::trim(note);
+    if (note.empty()) {
+        return std::nullopt;
+    }
+    return note;
+}
+
 }; // namespace
 
 models::SwallowAnnotation ActiveSwallowLabellingTaskView::Annotation::to_model() const
@@ -465,6 +478,7 @@ models::SwallowAnnotation ActiveSwallowLabellingTaskView::Annotation::to_model()
             ) :
             swallow_apnea_error_model(swallow_apnea_status),
         .ear_clicks = ear_clicks_annotation_model(ear_click_status, ear_click_labels),
+        .note = note_annotation_model(note),
     };
 }
 
