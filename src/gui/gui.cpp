@@ -468,6 +468,22 @@ void add_plot_text(const char *str)
 
 }; // namespace
 
+Gui::Annotator::Annotator(const app::ActiveSwallowLabellingTaskView& task_view) :
+    apnea_temp_range(optutil::map_or(
+        task_view.swallow_anpea_range(),
+        [](const models::TimeRange& range) {
+            return widgets::PlotRange{range.start, range.end};
+        },
+        widgets::PlotRange{NAN, NAN}
+    ))
+{}
+
+void Gui::Annotator::reset_ear_click()
+{
+    selected_ear_click_id.reset();
+    hovered_ear_click_id.reset();
+}
+
 void Gui::on_new_active_task(const app::App::ActiveTaskVariant& new_task)
 {
     constexpr double EventBufferSecs = 6;
@@ -480,29 +496,20 @@ void Gui::on_new_active_task(const app::App::ActiveTaskVariant& new_task)
                 std::max(info.event_range_secs.start - EventBufferSecs, time.front()),
                 std::min(info.event_range_secs.end + EventBufferSecs, time.back()),
             };
-
-            const auto *apnea_range = task.swallow_anpea_range();
-            if (apnea_range) {
-                m_apnea_temp_range = {apnea_range->start, apnea_range->end};
-            } else {
-                m_apnea_temp_range = {NAN, NAN};
-            }
             spdlog::debug(
                 "Set new summary range to [{}, {}]",
                 m_plot_summary_range.start,
                 m_plot_summary_range.end
             );
+
+            m_annotator = Annotator(task);
         },
         [this](const app::ActiveSwallowLabellingTaskErrorView&) {
             m_plot_summary_selector.reset();
             m_plot_summary_range = {NAN, NAN};
-            m_apnea_temp_range = {NAN, NAN};
+            m_annotator = Annotator();
         },
     }(new_task);
-
-    m_earclick_temp_range = {NAN, NAN};
-    m_hovered_ear_click_id.reset();
-    m_selected_ear_click_id.reset();
 }
 
 Gui::Plotter::Plotter(
@@ -584,7 +591,7 @@ void Gui::draw_flow_plot(app::ActiveSwallowLabellingTaskView& task_view)
     }
 
     if (task_view.can_add_new_swallow_apnea_range()) {
-        auto new_range = m_apnea_range_selector.update(
+        auto new_range = m_annotator.apnea_range_selector.update(
             "##apnea_range_selector", 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl
         );
         if (new_range) {
@@ -594,11 +601,15 @@ void Gui::draw_flow_plot(app::ActiveSwallowLabellingTaskView& task_view)
 
     const auto *range = task_view.swallow_anpea_range();
     if (range && task_view.can_edit_swallow_apnea_range()) {
-        if (!m_apnea_range_dragger.is_editing()) {
-            m_apnea_temp_range = {range->start, range->end};
+        if (!m_annotator.apnea_range_dragger.is_editing()) {
+            m_annotator.apnea_temp_range = {range->start, range->end};
         }
-        if (m_apnea_range_dragger.update("##apnea_range_dragger", m_apnea_temp_range)) {
-            task_view.set_swallow_apnea_range(m_apnea_temp_range.start, m_apnea_temp_range.end);
+        if (m_annotator.apnea_range_dragger.update(
+                "##apnea_range_dragger", m_annotator.apnea_temp_range
+            )) {
+            task_view.set_swallow_apnea_range(
+                m_annotator.apnea_temp_range.start, m_annotator.apnea_temp_range.end
+            );
         }
     }
 }
@@ -614,7 +625,7 @@ void Gui::draw_apnea_label_region(
         return;
     }
 
-    const auto *selecting_range = m_apnea_range_selector.range();
+    const auto *selecting_range = m_annotator.apnea_range_selector.range();
     if (selecting_range) {
         widgets::draw_plot_range(
             *selecting_range, selected_color ? SelectedColor : SelectingColor, height
@@ -622,8 +633,8 @@ void Gui::draw_apnea_label_region(
     } else {
         const auto *range = task_view.swallow_anpea_range();
         if (range) {
-            if (m_apnea_range_dragger.is_editing()) {
-                widgets::draw_plot_range(m_apnea_temp_range, SelectedColor, height);
+            if (m_annotator.apnea_range_dragger.is_editing()) {
+                widgets::draw_plot_range(m_annotator.apnea_temp_range, SelectedColor, height);
             } else {
                 widgets::draw_plot_range(range->start, range->end, SelectedColor, height);
             }
@@ -642,32 +653,36 @@ void Gui::draw_audio_plot(app::ActiveSwallowLabellingTaskView& task_view)
     if (task_view.can_add_new_ear_click_range()) {
         add_plot_text(HINT_ICON ICON_TEXT_SPACE
                       "Hold Ctrl and left click and drag to add ear click label(s)");
-        auto new_range = m_earclick_range_selector.update(
+        auto new_range = m_annotator.earclick_range_selector.update(
             "##earclick_new_range_selector", 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl
         );
         if (new_range) {
             auto new_id = task_view.add_ear_click_label(new_range->start, new_range->end);
             if (new_id) {
-                m_selected_ear_click_id = new_id;
+                m_annotator.selected_ear_click_id = new_id;
             }
         }
     }
 
-    if (task_view.can_add_new_ear_click_range() && m_selected_ear_click_id.has_value()) {
-        const auto *range = task_view.ear_click_label(*m_selected_ear_click_id);
+    if (task_view.can_add_new_ear_click_range() && m_annotator.selected_ear_click_id.has_value()) {
+        const auto *range = task_view.ear_click_label(*m_annotator.selected_ear_click_id);
         if (range) {
-            if (!m_earclick_range_dragger.is_editing()) {
-                m_earclick_temp_range = {range->range.start, range->range.end};
+            if (!m_annotator.earclick_range_dragger.is_editing()) {
+                m_annotator.earclick_temp_range = {range->range.start, range->range.end};
             }
-            if (m_earclick_range_dragger.update("##earclick_range_dragger", m_earclick_temp_range))
+            if (m_annotator.earclick_range_dragger.update(
+                    "##earclick_range_dragger", m_annotator.earclick_temp_range
+                ))
             {
                 task_view.set_ear_click_label(
-                    *m_selected_ear_click_id, m_earclick_temp_range.start, m_earclick_temp_range.end
+                    *m_annotator.selected_ear_click_id,
+                    m_annotator.earclick_temp_range.start,
+                    m_annotator.earclick_temp_range.end
                 );
             }
         } else {
-            spdlog::error("No range for ID = {}", *m_selected_ear_click_id);
-            m_selected_ear_click_id.reset();
+            spdlog::error("No range for ID = {}", *m_annotator.selected_ear_click_id);
+            m_annotator.selected_ear_click_id.reset();
         }
     }
 }
@@ -686,22 +701,23 @@ void Gui::draw_earclick_label_regions(
     }
 
     for (const auto& label : *labels) {
-        if (m_earclick_range_dragger.is_editing() && m_selected_ear_click_id == label.id)
-            [[unlikely]] {
-            widgets::draw_plot_range(m_earclick_temp_range, ColorSelected, height);
+        if (m_annotator.earclick_range_dragger.is_editing()
+            && m_annotator.selected_ear_click_id == label.id) [[unlikely]]
+        {
+            widgets::draw_plot_range(m_annotator.earclick_temp_range, ColorSelected, height);
         } else {
             widgets::draw_plot_range(
                 label.range.start,
                 label.range.end,
-                selected_color || m_selected_ear_click_id == label.id ?
+                selected_color || m_annotator.selected_ear_click_id == label.id ?
                     ColorSelected :
-                    (m_hovered_ear_click_id == label.id ? ColorHovered : Color),
+                    (m_annotator.hovered_ear_click_id == label.id ? ColorHovered : Color),
                 height
             );
         }
     }
 
-    const auto *selector_range = m_earclick_range_selector.range();
+    const auto *selector_range = m_annotator.earclick_range_selector.range();
     if (selector_range) {
         widgets::draw_plot_range(*selector_range, selected_color ? ColorSelected : Color, height);
     }
@@ -978,11 +994,7 @@ void Gui::draw_annotation_submit(app::ActiveSwallowLabellingTaskView& task_view)
         ImGui::SameLine();
         if (widgets::ButtonRed(del_str, {del_button_width, button_height})) {
             task_view.delete_annotation();
-
-            // TODO: should delegate this to App somehow, or at least encapsulate resetting
-            // annotation state
-            m_selected_ear_click_id.reset();
-            m_hovered_ear_click_id.reset();
+            m_annotator.reset_ear_click();
         }
         ImGui::SetItemTooltip("Delete annotation");
     }
@@ -1055,7 +1067,7 @@ void Gui::draw_earclick_labels_listbox(
         - (ImGui::CalcTextSize(remove_button_str).x + 2 * ImGui::GetStyle().ItemSpacing.x);
 
     std::optional<app::EarClickLabel::ID> id_to_remove = std::nullopt;
-    m_hovered_ear_click_id.reset();
+    m_annotator.hovered_ear_click_id.reset();
     for (const auto& label : labels) {
         widgets::ScopedImID label_id_scope(static_cast<int>(label.id));
         std::string str = fmt::format(
@@ -1065,18 +1077,19 @@ void Gui::draw_earclick_labels_listbox(
             label.range.end,
             label.range.end - label.range.start
         );
-        const bool selected = optutil::has_value_and_equal(m_selected_ear_click_id, label.id);
+        const bool selected =
+            optutil::has_value_and_equal(m_annotator.selected_ear_click_id, label.id);
         if (ImGui::Selectable(str.c_str(), selected, 0, {label_width, label_height})) {
             if (selected) {
                 spdlog::debug("De-selecting ear click label ID={}", label.id);
-                m_selected_ear_click_id.reset();
+                m_annotator.selected_ear_click_id.reset();
             } else {
                 spdlog::debug("Selecting ear click label ID={}", label.id);
-                m_selected_ear_click_id = label.id;
+                m_annotator.selected_ear_click_id = label.id;
             }
         }
         if (ImGui::IsItemHovered()) {
-            m_hovered_ear_click_id = label.id;
+            m_annotator.hovered_ear_click_id = label.id;
         }
 
         ImGui::SameLine();
@@ -1084,17 +1097,17 @@ void Gui::draw_earclick_labels_listbox(
             id_to_remove = label.id;
         }
         if (ImGui::IsItemHovered()) {
-            m_hovered_ear_click_id = label.id;
+            m_annotator.hovered_ear_click_id = label.id;
         }
     }
 
     if (id_to_remove.has_value()) {
         task_view.remove_ear_click_label(*id_to_remove);
-        if (id_to_remove == m_selected_ear_click_id) {
-            m_selected_ear_click_id.reset();
+        if (id_to_remove == m_annotator.selected_ear_click_id) {
+            m_annotator.selected_ear_click_id.reset();
         }
-        if (id_to_remove == m_hovered_ear_click_id) {
-            m_hovered_ear_click_id.reset();
+        if (id_to_remove == m_annotator.hovered_ear_click_id) {
+            m_annotator.hovered_ear_click_id.reset();
         }
     }
 }

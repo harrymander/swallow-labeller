@@ -79,15 +79,23 @@ private:
     Plotter m_flow_plotter;
     Plotter m_audio_plotter;
 
-    widgets::PlotRangeSelector m_apnea_range_selector;
-    widgets::PlotRange m_apnea_temp_range = {NAN, NAN};
-    widgets::PlotRangeDragger m_apnea_range_dragger;
+    struct Annotator {
+        widgets::PlotRangeSelector apnea_range_selector;
+        widgets::PlotRange apnea_temp_range = {NAN, NAN};
+        widgets::PlotRangeDragger apnea_range_dragger;
+        widgets::PlotRangeSelector earclick_range_selector;
+        widgets::PlotRangeDragger earclick_range_dragger;
+        widgets::PlotRange earclick_temp_range = {NAN, NAN};
+        std::optional<app::EarClickLabel::ID> selected_ear_click_id = std::nullopt;
+        std::optional<app::EarClickLabel::ID> hovered_ear_click_id = std::nullopt;
 
-    widgets::PlotRangeSelector m_earclick_range_selector;
-    widgets::PlotRangeDragger m_earclick_range_dragger;
-    widgets::PlotRange m_earclick_temp_range = {NAN, NAN};
-    std::optional<app::EarClickLabel::ID> m_selected_ear_click_id = std::nullopt;
-    std::optional<app::EarClickLabel::ID> m_hovered_ear_click_id = std::nullopt;
+        void reset_ear_click();
+
+        Annotator() = default;
+        explicit Annotator(const app::ActiveSwallowLabellingTaskView& task_view);
+    };
+
+    Annotator m_annotator;
 
     void setup_imgui_ini();
     void setup_dockspace() const;

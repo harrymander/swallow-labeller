@@ -25,6 +25,16 @@ inline R map_or(const std::optional<T>& opt, Map map_func, const R& default_valu
     return opt.has_value() ? map_func(*opt) : default_value;
 }
 
+/**
+ * Returns default_value if ptr is nullptr, else return the result of applying map_func on the
+ * dereferenced ptr.
+ */
+template <class T, class Map, class R>
+inline R map_or(const T *ptr, Map map_func, const R& default_value)
+{
+    return ptr == nullptr ? default_value : map_func(*ptr);
+}
+
 }; // namespace recap::labeller::optutil
 
 #endif // RECAP_LABELLER_UTIL_OPTUTIL_HPP_INCLUDE
