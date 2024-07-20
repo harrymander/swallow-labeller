@@ -835,7 +835,11 @@ void Gui::draw_task_list()
     if (ImGui::BeginListBox("##task_info_list", {-1, -1})) {
         for (std::size_t i = 0; i < tasks.size(); i++) {
             const auto& task = tasks[i];
-            const std::string str = task_info_str(task, m_app.task_has_annotation(task));
+            const bool has_annotation = m_app.task_has_annotation(task);
+            if (!has_annotation && m_only_show_annotated_tasks) {
+                continue;
+            }
+            const std::string str = task_info_str(task, has_annotation);
             if (m_task_list_text_filter.PassFilter(str.c_str())) {
                 if (ImGui::Selectable(str.c_str(), active_index == i)) {
                     m_app.set_active_task_index(i);
