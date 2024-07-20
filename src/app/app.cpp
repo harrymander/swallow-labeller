@@ -100,18 +100,6 @@ void App::set_active_task_index(std::size_t index)
     }
 }
 
-void App::increment_active_task_index()
-{
-    set_active_task_index((m_active_task_index + 1) % m_swallow_tasks.size());
-}
-
-void App::decrement_active_task_index()
-{
-    set_active_task_index(
-        m_active_task_index > 0 ? m_active_task_index - 1 : m_swallow_tasks.size() - 1
-    );
-}
-
 void App::reload_active_task()
 {
     spdlog::info("Reloading active task...");

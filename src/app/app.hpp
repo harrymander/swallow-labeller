@@ -195,8 +195,6 @@ public:
     [[nodiscard]] std::size_t active_task_index() const { return m_active_task_index; }
 
     void set_active_task_index(std::size_t index);
-    void increment_active_task_index();
-    void decrement_active_task_index();
 
     using ActiveTaskVariant =
         std::variant<ActiveSwallowLabellingTaskView, ActiveSwallowLabellingTaskErrorView>;
