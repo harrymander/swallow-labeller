@@ -34,7 +34,6 @@ imgui_compressed_c_array(
 add_executable(recap-labeller
     src/app/annotation-store.cpp
     src/app/app.cpp
-    src/gui/action-queue.cpp
     src/gui/font.cpp
     src/gui/gui.cpp
     src/gui/widgets/plot-range-dragger.cpp
