@@ -158,6 +158,10 @@ void Gui::draw()
         draw_critical_error(*critical_error);
     }
 
+    if (m_app.unsaved_task_switch_blocked()) {
+        draw_unsaved_task_prompt();
+    }
+
     draw_window(TaskListWindowId, [this]() { draw_task_list(); });
     draw_window(MainWindowId, [this]() { draw_main_window(); });
 
@@ -1103,6 +1107,71 @@ void Gui::draw_earclick_labels_listbox(
             m_annotator.hovered_ear_click_id.reset();
         }
     }
+}
+
+void Gui::draw_unsaved_task_prompt()
+{
+    static const char *ModalId = ERR_ICON ICON_TEXT_SPACE "Unsaved annotation";
+    constexpr ImVec2 CentrePos = {0.5F, 0.5F};
+    constexpr ImGuiWindowFlags Flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove;
+
+    if (!m_unsaved_task_switch_modal_open) {
+        m_unsaved_task_switch_modal_open = true;
+        ImGui::OpenPopup(ModalId);
+        ImGui::SetNextWindowPos(
+            ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, CentrePos
+        );
+    }
+
+    if (!ImGui::BeginPopupModal(ModalId, nullptr, Flags)) {
+        // Only need to call EndPopup if begin BeginPopupModal returns true
+        return;
+    }
+
+    static const char *const dont_save_str = "Don't save"; // Longest string
+    const ImVec2 size = {
+        ImGui::CalcTextSize(dont_save_str).x + 2 * ImGui::GetStyle().ItemInnerSpacing.x,
+        0,
+    };
+
+    // TODO: [FIXME(?)] the below is a bit of a hack, since currently we can't save an annotation
+    // that is in an invalid state. Ideally, would be able to save invalid annotations to a
+    // intermediary store so they can be restored.
+    const auto *task_view =
+        std::get_if<app::ActiveSwallowLabellingTaskView>(&m_app.active_task_view());
+    const bool can_save = task_view ? task_view->can_save_annotation() : false;
+
+    ImGui::Text("There are unsaved annotation changes!");
+    if (can_save) {
+        ImGui::Text("Do you want to save these changes?");
+    }
+    ImGui::Spacing();
+
+    if (can_save) {
+        if (ImGui::Button("Save", size)) {
+            m_app.save_unsaved_task_and_switch();
+            m_unsaved_task_switch_modal_open = false;
+        }
+        ImGui::SetItemDefaultFocus();
+        ImGui::SameLine();
+    }
+    if (ImGui::Button(dont_save_str, size)) {
+        m_app.discard_unsaved_task_and_switch();
+        m_unsaved_task_switch_modal_open = false;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Cancel", size)) {
+        m_app.cancel_unsaved_task_switch();
+        m_unsaved_task_switch_modal_open = false;
+    }
+    if (!can_save) {
+        ImGui::SetItemDefaultFocus();
+    }
+
+    if (!m_unsaved_task_switch_modal_open) {
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
 }
 
 }; // namespace recap::labeller::gui

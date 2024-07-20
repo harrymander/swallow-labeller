@@ -87,16 +87,81 @@ App::App(
 
 void App::set_active_task_index(std::size_t index)
 {
-    if (index < m_swallow_tasks.size()) {
-        if (index != m_active_task_index) {
-            spdlog::debug("Setting task index to {}", index);
-            m_active_task_index = index;
-            load_active_task();
-        } else {
-            spdlog::warn("Task index is already {}; not changing!", index);
-        }
+    if (m_next_active_task_index.has_value()) {
+        spdlog::error(
+            "There is already a task switch pending ({} -> {}), not switching",
+            m_active_task_index,
+            *m_next_active_task_index
+        );
+        return;
+    }
+    if (index >= m_swallow_tasks.size()) {
+        spdlog::error("Invalid task index {}; not changing!", index);
+        return;
+    }
+    if (index == m_active_task_index) {
+        spdlog::warn("Task index is already {}; not changing!", index);
+        return;
+    }
+
+    if (active_task_unsaved()) {
+        spdlog::debug(
+            "Task switch {} -> {} requested but task is unsaved; blocking task switch",
+            m_active_task_index,
+            index
+        );
+        m_next_active_task_index = index;
     } else {
-        spdlog::error("Invalid task index: {}; not changing!", index);
+        spdlog::debug("Setting task index to {}", index);
+        m_active_task_index = index;
+        load_active_task();
+    }
+}
+
+void App::cancel_unsaved_task_switch()
+{
+    if (m_next_active_task_index.has_value()) {
+        spdlog::debug(
+            "Cancelling task switch to index {}, staying on index {}",
+            *m_next_active_task_index,
+            m_active_task_index
+        );
+        m_next_active_task_index.reset();
+    } else {
+        spdlog::warn("No task switch to cancel, staying on index {}", m_active_task_index);
+    }
+}
+
+void App::save_unsaved_task_and_switch()
+{
+    if (m_next_active_task_index.has_value()) {
+        spdlog::debug(
+            "Saving unsaved task and switching active task index {} -> {}",
+            m_active_task_index,
+            *m_next_active_task_index
+        );
+        save_active_task();
+        m_active_task_index = *m_next_active_task_index;
+        m_next_active_task_index.reset();
+        load_active_task();
+    } else {
+        spdlog::warn("No unsaved task to save, staying on index {}", m_active_task_index);
+    }
+}
+
+void App::discard_unsaved_task_and_switch()
+{
+    if (m_next_active_task_index.has_value()) {
+        spdlog::debug(
+            "Discarding unsaved task and switching active task index {} -> {}",
+            m_active_task_index,
+            *m_next_active_task_index
+        );
+        m_active_task_index = *m_next_active_task_index;
+        m_next_active_task_index.reset();
+        load_active_task();
+    } else {
+        spdlog::warn("No unsaved task to discard, staying on index {}", m_active_task_index);
     }
 }
 
@@ -111,6 +176,26 @@ std::unique_ptr<App::ActiveTaskVariant> App::make_unique_active_task(Args&&...ar
 {
     auto *const ptr = new ActiveTaskVariant(T(std::forward<Args>(args)...));
     return std::unique_ptr<ActiveTaskVariant>(ptr);
+}
+
+bool App::active_task_unsaved() const
+{
+    const auto *task_view = std::get_if<ActiveSwallowLabellingTaskView>(m_active_task.get());
+    if (task_view) {
+        return task_view->annotation_unsaved();
+    }
+    return false;
+}
+
+void App::save_active_task()
+{
+    auto *task_view = std::get_if<ActiveSwallowLabellingTaskView>(m_active_task.get());
+    if (task_view) {
+        spdlog::debug("Saving annotation for active task");
+        task_view->save_annotation();
+    } else {
+        spdlog::error("Cannot save annotation for active task: in error state");
+    }
 }
 
 void App::load_active_task()
@@ -507,6 +592,17 @@ void ActiveSwallowLabellingTaskView::delete_annotation()
     m_annotation = Annotation();
     m_annotation_store.remove_annotation(m_task.annotation_id());
     spdlog::info("Deleted annotation for task with ID={}", m_task.annotation_id());
+}
+
+bool ActiveSwallowLabellingTaskView::annotation_unsaved() const
+{
+    // TODO: need a better way to check if annotation is unsaved...
+    if (can_save_annotation()) {
+        return !m_annotation_store.annotation_saved(
+            m_task.annotation_id(), m_annotation.to_model()
+        );
+    }
+    return false;
 }
 
 }; // namespace recap::labeller::app

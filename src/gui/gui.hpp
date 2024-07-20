@@ -59,6 +59,7 @@ private:
     bool m_show_implot_demo_window = false;
     bool m_show_imgui_metrics = false;
     bool m_critical_error_modal_open = false;
+    bool m_unsaved_task_switch_modal_open = false;
     recap::labeller::gui::widgets::ColorSchemeSelector m_color_scheme_selector;
 
 #if NDEBUG
@@ -127,6 +128,8 @@ private:
         float height = 0,
         bool selected_color = false
     ) const;
+
+    void draw_unsaved_task_prompt();
 };
 
 }; // namespace recap::labeller::gui

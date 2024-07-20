@@ -85,6 +85,8 @@ public:
 
     [[nodiscard]] const models::SwallowTaskInfo& info() const { return m_task.info(); }
 
+    [[nodiscard]] bool annotation_unsaved() const;
+
     [[nodiscard]] SwallowApneaAnnotationStatus swallow_apnea_annotation_status() const
     {
         return m_annotation.swallow_apnea_status;
@@ -195,6 +197,15 @@ public:
     [[nodiscard]] std::size_t active_task_index() const { return m_active_task_index; }
 
     void set_active_task_index(std::size_t index);
+    void reload_active_task();
+    void cancel_unsaved_task_switch();
+    void save_unsaved_task_and_switch();
+    void discard_unsaved_task_and_switch();
+
+    [[nodiscard]] bool unsaved_task_switch_blocked() const
+    {
+        return m_next_active_task_index.has_value();
+    }
 
     using ActiveTaskVariant =
         std::variant<ActiveSwallowLabellingTaskView, ActiveSwallowLabellingTaskErrorView>;
@@ -207,8 +218,6 @@ public:
     {
         return m_new_active_task_observable.subscribe(func);
     }
-
-    void reload_active_task();
 
     [[nodiscard]] bool task_has_annotation(const SwallowLabellingTask& task)
     {
@@ -228,8 +237,11 @@ private:
     SwallowAnnotationStore::ErrorObservable::Observer m_annotation_store_error_observer;
 
     std::size_t m_active_task_index = 0;
+    std::optional<std::size_t> m_next_active_task_index = std::nullopt;
     std::optional<std::string> m_critical_error = std::nullopt;
 
+    void save_active_task();
+    [[nodiscard]] bool active_task_unsaved() const;
     void load_active_task();
 
     template <typename T, typename... Args>
