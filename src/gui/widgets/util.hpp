@@ -96,7 +96,7 @@ inline double plot_pixels_to_xaxis(float x)
 
 inline bool global_shortcut(ImGuiKeyChord chord)
 {
-    return ImGui::Shortcut(chord, ImGuiInputFlags_RouteGlobal);
+    return !ImGui::GetIO().WantTextInput && ImGui::Shortcut(chord, ImGuiInputFlags_RouteGlobal);
 }
 
 }; // namespace recap::labeller::gui::widgets
