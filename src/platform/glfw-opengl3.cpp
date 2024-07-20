@@ -4,6 +4,9 @@
 // documentation from the docs/ folder + read the top of imgui.cpp. Read online:
 // https://github.com/ocornut/imgui/tree/master/docs
 
+#include "gui/gui.hpp"
+#include "platform.hpp"
+
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 #include <imgui.h>
@@ -13,12 +16,8 @@
 #include <GLES2/gl2.h>
 #endif
 
-#include "gui/gui.hpp"
-#include "platform.hpp"
-
-#include <spdlog/spdlog.h>
-
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
+#include <spdlog/spdlog.h>
 
 #include <cerrno>
 #include <csignal>

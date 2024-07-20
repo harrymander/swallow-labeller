@@ -12,12 +12,11 @@
 
 #include <backends/imgui_impl_dx12.h>
 #include <backends/imgui_impl_win32.h>
-#include <imgui.h>
-#include <spdlog/spdlog.h>
-
 #include <d3d12.h>
 #include <dxgi1_4.h>
+#include <imgui.h>
 #include <shellscalingapi.h>
+#include <spdlog/spdlog.h>
 #include <tchar.h>
 #include <winuser.h>
 

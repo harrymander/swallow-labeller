@@ -67,16 +67,13 @@ BreakBeforeTernaryOperators: false
 SortIncludes: CaseSensitive
 IncludeBlocks: Regroup
 IncludeCategories:
-  - Regex: '^".*' # Includes that use "
+  - Regex: '^".*' # Includes that use ""
     Priority: 1
     CaseSensitive: false
-  - Regex: "^<(config|recap)/.*"
+  - Regex: "^<.*\\.h(pp)?>" # other <> includes that use .h,.hpp etc. (i.e. non std)
     Priority: 2
     CaseSensitive: false
-  - Regex: "^<((backends|fmt|gtest|argparse|spdlog|nlohmann)/|imgui|implot|cnpy|IconsFont).*"  # 3rd part includes
+  - Regex: "^<[^.]+>$" # stdlib includes
     Priority: 3
-    CaseSensitive: false
-  - Regex: "^<.+\\..*>$" # other <> includes that use .h,.hpp etc. (i.e. non std)
-    Priority: 4
     CaseSensitive: false
 ...
