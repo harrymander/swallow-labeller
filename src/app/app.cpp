@@ -262,6 +262,35 @@ void App::save_active_task()
     }
 }
 
+void App::on_active_task_saved()
+{
+    if (!m_auto_advance_on_save) {
+        return;
+    }
+
+    std::size_t index = m_active_task_index + 1;
+    while (index != m_active_task_index) {
+        if (index == m_swallow_tasks.size()) {
+            // If the active index is 0 and we have reached end of list, then we have completed a
+            // full loop
+            if (m_active_task_index == 0) {
+                break;
+            }
+            index = 0;
+        }
+
+        const auto& task = m_swallow_tasks[index];
+        if (!(task_has_annotation(task) || task.error_msg().has_value())) {
+            set_active_task_index(index);
+            return;
+        }
+
+        index += 1;
+    }
+
+    spdlog::info("No more un-annotated tasks to auto-advance to!");
+}
+
 void App::load_active_task()
 {
     SwallowLabellingTask& task = m_swallow_tasks[m_active_task_index];
@@ -275,7 +304,7 @@ void App::load_active_task()
             spdlog::debug("Loaded data from {}", task.data_path());
             task.clear_error_msg();
             m_active_task = make_unique_active_task<ActiveSwallowLabellingTaskView>(
-                task, data, m_annotation_store
+                task, data, m_annotation_store, [this]() { on_active_task_saved(); }
             );
         } catch (const std::exception& e) {
             spdlog::error("Error loading data file from {}: {}", task.data_path(), e.what());
@@ -288,9 +317,15 @@ void App::load_active_task()
 }
 
 ActiveSwallowLabellingTaskView::ActiveSwallowLabellingTaskView(
-    SwallowLabellingTask& task, SwallowTaskData data, SwallowAnnotationStore& annotation_store
+    SwallowLabellingTask& task,
+    SwallowTaskData data,
+    SwallowAnnotationStore& annotation_store,
+    std::function<void()> on_task_save
 ) :
-    m_task(task), m_data(std::move(data)), m_annotation_store(annotation_store)
+    m_task(task),
+    m_data(std::move(data)),
+    m_annotation_store(annotation_store),
+    m_on_task_save(std::move(on_task_save))
 {
     const auto *annotation = m_annotation_store.get_annotation(task.annotation_id());
     if (annotation) {
@@ -644,6 +679,7 @@ void ActiveSwallowLabellingTaskView::save_annotation()
 
     (void) m_annotation_store.add_annotation(m_task.annotation_id(), m_annotation.to_model());
     spdlog::info("Saved annotation for task with ID={}", m_task.annotation_id());
+    m_on_task_save();
 }
 
 void ActiveSwallowLabellingTaskView::delete_annotation()

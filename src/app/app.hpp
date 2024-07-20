@@ -12,6 +12,7 @@
 
 #include <cstddef>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -159,12 +160,16 @@ private:
     [[nodiscard]] bool valid_earclick_annotation() const;
 
     ActiveSwallowLabellingTaskView(
-        SwallowLabellingTask& task, SwallowTaskData data, SwallowAnnotationStore& annotation_store
+        SwallowLabellingTask& task,
+        SwallowTaskData data,
+        SwallowAnnotationStore& annotation_store,
+        std::function<void()> on_task_save
     );
 
     SwallowLabellingTask& m_task;
     SwallowTaskData m_data;
     SwallowAnnotationStore& m_annotation_store;
+    std::function<void()> m_on_task_save;
 
     struct Annotation {
         Annotation() = default;
@@ -240,6 +245,10 @@ public:
         return m_critical_error;
     }
 
+    [[nodiscard]] bool auto_advance_on_save() const { return m_auto_advance_on_save; }
+
+    void set_auto_advance_on_save(bool advance) { m_auto_advance_on_save = advance; }
+
     class UnsavedTaskHandler;
 
 private:
@@ -257,10 +266,12 @@ private:
     bool m_ready_to_stop = false;
     std::size_t m_active_task_index = 0;
     std::optional<std::string> m_critical_error = std::nullopt;
+    bool m_auto_advance_on_save = true;
 
     void save_active_task();
     [[nodiscard]] bool active_task_unsaved() const;
     void load_active_task();
+    void on_active_task_saved();
 
     template <typename T, typename... Args>
     static std::unique_ptr<ActiveTaskVariant> make_unique_active_task(Args&&...);

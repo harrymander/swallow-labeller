@@ -993,6 +993,12 @@ void Gui::draw_annotation_submit(app::ActiveSwallowLabellingTaskView& task_view)
         }
         ImGui::SetItemTooltip("Delete annotation");
     }
+
+    bool auto_advance = m_app.auto_advance_on_save();
+    if (ImGui::Checkbox("Auto-advance to next task", &auto_advance)) {
+        m_app.set_auto_advance_on_save(auto_advance);
+        spdlog::debug("{}abled auto-advance on save", auto_advance ? "En" : "Dis");
+    }
 }
 
 void Gui::draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view)
