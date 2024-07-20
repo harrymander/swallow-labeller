@@ -14,6 +14,7 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -216,6 +217,11 @@ public:
         return m_annotation_store.has_annotation(task.info().get_id());
     }
 
+    [[nodiscard]] const std::optional<std::string>& critical_error() const
+    {
+        return m_critical_error;
+    }
+
 private:
     std::vector<SwallowLabellingTask> m_swallow_tasks;
     SwallowAnnotationStore m_annotation_store;
@@ -224,6 +230,7 @@ private:
     SwallowAnnotationStore::ErrorObservable::Observer m_annotation_store_error_observer;
 
     std::size_t m_active_task_index = 0;
+    std::optional<std::string> m_critical_error = std::nullopt;
 
     void load_active_task();
 

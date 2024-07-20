@@ -58,6 +58,7 @@ private:
     bool m_show_imgui_demo_window = false;
     bool m_show_implot_demo_window = false;
     bool m_show_imgui_metrics = false;
+    bool m_critical_error_modal_open = false;
     recap::labeller::gui::widgets::ColorSchemeSelector m_color_scheme_selector;
 
 #if NDEBUG
@@ -90,6 +91,7 @@ private:
 
     void setup_imgui_ini();
     void setup_dockspace() const;
+    void draw_critical_error(const std::string& error);
     void draw_main_window();
     void draw_task_list();
     void draw_menu_bar();

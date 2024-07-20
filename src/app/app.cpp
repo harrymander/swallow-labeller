@@ -76,10 +76,9 @@ App::App(
     m_swallow_tasks(labelling_tasks(swallow_tasks, data_dir)),
     m_annotation_store(std::move(annotation_store)),
     m_annotation_store_error_observer(
-        m_annotation_store.subscribe_sync_error([](const std::string& err) {
-            // TODO
-            spdlog::critical("[TOFIX] Error syncing to file: {}", err);
-            throw std::runtime_error("Error syncing to file: " + err);
+        m_annotation_store.subscribe_sync_error([this](const std::string& err) {
+            m_critical_error = fmt::format("Error syncing to annotation file: {}", err);
+            spdlog::critical(*m_critical_error);
         })
     )
 {

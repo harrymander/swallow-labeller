@@ -32,6 +32,7 @@
 #define ANNOTATED_TASK_ICON ICON_FA_SQUARE_CHECK
 #define HINT_ICON ICON_FA_LIGHTBULB
 #define DELETE_ICON ICON_FA_TRASH_CAN
+#define EXIT_ICON ICON_FA_XMARK
 #define ICON_TEXT_SPACE "  "
 constexpr float LabelSummaryHeight = 8; // Same as default ImPlotStyle::DigitalBitHeight
 
@@ -152,6 +153,11 @@ void Gui::draw()
     }
     setup_dockspace();
 
+    const auto& critical_error = m_app.critical_error();
+    if (critical_error.has_value()) {
+        draw_critical_error(*critical_error);
+    }
+
     draw_window(TaskListWindowId, [this]() { draw_task_list(); });
     draw_window(MainWindowId, [this]() { draw_main_window(); });
 
@@ -165,6 +171,31 @@ void Gui::draw()
     show_window(m_show_implot_demo_window, ImPlot::ShowDemoWindow);
 
     m_first_draw = false;
+}
+
+void Gui::draw_critical_error(const std::string& error)
+{
+    constexpr ImU32 TitleColor = 0xCC2929FF;
+    constexpr ImVec2 CentrePos = {0.5F, 0.5F};
+    widgets::ScopedImColor color_scope(ImGuiCol_TitleBgActive, TitleColor);
+
+    static const char *modal_title = ERR_ICON ICON_TEXT_SPACE "Critical error##crit_err_modal";
+
+    if (!m_critical_error_modal_open) {
+        m_critical_error_modal_open = true;
+        ImGui::OpenPopup(modal_title);
+        ImGui::SetNextWindowPos(
+            ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, CentrePos
+        );
+    }
+
+    if (ImGui::BeginPopupModal(modal_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("%s\n(Please email Harry!)", error.c_str());
+        if (widgets::ButtonRed(EXIT_ICON ICON_TEXT_SPACE "Quit")) {
+            stop();
+        }
+        ImGui::EndPopup();
+    }
 }
 
 void Gui::setup_dockspace() const
