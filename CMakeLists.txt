@@ -59,6 +59,7 @@ target_link_libraries(recap-labeller PRIVATE
     imgui::imgui
     implot::demo
     implot::implot
+    magic_enum::magic_enum
     nlohmann_json::nlohmann_json
     spdlog::spdlog
 )

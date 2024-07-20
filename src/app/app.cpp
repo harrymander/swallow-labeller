@@ -9,6 +9,7 @@
 #include "util/variant-visitor.hpp"
 
 #include <fmt/core.h>
+#include <magic_enum.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -163,56 +164,28 @@ ActiveSwallowLabellingTaskView::ActiveSwallowLabellingTaskView(
 
 namespace {
 
-SwallowApneaAnnotationStatus apnea_status_from_annotation(
+SwallowApneaAnnotationStatus apnea_status_from_swallow_apnea_model(
     const std::variant<models::SwallowApneaAnnotation, models::SwallowApneaError>& v
 )
 {
-    using namespace models;
-
-    return VariantVisitor{
-        [](const SwallowApneaAnnotation& annotation) {
-            switch (annotation.pattern) {
-            case SRCPattern::ExEx:
-                return SwallowApneaAnnotationStatus::ExEx;
-            case SRCPattern::ExIn:
-                return SwallowApneaAnnotationStatus::ExIn;
-            case SRCPattern::InEx:
-                return SwallowApneaAnnotationStatus::InEx;
-            case SRCPattern::InIn:
-                break;
-            }
-            return SwallowApneaAnnotationStatus::InIn;
+    auto name = VariantVisitor{
+        [](const models::SwallowApneaAnnotation& annotation) {
+            return magic_enum::enum_name(annotation.pattern);
         },
-        [](const SwallowApneaError& error) {
-            switch (error) {
-            case SwallowApneaError::FlowError:
-                return SwallowApneaAnnotationStatus::FlowError;
-            case SwallowApneaError::NoSwallow:
-                return SwallowApneaAnnotationStatus::NoSwallow;
-            case SwallowApneaError::ApneaCutoff:
-                break;
-            }
-            return SwallowApneaAnnotationStatus::ApneaCutoff;
-        },
+        [](const models::SwallowApneaError& error) { return magic_enum::enum_name(error); },
     }(v);
+    return magic_enum::enum_cast<SwallowApneaAnnotationStatus>(name).value();
 }
 
-EarClickAnnotationStatus ear_click_status_from_annotation(
+EarClickAnnotationStatus ear_click_status_from_ear_click_model(
     const std::variant<std::vector<models::TimeRange>, models::EarClickError>& v
 )
 {
-    using namespace models;
-
     return VariantVisitor{
-        [](const std::vector<TimeRange>&) { return EarClickAnnotationStatus::Ok; },
-        [](const EarClickError& error) {
-            switch (error) {
-            case EarClickError::NoEarClick:
-                return EarClickAnnotationStatus::NoEarClick;
-            case EarClickError::AudioError:
-                break;
-            }
-            return EarClickAnnotationStatus::AudioError;
+        [](const std::vector<models::TimeRange>&) { return EarClickAnnotationStatus::Ok; },
+        [](const models::EarClickError& error) {
+            return magic_enum::enum_cast<EarClickAnnotationStatus>(magic_enum::enum_name(error))
+                .value();
         },
     }(v);
 }
@@ -221,18 +194,22 @@ EarClickAnnotationStatus ear_click_status_from_annotation(
 
 ActiveSwallowLabellingTaskView::Annotation::Annotation(const models::SwallowAnnotation& annotation
 ) :
-    swallow_apnea_status(apnea_status_from_annotation(annotation.swallow_apnea)),
+    swallow_apnea_status(apnea_status_from_swallow_apnea_model(annotation.swallow_apnea)),
+
     swallow_is_ambiguous(VariantVisitor{
         [](const models::SwallowApneaAnnotation& annotation) { return annotation.is_ambiguous; },
         [](auto) { return false; },
     }(annotation.swallow_apnea)),
+
     swallow_apnea_range(VariantVisitor{
         [](const models::SwallowApneaAnnotation& annotation) { return annotation.time; },
         [](auto) {
             return models::TimeRange{NAN, NAN};
         },
     }(annotation.swallow_apnea)),
-    ear_click_status(ear_click_status_from_annotation(annotation.ear_clicks)),
+
+    ear_click_status(ear_click_status_from_ear_click_model(annotation.ear_clicks)),
+
     ear_click_labels(VariantVisitor{
         [](const std::vector<models::TimeRange>& ranges) {
             EarClickLabel::ID id = 1;
@@ -245,13 +222,11 @@ ActiveSwallowLabellingTaskView::Annotation::Annotation(const models::SwallowAnno
         },
         [](auto) { return std::vector<EarClickLabel>{}; },
     }(annotation.ear_clicks)),
+
     next_ear_click_label_id(ear_click_labels.empty() ? 1 : ear_click_labels.back().id + 1)
 {}
 
 namespace {
-
-// This is a mess... need to look into a better way to convert between enums (maybe
-// https://github.com/Neargye/magic_enum ?)
 
 [[nodiscard]] inline bool apnea_status_is_src_pattern(SwallowApneaAnnotationStatus status)
 {
@@ -264,30 +239,8 @@ swallow_apnea_annotation_model(
     bool is_ambiguous, SwallowApneaAnnotationStatus status, models::TimeRange range
 )
 {
-    using namespace models;
-
-    SRCPattern pattern;
-    switch (status) {
-    case SwallowApneaAnnotationStatus::ExEx:
-        pattern = SRCPattern::ExEx;
-        break;
-    case SwallowApneaAnnotationStatus::ExIn:
-        pattern = SRCPattern::ExIn;
-        break;
-    case SwallowApneaAnnotationStatus::InEx:
-        pattern = SRCPattern::InEx;
-        break;
-    case SwallowApneaAnnotationStatus::InIn:
-        pattern = SRCPattern::InIn;
-        break;
-    default: {
-        static const char *err = "Cannot create swallow annotation model from error status";
-        spdlog::critical(err);
-        throw std::logic_error(err);
-    }
-    }
-
-    return SwallowApneaAnnotation{
+    auto pattern = magic_enum::enum_cast<models::SRCPattern>(magic_enum::enum_name(status)).value();
+    return models::SwallowApneaAnnotation{
         .is_ambiguous = is_ambiguous,
         .pattern = pattern,
         .time = range,
@@ -297,26 +250,7 @@ swallow_apnea_annotation_model(
 [[nodiscard]] std::variant<models::SwallowApneaAnnotation, models::SwallowApneaError>
 swallow_apnea_error_model(SwallowApneaAnnotationStatus status)
 {
-    using namespace models;
-
-    switch (status) {
-    case SwallowApneaAnnotationStatus::FlowError:
-        return SwallowApneaError::FlowError;
-    case SwallowApneaAnnotationStatus::NoSwallow:
-        return SwallowApneaError::NoSwallow;
-    case SwallowApneaAnnotationStatus::ApneaCutoff:
-        return SwallowApneaError::ApneaCutoff;
-
-    case SwallowApneaAnnotationStatus::ExEx:
-    case SwallowApneaAnnotationStatus::ExIn:
-    case SwallowApneaAnnotationStatus::InEx:
-    case SwallowApneaAnnotationStatus::InIn:
-        break;
-    }
-
-    static const char *err = "Cannot create swallow error model from pattern status";
-    spdlog::critical(err);
-    throw std::logic_error(err);
+    return magic_enum::enum_cast<models::SwallowApneaError>(magic_enum::enum_name(status)).value();
 }
 
 [[nodiscard]] std::variant<std::vector<models::TimeRange>, models::EarClickError>
@@ -324,13 +258,11 @@ ear_clicks_annotation_model(
     EarClickAnnotationStatus status, const std::vector<EarClickLabel>& labels
 )
 {
-    using namespace models;
-
     switch (status) {
     case EarClickAnnotationStatus::NoEarClick:
-        return EarClickError::NoEarClick;
+        return models::EarClickError::NoEarClick;
     case EarClickAnnotationStatus::AudioError:
-        return EarClickError::AudioError;
+        return models::EarClickError::AudioError;
     case EarClickAnnotationStatus::Ok:
         break;
     }
@@ -338,10 +270,10 @@ ear_clicks_annotation_model(
     if (labels.empty()) {
         // Could throw an exception like above, but will play it safe
         spdlog::error("Ear click status is Ok, but no labels! Returning NoEarClick error");
-        return EarClickError::NoEarClick;
+        return models::EarClickError::NoEarClick;
     }
 
-    std::vector<TimeRange> ranges;
+    std::vector<models::TimeRange> ranges;
     ranges.reserve(labels.size());
     for (const auto& label : labels) {
         ranges.push_back(label.range);
