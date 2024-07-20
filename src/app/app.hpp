@@ -190,6 +190,13 @@ public:
         SwallowAnnotationStore annotation_store,
         const std::filesystem::path& data_dir);
 
+    ~App();
+
+    App(const App&) = delete;
+    App& operator=(const App&) = delete;
+    App(App&&) = delete;
+    App& operator=(App&&) = delete;
+
     void stop();
 
     [[nodiscard]] bool can_stop() const { return m_ready_to_stop; }
@@ -208,7 +215,7 @@ public:
 
     [[nodiscard]] bool unsaved_task_switch_blocked() const
     {
-        return m_next_active_task_index.has_value();
+        return m_unsaved_task_handler != nullptr;
     }
 
     using ActiveTaskVariant =
@@ -233,17 +240,22 @@ public:
         return m_critical_error;
     }
 
+    class UnsavedTaskHandler;
+
 private:
+    friend class UnsavedTaskSwitcher;
+    friend class UnsavedTaskCloser;
+
     std::vector<SwallowLabellingTask> m_swallow_tasks;
     SwallowAnnotationStore m_annotation_store;
     std::unique_ptr<ActiveTaskVariant> m_active_task;
     NewActiveTaskObservable m_new_active_task_observable;
     SwallowAnnotationStore::ErrorObservable::Observer m_annotation_store_error_observer;
+    std::unique_ptr<UnsavedTaskHandler> m_unsaved_task_handler;
 
     bool m_stop_requested = false;
     bool m_ready_to_stop = false;
     std::size_t m_active_task_index = 0;
-    std::optional<std::size_t> m_next_active_task_index = std::nullopt;
     std::optional<std::string> m_critical_error = std::nullopt;
 
     void save_active_task();

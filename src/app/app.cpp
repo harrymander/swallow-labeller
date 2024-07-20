@@ -80,26 +80,96 @@ App::App(
             m_critical_error = fmt::format("Error syncing to annotation file: {}", err);
             spdlog::critical(*m_critical_error);
         })
-    )
+    ),
+    m_unsaved_task_handler(nullptr)
 {
     load_active_task();
 }
 
+App::~App() = default;
+
+class App::UnsavedTaskHandler {
+public:
+    UnsavedTaskHandler() = default;
+    virtual ~UnsavedTaskHandler() = default;
+
+    virtual void cancel() = 0;
+    virtual void submit() = 0;
+
+    UnsavedTaskHandler(const UnsavedTaskHandler&) = delete;
+    UnsavedTaskHandler& operator=(const UnsavedTaskHandler&) = delete;
+    UnsavedTaskHandler(UnsavedTaskHandler&&) = delete;
+    UnsavedTaskHandler& operator=(UnsavedTaskHandler&&) = delete;
+};
+
+class UnsavedTaskSwitcher : public App::UnsavedTaskHandler {
+public:
+    UnsavedTaskSwitcher(App& app, std::size_t next_task_index) :
+        m_app(app), m_next_task_index(next_task_index)
+    {}
+
+    void cancel() override
+    {
+        spdlog::debug(
+            "Cancelling task index switch to {}, staying on {}",
+            m_next_task_index,
+            m_app.m_active_task_index
+        );
+    }
+
+    void submit() override
+    {
+        spdlog::debug(
+            "Switching task index {} -> {}", m_app.m_active_task_index, m_next_task_index
+        );
+        m_app.m_active_task_index = m_next_task_index;
+        m_app.load_active_task();
+    }
+
+private:
+    App& m_app;
+    std::size_t m_next_task_index;
+};
+
+class UnsavedTaskCloser : public App::UnsavedTaskHandler {
+public:
+    explicit UnsavedTaskCloser(App& app) : m_app(app) {}
+
+    void cancel() override
+    {
+        spdlog::info("App close cancelled");
+        m_app.m_stop_requested = false;
+    }
+
+    void submit() override
+    {
+        spdlog::info("Closing app");
+        m_app.m_ready_to_stop = true;
+    }
+
+private:
+    App& m_app;
+};
+
 void App::stop()
 {
-    spdlog::info("Application stop requested");
     m_stop_requested = true;
-    m_ready_to_stop = true;
+    if (m_critical_error) {
+        spdlog::critical("Force-stopping application due to critical error");
+        m_ready_to_stop = true;
+    } else if (active_task_unsaved()) {
+        spdlog::debug("Application stop requested, but there is an unsaved annotation; blocking");
+        m_unsaved_task_handler = std::make_unique<UnsavedTaskCloser>(*this);
+    } else {
+        spdlog::info("Stopping application");
+        m_ready_to_stop = true;
+    }
 }
 
 void App::set_active_task_index(std::size_t index)
 {
-    if (m_next_active_task_index.has_value()) {
-        spdlog::error(
-            "There is already a task switch pending ({} -> {}), not switching",
-            m_active_task_index,
-            *m_next_active_task_index
-        );
+    if (m_unsaved_task_handler) {
+        spdlog::error("There is already an unsaved task action pending, not switching");
         return;
     }
     if (index >= m_swallow_tasks.size()) {
@@ -117,7 +187,7 @@ void App::set_active_task_index(std::size_t index)
             m_active_task_index,
             index
         );
-        m_next_active_task_index = index;
+        m_unsaved_task_handler = std::make_unique<UnsavedTaskSwitcher>(*this, index);
     } else {
         spdlog::debug("Setting task index to {}", index);
         m_active_task_index = index;
@@ -127,13 +197,10 @@ void App::set_active_task_index(std::size_t index)
 
 void App::cancel_unsaved_task_switch()
 {
-    if (m_next_active_task_index.has_value()) {
-        spdlog::debug(
-            "Cancelling task switch to index {}, staying on index {}",
-            *m_next_active_task_index,
-            m_active_task_index
-        );
-        m_next_active_task_index.reset();
+    if (m_unsaved_task_handler) {
+        spdlog::debug("Cancelling unsaved task change");
+        m_unsaved_task_handler->cancel();
+        m_unsaved_task_handler.reset();
     } else {
         spdlog::warn("No task switch to cancel, staying on index {}", m_active_task_index);
     }
@@ -141,16 +208,11 @@ void App::cancel_unsaved_task_switch()
 
 void App::save_unsaved_task_and_switch()
 {
-    if (m_next_active_task_index.has_value()) {
-        spdlog::debug(
-            "Saving unsaved task and switching active task index {} -> {}",
-            m_active_task_index,
-            *m_next_active_task_index
-        );
+    if (m_unsaved_task_handler) {
+        spdlog::debug("Saving unsaved task");
         save_active_task();
-        m_active_task_index = *m_next_active_task_index;
-        m_next_active_task_index.reset();
-        load_active_task();
+        m_unsaved_task_handler->submit();
+        m_unsaved_task_handler.reset();
     } else {
         spdlog::warn("No unsaved task to save, staying on index {}", m_active_task_index);
     }
@@ -158,15 +220,10 @@ void App::save_unsaved_task_and_switch()
 
 void App::discard_unsaved_task_and_switch()
 {
-    if (m_next_active_task_index.has_value()) {
-        spdlog::debug(
-            "Discarding unsaved task and switching active task index {} -> {}",
-            m_active_task_index,
-            *m_next_active_task_index
-        );
-        m_active_task_index = *m_next_active_task_index;
-        m_next_active_task_index.reset();
-        load_active_task();
+    if (m_unsaved_task_handler) {
+        spdlog::debug("Discarding unsaved task");
+        m_unsaved_task_handler->submit();
+        m_unsaved_task_handler.reset();
     } else {
         spdlog::warn("No unsaved task to discard, staying on index {}", m_active_task_index);
     }
