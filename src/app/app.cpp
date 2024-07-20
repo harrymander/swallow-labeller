@@ -85,6 +85,13 @@ App::App(
     load_active_task();
 }
 
+void App::stop()
+{
+    spdlog::info("Application stop requested");
+    m_stop_requested = true;
+    m_ready_to_stop = true;
+}
+
 void App::set_active_task_index(std::size_t index)
 {
     if (m_next_active_task_index.has_value()) {

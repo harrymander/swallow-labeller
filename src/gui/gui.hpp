@@ -29,7 +29,7 @@ public:
     void stop();
     static void set_scaling_factor(float scaling_factor);
 
-    [[nodiscard]] bool ready_to_stop() const { return m_ready_to_stop; }
+    [[nodiscard]] bool ready_to_stop() const { return m_app.can_stop(); }
 
 private:
     class Plotter {
@@ -53,8 +53,6 @@ private:
 
     bool m_first_draw = true;
     std::string m_ini_path;
-    bool m_stop_requested = false;
-    bool m_ready_to_stop = false;
     bool m_show_imgui_demo_window = false;
     bool m_show_implot_demo_window = false;
     bool m_show_imgui_metrics = false;

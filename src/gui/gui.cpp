@@ -113,9 +113,7 @@ Gui::~Gui()
 
 void Gui::stop()
 {
-    spdlog::info("GUI close requested");
-    m_stop_requested = true;
-    m_ready_to_stop = true;
+    m_app.stop();
 }
 
 static const char *const TaskListWindowId = "##tasklistwindow";

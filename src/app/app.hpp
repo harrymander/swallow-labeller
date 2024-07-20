@@ -190,6 +190,10 @@ public:
         SwallowAnnotationStore annotation_store,
         const std::filesystem::path& data_dir);
 
+    void stop();
+
+    [[nodiscard]] bool can_stop() const { return m_ready_to_stop; }
+
     [[nodiscard]] const std::vector<SwallowLabellingTask>& tasks() const { return m_swallow_tasks; }
 
     [[nodiscard]] std::size_t num_annotated_tasks() const { return m_annotation_store.size(); }
@@ -236,6 +240,8 @@ private:
     NewActiveTaskObservable m_new_active_task_observable;
     SwallowAnnotationStore::ErrorObservable::Observer m_annotation_store_error_observer;
 
+    bool m_stop_requested = false;
+    bool m_ready_to_stop = false;
     std::size_t m_active_task_index = 0;
     std::optional<std::size_t> m_next_active_task_index = std::nullopt;
     std::optional<std::string> m_critical_error = std::nullopt;
