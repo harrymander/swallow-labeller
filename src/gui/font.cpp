@@ -1,10 +1,10 @@
 #include "font.hpp"
 
+#include "util/os.hpp"
+
 #include <IconsFontAwesome6.h>
 #include <imgui.h>
 #include <spdlog/spdlog.h>
-
-#include <cstdlib>
 
 extern const unsigned int adobe_source_sans_compressed_size;
 extern const unsigned int adobe_source_sans_compressed_data[];
@@ -19,13 +19,13 @@ constexpr float DefaultFontSize = 18;
 
 float get_font_size()
 {
-    const char *var = std::getenv("RECAP_LABELLER_EMBEDDED_FONT_SIZE");
-    if (var == nullptr) {
+    auto var = os::getenv("RECAP_LABELLER_EMBEDDED_FONT_SIZE");
+    if (!var || var->empty()) {
         return DefaultFontSize;
     }
 
-    spdlog::debug("RECAP_LABELLER_EMBEDDED_FONT_SIZE={}", var);
-    auto size = static_cast<float>(std::atof(var));
+    spdlog::debug("RECAP_LABELLER_EMBEDDED_FONT_SIZE={}", *var);
+    auto size = static_cast<float>(std::atof(var->c_str()));
     return size > 0 ? size : DefaultFontSize;
 }
 
@@ -56,9 +56,9 @@ void merge_icon_font()
 
 void setup_fonts()
 {
-    const char *no_embed_envvar = std::getenv("RECAP_LABELLER_NO_EMBEDDED_FONTS");
-    if (no_embed_envvar != nullptr && std::atoi(no_embed_envvar)) {
-        spdlog::debug("RECAP_LABELLER_NO_EMBEDDED_FONTS={}", no_embed_envvar);
+    const auto no_embed_envvar = os::getenv("RECAP_LABELLER_NO_EMBEDDED_FONTS");
+    if (no_embed_envvar.has_value() && std::atoi(no_embed_envvar->c_str())) {
+        spdlog::debug("RECAP_LABELLER_NO_EMBEDDED_FONTS={}", *no_embed_envvar);
         spdlog::info("Not loading embedded fonts");
         return;
     }

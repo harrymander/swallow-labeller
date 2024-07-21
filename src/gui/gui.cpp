@@ -10,6 +10,7 @@
 #include "gui/widgets/util.hpp"
 #include "models/time-range.hpp"
 #include "util/optutil.hpp"
+#include "util/os.hpp"
 #include "util/util.hpp"
 #include "util/variant-visitor.hpp"
 
@@ -23,7 +24,6 @@
 #include <spdlog/spdlog.h>
 
 #include <array>
-#include <cstdlib>
 #include <filesystem>
 #include <variant>
 
@@ -86,10 +86,10 @@ bool is_valid_ini_path(const std::filesystem::path& path)
 void Gui::setup_imgui_ini()
 {
     ImGuiIO& io = ImGui::GetIO();
-    const char *const env = std::getenv("RECAP_LABELLER_IMGUI_INI_PATH");
-    if (env) {
-        if (*env) {
-            std::filesystem::path path(env);
+    const auto env = os::getenv("RECAP_LABELLER_IMGUI_INI_PATH");
+    if (env.has_value()) {
+        if (!env->empty()) {
+            std::filesystem::path path(*env);
             if (is_valid_ini_path(path)) {
                 m_ini_path = path.make_preferred().string();
                 spdlog::info("Custom ImGui INI path: '{}'", m_ini_path);
