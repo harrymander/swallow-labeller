@@ -482,12 +482,6 @@ Gui::Annotator::Annotator(const app::ActiveSwallowLabellingTaskView& task_view) 
     note(task_view.note())
 {}
 
-void Gui::Annotator::reset_ear_click()
-{
-    selected_ear_click_id.reset();
-    hovered_ear_click_id.reset();
-}
-
 void Gui::on_new_active_task(const app::App::ActiveTaskVariant& new_task)
 {
     constexpr double EventBufferSecs = 6;
@@ -989,7 +983,7 @@ bool Gui::draw_annotation_submit(app::ActiveSwallowLabellingTaskView& task_view)
         ImGui::SameLine();
         if (widgets::ButtonRed(del_str, {del_button_width, button_height})) {
             task_view.delete_annotation();
-            m_annotator.reset_ear_click();
+            m_annotator = Annotator(task_view);
         }
         ImGui::SetItemTooltip("Delete annotation");
     }

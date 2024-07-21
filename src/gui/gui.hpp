@@ -89,8 +89,6 @@ private:
         std::optional<app::EarClickLabel::ID> hovered_ear_click_id = std::nullopt;
         std::string note;
 
-        void reset_ear_click();
-
         Annotator() = default;
         explicit Annotator(const app::ActiveSwallowLabellingTaskView& task_view);
     };
