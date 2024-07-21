@@ -1017,10 +1017,13 @@ void Gui::draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view)
     ImGui::SeparatorText("Note");
     const float note_height =
         (NoteHeightLines - 1) * ImGui::GetTextLineHeightWithSpacing() + ImGui::GetTextLineHeight();
-    ImGui::InputTextMultiline("##annotation_note_input", &m_annotator.note, {-1, note_height});
-    if (ImGui::IsItemDeactivatedAfterEdit()) {
-        // TODO: this may result in some changes not being registered?
-        spdlog::debug("Annotation note updated");
+    bool update_note =
+        ImGui::InputTextMultiline("##annotation_note_input", &m_annotator.note, {-1, note_height});
+    if (ImGui::SmallButton("Clear##clear_note_text")) {
+        m_annotator.note.clear();
+        update_note = true;
+    }
+    if (update_note) {
         task_view.set_note(m_annotator.note);
     }
 
