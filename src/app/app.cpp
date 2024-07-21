@@ -237,6 +237,19 @@ void App::reload_active_task()
     load_active_task();
 }
 
+void App::save_active_task()
+{
+    auto *task_view = std::get_if<ActiveSwallowLabellingTaskView>(m_active_task.get());
+    if (task_view) {
+        spdlog::debug("Saving annotation for active task");
+        if (task_view->save_annotation() && m_auto_advance_on_save) {
+            auto_advance_active_task();
+        }
+    } else {
+        spdlog::error("Cannot save annotation for active task: in error state");
+    }
+}
+
 template <typename T, typename... Args>
 std::unique_ptr<App::ActiveTaskVariant> App::make_unique_active_task(Args&&...args)
 {
@@ -253,23 +266,8 @@ bool App::active_task_unsaved() const
     return false;
 }
 
-void App::save_active_task()
+void App::auto_advance_active_task()
 {
-    auto *task_view = std::get_if<ActiveSwallowLabellingTaskView>(m_active_task.get());
-    if (task_view) {
-        spdlog::debug("Saving annotation for active task");
-        task_view->save_annotation();
-    } else {
-        spdlog::error("Cannot save annotation for active task: in error state");
-    }
-}
-
-void App::on_active_task_saved()
-{
-    if (!m_auto_advance_on_save) {
-        return;
-    }
-
     std::size_t index = m_active_task_index + 1;
     while (index != m_active_task_index) {
         if (index == m_swallow_tasks.size()) {
@@ -306,7 +304,7 @@ void App::load_active_task()
             spdlog::debug("Loaded data from {}", task.data_path());
             task.clear_error_msg();
             m_active_task = make_unique_active_task<ActiveSwallowLabellingTaskView>(
-                task, data, m_annotation_store, [this]() { on_active_task_saved(); }
+                task, data, m_annotation_store
             );
         } catch (const std::exception& e) {
             spdlog::error("Error loading data file from {}: {}", task.data_path(), e.what());
@@ -319,15 +317,9 @@ void App::load_active_task()
 }
 
 ActiveSwallowLabellingTaskView::ActiveSwallowLabellingTaskView(
-    SwallowLabellingTask& task,
-    SwallowTaskData data,
-    SwallowAnnotationStore& annotation_store,
-    std::function<void()> on_task_save
+    SwallowLabellingTask& task, SwallowTaskData data, SwallowAnnotationStore& annotation_store
 ) :
-    m_task(task),
-    m_data(std::move(data)),
-    m_annotation_store(annotation_store),
-    m_on_task_save(std::move(on_task_save))
+    m_task(task), m_data(std::move(data)), m_annotation_store(annotation_store)
 {
     const auto *annotation = m_annotation_store.get_annotation(task.annotation_id());
     if (annotation) {
@@ -684,16 +676,16 @@ bool ActiveSwallowLabellingTaskView::can_save_annotation() const
     return valid_apnea_annotation() && valid_earclick_annotation();
 }
 
-void ActiveSwallowLabellingTaskView::save_annotation()
+bool ActiveSwallowLabellingTaskView::save_annotation()
 {
     if (!can_save_annotation()) {
         spdlog::error("Cannot save annotation for task with ID={}", m_task.annotation_id());
-        return;
+        return false;
     }
 
     (void) m_annotation_store.add_annotation(m_task.annotation_id(), m_annotation.to_model());
     spdlog::info("Saved annotation for task with ID={}", m_task.annotation_id());
-    m_on_task_save();
+    return true;
 }
 
 void ActiveSwallowLabellingTaskView::delete_annotation()

@@ -152,28 +152,23 @@ public:
 
     [[nodiscard]] bool can_save_annotation() const;
 
-    void save_annotation();
-
     void delete_annotation();
 
 private:
     friend class App;
 
+    [[nodiscard]] bool save_annotation();
     [[nodiscard]] bool has_apnea_range() const;
     [[nodiscard]] bool valid_apnea_annotation() const;
     [[nodiscard]] bool valid_earclick_annotation() const;
 
     ActiveSwallowLabellingTaskView(
-        SwallowLabellingTask& task,
-        SwallowTaskData data,
-        SwallowAnnotationStore& annotation_store,
-        std::function<void()> on_task_save
+        SwallowLabellingTask& task, SwallowTaskData data, SwallowAnnotationStore& annotation_store
     );
 
     SwallowLabellingTask& m_task;
     SwallowTaskData m_data;
     SwallowAnnotationStore& m_annotation_store;
-    std::function<void()> m_on_task_save;
 
     struct Annotation {
         Annotation() = default;
@@ -218,11 +213,17 @@ public:
 
     [[nodiscard]] std::size_t active_task_index() const { return m_active_task_index; }
 
+    /**
+     * [FIXME] The below functions may change the active task view, so any references returned from
+     * active_task_view() may be invalidated and should not be used following a call to any of these
+     * functions.
+     */
     void set_active_task_index(std::size_t index);
     void reload_active_task();
     void cancel_unsaved_task_switch();
     void save_unsaved_task_and_switch();
     void discard_unsaved_task_and_switch();
+    void save_active_task();
 
     [[nodiscard]] bool unsaved_task_switch_blocked() const
     {
@@ -241,7 +242,7 @@ public:
         return m_new_active_task_observable.subscribe(func);
     }
 
-    [[nodiscard]] bool task_has_annotation(const SwallowLabellingTask& task)
+    [[nodiscard]] bool task_has_annotation(const SwallowLabellingTask& task) const
     {
         return m_annotation_store.has_annotation(task.info().get_id());
     }
@@ -274,10 +275,9 @@ private:
     std::optional<std::string> m_critical_error = std::nullopt;
     bool m_auto_advance_on_save = true;
 
-    void save_active_task();
     [[nodiscard]] bool active_task_unsaved() const;
     void load_active_task();
-    void on_active_task_saved();
+    void auto_advance_active_task();
 
     template <typename T, typename... Args>
     static std::unique_ptr<ActiveTaskVariant> make_unique_active_task(Args&&...);

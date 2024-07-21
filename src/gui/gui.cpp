@@ -969,7 +969,7 @@ template <typename... Args> bool delete_label_button(Args&&...args)
 
 }; // namespace
 
-void Gui::draw_annotation_submit(app::ActiveSwallowLabellingTaskView& task_view)
+bool Gui::draw_annotation_submit(app::ActiveSwallowLabellingTaskView& task_view)
 {
     static const char *del_str = ICON_TEXT_SPACE ICON_FA_TRASH_CAN ICON_TEXT_SPACE;
     const float del_button_width =
@@ -981,12 +981,10 @@ void Gui::draw_annotation_submit(app::ActiveSwallowLabellingTaskView& task_view)
         can_delete ? ImGui::GetContentRegionAvail().x - del_button_width : -1;
 
     ImGui::BeginDisabled(!task_view.can_save_annotation());
-    if (ImGui::Button("Save [Ctrl+S]", {submit_button_width, button_height})
-        || widgets::global_shortcut(ImGuiMod_Ctrl | ImGuiKey_S))
-    {
-        task_view.save_annotation();
-    }
+    const bool save_task = ImGui::Button("Save [Ctrl+S]", {submit_button_width, button_height})
+        || widgets::global_shortcut(ImGuiMod_Ctrl | ImGuiKey_S);
     ImGui::EndDisabled();
+
     if (can_delete) {
         ImGui::SameLine();
         if (widgets::ButtonRed(del_str, {del_button_width, button_height})) {
@@ -1001,13 +999,15 @@ void Gui::draw_annotation_submit(app::ActiveSwallowLabellingTaskView& task_view)
         m_app.set_auto_advance_on_save(auto_advance);
         spdlog::debug("{}abled auto-advance on save", auto_advance ? "En" : "Dis");
     }
+
+    return save_task;
 }
 
 void Gui::draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view)
 {
     constexpr float NoteHeightLines = 3;
 
-    draw_annotation_submit(task_view);
+    const bool to_save_annotation = draw_annotation_submit(task_view);
 
     ImGui::SeparatorText("Instructions");
     ImGui::TextWrapped("Single apnoea label required, may have multiple ear audio labels.");
@@ -1066,6 +1066,10 @@ void Gui::draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view)
                 ImGui::EndListBox();
             }
         }
+    }
+
+    if (to_save_annotation) {
+        m_app.save_active_task();
     }
 }
 
