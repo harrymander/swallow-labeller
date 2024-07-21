@@ -18,6 +18,16 @@ if(WIN32)
     endif()
 endif()
 
+if(VCPKG_TOOLCHAIN)
+    set(DEFAULT_FETCH_VENDORED OFF)
+else()
+    set(DEFAULT_FETCH_VENDORED ON)
+endif()
+option(FETCH_VENDORED "Fetch vendored dependencies" ${DEFAULT_FETCH_VENDORED})
+if(FETCH_VENDORED)
+    message(STATUS "Fetching vendored dependencies")
+endif()
+
 add_subdirectory(vendor)
 
 option(BUILD_TESTS "Build tests" ON)
@@ -59,7 +69,7 @@ add_executable(recap-labeller
 target_include_directories(recap-labeller PRIVATE src)
 target_compile_features(recap-labeller PRIVATE cxx_std_20)
 target_link_libraries(recap-labeller PRIVATE
-    argparse
+    argparse::argparse
     cnpy::cnpy
     fmt::fmt
     IconFontCppHeaders

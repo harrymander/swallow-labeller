@@ -1,6 +1,11 @@
 {
   "dependencies": [
+    "argparse",
+    "fmt",
     "gtest",
+    "magic-enum",
+    "nlohmann-json",
+    "spdlog",
     "zlib"
   ]
 }

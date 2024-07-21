@@ -1,4 +1,4 @@
-if(FETCH_GTEST)
+if(FETCH_VENDORED)
     include(FetchContent)
     fetchcontent_declare(
         googletest
@@ -17,16 +17,11 @@ if(FETCH_GTEST)
             EXCLUDE_FROM_ALL
         )
     endif()
-    include(GoogleTest)
 else()
-    find_package(GTest)
-    if(NOT GTest_FOUND)
-        message(
-            FATAL_ERROR
-            "GTest not found - install or re-configure with FETCH_GTEST=on"
-        )
-    endif()
+    find_package(GTest CONFIG REQUIRED)
 endif()
+
+include(GoogleTest)
 
 set(Python3_FIND_UNVERSIONED_NAMES FIRST)
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
