@@ -3,7 +3,7 @@
     "configurePresets": [
         {
             "name": "windows-static",
-            "generator": "Visual Studio 17 2022",
+            "generator": "Ninja Multi-Config",
             "binaryDir": "${sourceDir}/build",
             "toolchainFile": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
             "cacheVariables": {
