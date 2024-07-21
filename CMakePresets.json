@@ -3,7 +3,7 @@
     "configurePresets": [
         {
             "name": "windows-static",
-            "generator": "Visual Studio 17 2022",
+            "generator": "Ninja Multi-Config",
             "binaryDir": "${sourceDir}/build",
             "toolchainFile": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
             "cacheVariables": {
@@ -14,11 +14,6 @@
                 "BUILD_TESTS": "ON",
                 "ENABLE_LINTING": "OFF"
             }
-        },
-        {
-            "name": "windows-static-ninja-multi",
-            "inherits": "windows-static",
-            "generator": "Ninja Multi-Config"
         }
     ]
 }
