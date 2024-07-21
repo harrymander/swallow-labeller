@@ -50,7 +50,7 @@ jobs:
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
       - name: Configure
-        run: cmake --preset windows-static -DBUILD_DEMO=off
+        run: cmake --preset windows-static-ninja-multi -DBUILD_DEMO=off
         env:
             VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
       - name: Build
