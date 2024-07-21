@@ -10,7 +10,7 @@
                 "VCPKG_TARGET_TRIPLET": "x64-windows-static",
                 "BUILD_SHARED_LIBS": "OFF",
                 "ZLIB_USE_STATIC_LIBS": "ON",
-                "FETCH_GTEST": "ON",
+                "FETCH_GTEST": "OFF",
                 "BUILD_TESTS": "ON",
                 "ENABLE_LINTING": "OFF"
             }
