@@ -211,8 +211,8 @@ void Gui::setup_dockspace() const
     // approximate sizes since the ratio calculations don't factor in window spacing etc.
     constexpr float TasklistPx = 250;
     constexpr float LabelInfoPx = 350;
-    constexpr float MinRatio = 0.1;
-    constexpr float MaxRatio = 0.25;
+    constexpr float MinRatio = 0.1F;
+    constexpr float MaxRatio = 0.25F;
 
     // If the dockspace ID already exists, the the node sizes are already set in imgui.ini. The
     // following is adapted from:
