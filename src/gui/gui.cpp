@@ -820,31 +820,62 @@ void Gui::draw_task_list()
         {num_annotated_pos.x, num_annotated_pos.y + ImGui::GetTextLineHeightWithSpacing()}
     );
 
+    const float button_padding = 2 * ImGui::GetStyle().ItemSpacing.x;
+
+    const char *shuffle_button_str = SHUFFLE_ICON ICON_TEXT_SPACE "Shuffle";
+    const float shuffle_button_width = button_padding + ImGui::CalcTextSize(shuffle_button_str).x;
     if (m_app.tasks_shuffled()) {
-        if (ImGui::Button(UNSHUFFLE_ICON ICON_TEXT_SPACE "Sort")) {
+        if (ImGui::Button(UNSHUFFLE_ICON ICON_TEXT_SPACE "Sort", {shuffle_button_width, 0})) {
             m_app.unshuffle_tasks();
         }
     } else {
-        if (ImGui::Button(SHUFFLE_ICON ICON_TEXT_SPACE "Shuffle")) {
+        if (ImGui::Button(shuffle_button_str, {shuffle_button_width, 0})) {
             m_app.shuffle_tasks();
         }
     }
 
     ImGui::SameLine();
     bool scroll_to_selected_task = false;
-    if (ImGui::Button(m_only_show_annotated_tasks ? "Show all" : "Show annotated only")) {
+    const char *show_annotated_str = "Show annotated only";
+    const float show_annotated_button_width =
+        button_padding + ImGui::CalcTextSize(show_annotated_str).x;
+    if (ImGui::Button(
+            m_only_show_annotated_tasks ? "Show all" : show_annotated_str,
+            {show_annotated_button_width, 0}
+        ))
+    {
         m_only_show_annotated_tasks = !m_only_show_annotated_tasks;
         scroll_to_selected_task = true;
     }
+
+    ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32_BLACK_TRANS);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32_BLACK_TRANS);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, IM_COL32_BLACK_TRANS);
+    ImGui::BeginGroup();
+    const bool scroll_to_top = ImGui::SmallButton(ICON_FA_ARROWS_UP_TO_LINE);
+    ImGui::SetItemTooltip("Scroll to top");
+    if (ImGui::SmallButton(ICON_FA_ARROWS_TO_DOT)) {
+        scroll_to_selected_task = true;
+    }
+    ImGui::SetItemTooltip("Scroll to active task");
+    const bool scroll_to_bottom = ImGui::SmallButton(ICON_FA_ARROWS_DOWN_TO_LINE);
+    ImGui::SetItemTooltip("Scroll to bottom");
+    ImGui::EndGroup();
+    ImGui::SameLine();
+    ImGui::PopStyleColor(3);
 
     const std::size_t active_index = m_app.active_task_index();
     if (!scroll_to_selected_task) {
         scroll_to_selected_task = m_task_list_last_active_index != active_index;
     }
     m_task_list_last_active_index = active_index;
-
     std::size_t num_annotated = 0;
+
     if (ImGui::BeginListBox("##task_info_list", {-1, -1})) {
+        if (scroll_to_top) {
+            ImGui::SetScrollHereY();
+        }
+
         std::size_t i = 0;
         for (const auto& task : tasks.items()) {
             const bool has_annotation = m_app.task_has_annotation(task);
@@ -870,6 +901,10 @@ void Gui::draw_task_list()
             }
 
             i += 1;
+        }
+
+        if (scroll_to_bottom) {
+            ImGui::SetScrollHereY();
         }
         ImGui::EndListBox();
     }
