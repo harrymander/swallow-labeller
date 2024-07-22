@@ -209,8 +209,6 @@ public:
 
     [[nodiscard]] const std::vector<SwallowLabellingTask>& tasks() const { return m_swallow_tasks; }
 
-    [[nodiscard]] std::size_t num_annotated_tasks() const { return m_annotation_store.size(); }
-
     [[nodiscard]] std::size_t active_task_index() const { return m_active_task_index; }
 
     /**

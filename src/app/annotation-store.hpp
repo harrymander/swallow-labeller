@@ -12,8 +12,6 @@ class SwallowAnnotationStore {
 public:
     SwallowAnnotationStore(std::filesystem::path path, models::SwallowAnnotationsMap annotations);
 
-    [[nodiscard]] std::size_t size() const { return annotations.size(); }
-
     /**
      * Retrieves annotation with annotation_id and returns pointer to it, or nullptr if no
      * annotation with that ID

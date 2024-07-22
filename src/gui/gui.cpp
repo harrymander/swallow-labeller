@@ -1,8 +1,8 @@
+#include <cstddef>
 #define IMGUI_DEFINE_MATH_OPERATORS
 
-#include "gui.hpp"
-
 #include "app/app.hpp"
+#include "gui.hpp"
 #include "gui/font.hpp"
 #include "gui/widgets/plot-range-selector.hpp"
 #include "gui/widgets/plot-range.hpp"
@@ -812,45 +812,49 @@ void Gui::draw_task_list()
     m_task_list_text_filter.Draw("##task_info_list_filter");
 
     const auto& tasks = m_app.tasks();
-    const std::size_t num_annotated = m_app.num_annotated_tasks();
+
+    const ImVec2 num_annotated_pos = ImGui::GetCursorPos();
+    ImGui::SetCursorPos(
+        {num_annotated_pos.x, num_annotated_pos.y + ImGui::GetTextLineHeightWithSpacing()}
+    );
+
+    if (ImGui::Button(m_only_show_annotated_tasks ? "Show all" : "Show annotated only")) {
+        m_only_show_annotated_tasks = !m_only_show_annotated_tasks;
+    }
+
+    const std::size_t active_index = m_app.active_task_index();
+    std::size_t num_annotated = 0;
+    if (ImGui::BeginListBox("##task_info_list", {-1, -1})) {
+        for (std::size_t i = 0; i < tasks.size(); i++) {
+            const auto& task = tasks[i];
+            const bool has_annotation = m_app.task_has_annotation(task);
+            if (has_annotation) {
+                num_annotated += 1;
+            }
+            if (!m_only_show_annotated_tasks || has_annotation) {
+                const std::string str = task_info_str(task, has_annotation);
+                if (m_task_list_text_filter.PassFilter(str.c_str())) {
+                    if (ImGui::Selectable(str.c_str(), active_index == i)) {
+                        m_app.set_active_task_index(i);
+                    }
+                    const auto& err = task.error_msg();
+                    if (err.has_value() && ImGui::BeginItemTooltip()) {
+                        ImGui::Text(ERR_ICON ICON_TEXT_SPACE "%s", err->c_str());
+                        ImGui::EndTooltip();
+                    }
+                }
+            }
+        }
+        ImGui::EndListBox();
+    }
+
+    ImGui::SetCursorPos(num_annotated_pos);
     ImGui::Text(
         ANNOTATED_TASK_ICON ICON_TEXT_SPACE "Annotated: %zu task%s out of %zu",
         num_annotated,
         num_annotated == 1 ? "" : "s",
         tasks.size()
     );
-
-    ImGui::BeginDisabled(num_annotated == 0);
-    if (ImGui::Button(
-            num_annotated != 0 && m_only_show_annotated_tasks ? "Show all" : "Show annotated only"
-        ))
-    {
-        m_only_show_annotated_tasks = !m_only_show_annotated_tasks;
-    }
-    ImGui::EndDisabled();
-
-    const std::size_t active_index = m_app.active_task_index();
-    if (ImGui::BeginListBox("##task_info_list", {-1, -1})) {
-        for (std::size_t i = 0; i < tasks.size(); i++) {
-            const auto& task = tasks[i];
-            const bool has_annotation = m_app.task_has_annotation(task);
-            if (!has_annotation && m_only_show_annotated_tasks) {
-                continue;
-            }
-            const std::string str = task_info_str(task, has_annotation);
-            if (m_task_list_text_filter.PassFilter(str.c_str())) {
-                if (ImGui::Selectable(str.c_str(), active_index == i)) {
-                    m_app.set_active_task_index(i);
-                }
-                const auto& err = task.error_msg();
-                if (err.has_value() && ImGui::BeginItemTooltip()) {
-                    ImGui::Text(ERR_ICON ICON_TEXT_SPACE "%s", err->c_str());
-                    ImGui::EndTooltip();
-                }
-            }
-        }
-        ImGui::EndListBox();
-    }
 }
 
 void Gui::draw_debug_info()
