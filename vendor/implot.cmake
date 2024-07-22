@@ -1,8 +1,4 @@
 include(FetchContent)
-set(
-    IMPLOT_INFINITE_LOOP_FIX_PATCH
-    0001-Fix-infinite-loop-when-plot-ranges-are-very-small.patch
-)
 fetchcontent_declare(
     implot
     GIT_REPOSITORY https://github.com/harrymander/implot
