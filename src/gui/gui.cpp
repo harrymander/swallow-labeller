@@ -871,6 +871,7 @@ void Gui::draw_task_list()
     m_task_list_last_active_index = active_index;
     std::size_t num_annotated = 0;
 
+    std::size_t new_active_index = active_index;
     if (ImGui::BeginListBox("##task_info_list", {-1, -1})) {
         if (scroll_to_top) {
             ImGui::SetScrollHereY();
@@ -887,7 +888,7 @@ void Gui::draw_task_list()
                 if (m_task_list_text_filter.PassFilter(str.c_str())) {
                     const bool selected = active_index == i;
                     if (ImGui::Selectable(str.c_str(), selected)) {
-                        m_app.set_active_task_index(i);
+                        new_active_index = i;
                     }
                     if (selected && scroll_to_selected_task && !ImGui::IsItemVisible()) {
                         ImGui::ScrollToItem();
@@ -916,6 +917,10 @@ void Gui::draw_task_list()
         num_annotated == 1 ? "" : "s",
         tasks.size()
     );
+
+    if (active_index != new_active_index) {
+        m_app.set_active_task_index(new_active_index);
+    }
 }
 
 void Gui::draw_debug_info()
