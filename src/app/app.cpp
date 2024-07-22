@@ -75,7 +75,10 @@ App::App(
     SwallowAnnotationStore annotation_store,
     const fs::path& data_dir
 ) :
-    m_swallow_tasks(labelling_tasks(swallow_tasks, data_dir)),
+    m_swallow_task_list(
+        labelling_tasks(swallow_tasks, data_dir),
+        [](const auto& a, const auto& b) { return a.info() < b.info(); }
+    ),
     m_annotation_store(std::move(annotation_store)),
     m_annotation_store_error_observer(
         m_annotation_store.subscribe_sync_error([this](const std::string& err) {
@@ -115,16 +118,16 @@ public:
         spdlog::debug(
             "Cancelling task index switch to {}, staying on {}",
             m_next_task_index,
-            m_app.m_active_task_index
+            m_app.m_swallow_task_list.index()
         );
     }
 
     void submit() override
     {
         spdlog::debug(
-            "Switching task index {} -> {}", m_app.m_active_task_index, m_next_task_index
+            "Switching task index {} -> {}", m_app.m_swallow_task_list.index(), m_next_task_index
         );
-        m_app.m_active_task_index = m_next_task_index;
+        m_app.m_swallow_task_list.set_index(m_next_task_index);
         m_app.load_active_task();
     }
 
@@ -174,11 +177,11 @@ void App::set_active_task_index(std::size_t index)
         spdlog::error("There is already an unsaved task action pending, not switching");
         return;
     }
-    if (index >= m_swallow_tasks.size()) {
+    if (index >= m_swallow_task_list.size()) {
         spdlog::error("Invalid task index {}; not changing!", index);
         return;
     }
-    if (index == m_active_task_index) {
+    if (index == m_swallow_task_list.index()) {
         spdlog::warn("Task index is already {}; not changing!", index);
         return;
     }
@@ -186,13 +189,13 @@ void App::set_active_task_index(std::size_t index)
     if (active_task_unsaved()) {
         spdlog::debug(
             "Task switch {} -> {} requested but task is unsaved; blocking task switch",
-            m_active_task_index,
+            m_swallow_task_list.index(),
             index
         );
         m_unsaved_task_handler = std::make_unique<UnsavedTaskSwitcher>(*this, index);
     } else {
         spdlog::debug("Setting task index to {}", index);
-        m_active_task_index = index;
+        m_swallow_task_list.set_index(index);
         load_active_task();
     }
 }
@@ -204,7 +207,7 @@ void App::cancel_unsaved_task_switch()
         m_unsaved_task_handler->cancel();
         m_unsaved_task_handler.reset();
     } else {
-        spdlog::warn("No task switch to cancel, staying on index {}", m_active_task_index);
+        spdlog::warn("No task switch to cancel, staying on index {}", m_swallow_task_list.index());
     }
 }
 
@@ -216,7 +219,7 @@ void App::save_unsaved_task_and_switch()
         m_unsaved_task_handler->submit();
         m_unsaved_task_handler.reset();
     } else {
-        spdlog::warn("No unsaved task to save, staying on index {}", m_active_task_index);
+        spdlog::warn("No unsaved task to save, staying on index {}", m_swallow_task_list.index());
     }
 }
 
@@ -227,7 +230,9 @@ void App::discard_unsaved_task_and_switch()
         m_unsaved_task_handler->submit();
         m_unsaved_task_handler.reset();
     } else {
-        spdlog::warn("No unsaved task to discard, staying on index {}", m_active_task_index);
+        spdlog::warn(
+            "No unsaved task to discard, staying on index {}", m_swallow_task_list.index()
+        );
     }
 }
 
@@ -268,18 +273,19 @@ bool App::active_task_unsaved() const
 
 void App::auto_advance_active_task()
 {
-    std::size_t index = m_active_task_index + 1;
-    while (index != m_active_task_index) {
-        if (index == m_swallow_tasks.size()) {
+    const std::size_t active_index = m_swallow_task_list.index();
+    std::size_t index = active_index + 1;
+    while (index != active_index) {
+        if (index == m_swallow_task_list.size()) {
             // If the active index is 0 and we have reached end of list, then we have completed a
             // full loop
-            if (m_active_task_index == 0) {
+            if (active_index == 0) {
                 break;
             }
             index = 0;
         }
 
-        const auto& task = m_swallow_tasks[index];
+        const auto& task = m_swallow_task_list.at(index);
         if (!(task_has_annotation(task) || task.error_msg().has_value())) {
             set_active_task_index(index);
             return;
@@ -293,7 +299,7 @@ void App::auto_advance_active_task()
 
 void App::load_active_task()
 {
-    SwallowLabellingTask& task = m_swallow_tasks[m_active_task_index];
+    SwallowLabellingTask& task = m_swallow_task_list.index_item();
     const auto path = fs::path(task.data_path());
     if (!fs::is_regular_file(path)) {
         task.set_error_msg("Data file not found");

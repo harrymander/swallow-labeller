@@ -3,6 +3,7 @@
 
 #include "models/time-range.hpp"
 
+#include <compare>
 #include <istream>
 #include <string>
 #include <vector>
@@ -19,6 +20,8 @@ std::string swallow_test_type_string(SwallowTestType type);
 struct LabellingDataFile {
     std::string path;
     std::string checksum;
+
+    auto operator<=>(const LabellingDataFile&) const = default;
 };
 
 struct SwallowTaskInfo {
@@ -32,6 +35,8 @@ struct SwallowTaskInfo {
     LabellingDataFile npz_file;
 
     [[nodiscard]] const std::string& get_id() const { return npz_file.checksum; }
+
+    auto operator<=>(const SwallowTaskInfo&) const = default;
 };
 
 std::vector<SwallowTaskInfo> load_swallow_task_info_json(std::istream& stream);

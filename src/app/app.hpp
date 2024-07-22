@@ -2,6 +2,7 @@
 #define RECAP_LABELLER_APP_INCLUDE_HPP
 
 #include "app/annotation-store.hpp"
+#include "app/view-list.hpp"
 #include "models/annotation.hpp"
 #include "models/data.hpp"
 #include "models/task-info.hpp"
@@ -12,7 +13,6 @@
 
 #include <cstddef>
 #include <filesystem>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -207,9 +207,17 @@ public:
 
     [[nodiscard]] bool can_stop() const { return m_ready_to_stop; }
 
-    [[nodiscard]] const std::vector<SwallowLabellingTask>& tasks() const { return m_swallow_tasks; }
+    using SwallowLabellingTaskList = ViewList<SwallowLabellingTask>;
 
-    [[nodiscard]] std::size_t active_task_index() const { return m_active_task_index; }
+    [[nodiscard]] const SwallowLabellingTaskList& tasks() const { return m_swallow_task_list; }
+
+    [[nodiscard]] bool tasks_shuffled() const { return m_swallow_task_list.shuffled(); }
+
+    void shuffle_tasks() { m_swallow_task_list.shuffle(); }
+
+    void unshuffle_tasks() { m_swallow_task_list.unshuffle(); }
+
+    [[nodiscard]] std::size_t active_task_index() const { return m_swallow_task_list.index(); }
 
     /**
      * [FIXME] The below functions may change the active task view, so any references returned from
@@ -260,7 +268,7 @@ private:
     friend class UnsavedTaskSwitcher;
     friend class UnsavedTaskCloser;
 
-    std::vector<SwallowLabellingTask> m_swallow_tasks;
+    SwallowLabellingTaskList m_swallow_task_list;
     SwallowAnnotationStore m_annotation_store;
     std::unique_ptr<ActiveTaskVariant> m_active_task;
     NewActiveTaskObservable m_new_active_task_observable;
@@ -269,7 +277,6 @@ private:
 
     bool m_stop_requested = false;
     bool m_ready_to_stop = false;
-    std::size_t m_active_task_index = 0;
     std::optional<std::string> m_critical_error = std::nullopt;
     bool m_auto_advance_on_save = true;
 

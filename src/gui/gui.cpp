@@ -34,6 +34,8 @@
 #define HINT_ICON ICON_FA_LIGHTBULB
 #define DELETE_ICON ICON_FA_TRASH_CAN
 #define EXIT_ICON ICON_FA_XMARK
+#define SHUFFLE_ICON ICON_FA_SHUFFLE
+#define UNSHFUFLE_ICON ICON_FA_ARROW_DOWN_WIDE_SHORT
 #define ICON_TEXT_SPACE "  "
 constexpr float LabelSummaryHeight = 8; // Same as default ImPlotStyle::DigitalBitHeight
 
@@ -264,7 +266,7 @@ void Gui::draw_main_window()
         draw_debug_info();
     }
 
-    const auto& task = m_app.tasks()[m_app.active_task_index()];
+    const auto& task = m_app.tasks().at(m_app.active_task_index());
     const auto& info = task.info();
     ImGui::Text(
         "Subject #%u, %s swallows, repeat #%u, swallow #%u (%s)",
@@ -818,6 +820,17 @@ void Gui::draw_task_list()
         {num_annotated_pos.x, num_annotated_pos.y + ImGui::GetTextLineHeightWithSpacing()}
     );
 
+    if (m_app.tasks_shuffled()) {
+        if (ImGui::Button(UNSHFUFLE_ICON ICON_TEXT_SPACE "Sort")) {
+            m_app.unshuffle_tasks();
+        }
+    } else {
+        if (ImGui::Button(SHUFFLE_ICON ICON_TEXT_SPACE "Shuffle")) {
+            m_app.shuffle_tasks();
+        }
+    }
+
+    ImGui::SameLine();
     if (ImGui::Button(m_only_show_annotated_tasks ? "Show all" : "Show annotated only")) {
         m_only_show_annotated_tasks = !m_only_show_annotated_tasks;
     }
@@ -825,8 +838,8 @@ void Gui::draw_task_list()
     const std::size_t active_index = m_app.active_task_index();
     std::size_t num_annotated = 0;
     if (ImGui::BeginListBox("##task_info_list", {-1, -1})) {
-        for (std::size_t i = 0; i < tasks.size(); i++) {
-            const auto& task = tasks[i];
+        std::size_t i = 0;
+        for (const auto& task : tasks.items()) {
             const bool has_annotation = m_app.task_has_annotation(task);
             if (has_annotation) {
                 num_annotated += 1;
@@ -844,6 +857,8 @@ void Gui::draw_task_list()
                     }
                 }
             }
+
+            i += 1;
         }
         ImGui::EndListBox();
     }

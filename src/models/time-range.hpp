@@ -1,6 +1,8 @@
 #ifndef RECAP_LABELLER_MODELS_TIME_RANGE_HPP_INCLUDE
 #define RECAP_LABELLER_MODELS_TIME_RANGE_HPP_INCLUDE
 
+#include <compare>
+
 namespace recap::labeller::models {
 
 struct TimeRange {
@@ -8,6 +10,8 @@ struct TimeRange {
     double end;
 
     bool operator==(const TimeRange&) const = default;
+
+    auto operator<=>(const TimeRange&) const = default;
 };
 
 }; // namespace recap::labeller::models
