@@ -57,7 +57,6 @@ int parse_args(argparse::ArgumentParser& program, int argc, const char **argv)
         .help("reads existing annotations from this file rather than file passed to\n"
               "--annotations; WARNING: this will cause any existing annotations in\n"
               "file passed to --annotations to be overwritten!");
-    program.add_argument("--no-shuffle").flag().help("do not display tasks in random order");
 
     try {
         program.parse_args(argc, argv);
