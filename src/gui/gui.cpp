@@ -35,7 +35,7 @@
 #define DELETE_ICON ICON_FA_TRASH_CAN
 #define EXIT_ICON ICON_FA_XMARK
 #define SHUFFLE_ICON ICON_FA_SHUFFLE
-#define UNSHFUFLE_ICON ICON_FA_ARROW_DOWN_WIDE_SHORT
+#define UNSHUFFLE_ICON ICON_FA_SORT
 #define ICON_TEXT_SPACE "  "
 constexpr float LabelSummaryHeight = 8; // Same as default ImPlotStyle::DigitalBitHeight
 
@@ -821,7 +821,7 @@ void Gui::draw_task_list()
     );
 
     if (m_app.tasks_shuffled()) {
-        if (ImGui::Button(UNSHFUFLE_ICON ICON_TEXT_SPACE "Sort")) {
+        if (ImGui::Button(UNSHUFFLE_ICON ICON_TEXT_SPACE "Sort")) {
             m_app.unshuffle_tasks();
         }
     } else {
