@@ -831,11 +831,18 @@ void Gui::draw_task_list()
     }
 
     ImGui::SameLine();
+    bool scroll_to_selected_task = false;
     if (ImGui::Button(m_only_show_annotated_tasks ? "Show all" : "Show annotated only")) {
         m_only_show_annotated_tasks = !m_only_show_annotated_tasks;
+        scroll_to_selected_task = true;
     }
 
     const std::size_t active_index = m_app.active_task_index();
+    if (!scroll_to_selected_task) {
+        scroll_to_selected_task = m_task_list_last_active_index != active_index;
+    }
+    m_task_list_last_active_index = active_index;
+
     std::size_t num_annotated = 0;
     if (ImGui::BeginListBox("##task_info_list", {-1, -1})) {
         std::size_t i = 0;
@@ -847,8 +854,12 @@ void Gui::draw_task_list()
             if (!m_only_show_annotated_tasks || has_annotation) {
                 const std::string str = task_info_str(task, has_annotation);
                 if (m_task_list_text_filter.PassFilter(str.c_str())) {
-                    if (ImGui::Selectable(str.c_str(), active_index == i)) {
+                    const bool selected = active_index == i;
+                    if (ImGui::Selectable(str.c_str(), selected)) {
                         m_app.set_active_task_index(i);
+                    }
+                    if (selected && scroll_to_selected_task && !ImGui::IsItemVisible()) {
+                        ImGui::ScrollToItem();
                     }
                     const auto& err = task.error_msg();
                     if (err.has_value() && ImGui::BeginItemTooltip()) {

@@ -10,6 +10,7 @@
 #include <fmt/core.h>
 #include <imgui.h>
 
+#include <limits>
 #include <optional>
 #include <string>
 
@@ -68,6 +69,7 @@ private:
 
     bool m_only_show_annotated_tasks = false;
     ImGuiTextFilter m_task_list_text_filter;
+    std::size_t m_task_list_last_active_index = std::numeric_limits<std::size_t>::max();
 
     widgets::PlotRangeDragger m_plot_summary_dragger;
     widgets::PlotRangeSelector m_plot_summary_selector;
