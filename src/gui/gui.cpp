@@ -995,32 +995,6 @@ bool shortcut_toggle(ImGuiKeyChord chord, bool& val)
     return false;
 }
 
-namespace {
-
-bool colored_radio_button(const char *label, bool selected, const ImColor& base_color)
-{
-    float hue;
-    float sat;
-    float val;
-    ImGui::ColorConvertRGBtoHSV(
-        base_color.Value.x, base_color.Value.y, base_color.Value.z, hue, sat, val
-    );
-    const auto check_color = ImColor::HSV(hue, sat, val + 0.3F);
-    const auto bg_color = ImColor::HSV(hue, sat, val - 0.4F);
-    const auto hover_color = ImColor::HSV(hue, sat, val - 0.3F);
-    const auto active_color = ImColor::HSV(hue, sat, val - 0.25F);
-    widgets::ScopedImColor color_scope{
-        {ImGuiCol_FrameBg, bg_color},
-        {ImGuiCol_FrameBgHovered, hover_color},
-        {ImGuiCol_FrameBgActive, active_color},
-        {ImGuiCol_CheckMark, check_color},
-    };
-
-    return ImGui::RadioButton(label, selected);
-}
-
-}; // namespace
-
 void draw_swallow_apnea_annotation_selection(app::ActiveSwallowLabellingTaskView& task_view)
 {
     using enum app::SwallowApneaAnnotationStatus;
@@ -1040,8 +1014,9 @@ void draw_swallow_apnea_annotation_selection(app::ActiveSwallowLabellingTaskView
     };
     for (const auto& opt : SrcOptions) {
         bool selected = opt.value == status;
-        const bool radio_clicked =
-            colored_radio_button(opt.label, selected, GuiColors::apnea_label_color(opt.value));
+        const bool radio_clicked = widgets::colored_radio_button(
+            opt.label, selected, GuiColors::apnea_label_color(opt.value)
+        );
         if (radio_clicked || widgets::global_shortcut(opt.key)) {
             if (!selected) {
                 status = opt.value;
@@ -1079,8 +1054,9 @@ bool ear_click_annotation_status_radio(app::EarClickAnnotationStatus& status)
 {
     using enum app::EarClickAnnotationStatus;
     using Option = widgets::RadioButtonField<app::EarClickAnnotationStatus>;
+
     constexpr std::array Options = {
-        Option("Ok [e]", Ok, ImGuiKey_E),
+        Option("Ok [e]", Ok, ImGuiKey_E, GuiColors::color(GuiColors::EarClickLabelColor)),
         Option("No ear click [w]", NoEarClick, ImGuiKey_W),
         Option("Audio error", AudioError),
     };
