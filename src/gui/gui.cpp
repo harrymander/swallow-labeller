@@ -20,7 +20,6 @@
 #include <imgui_internal.h>
 #include <imgui_stdlib.h>
 #include <implot.h>
-#include <magic_enum.hpp>
 #include <spdlog/fmt/std.h>
 #include <spdlog/spdlog.h>
 
@@ -54,13 +53,6 @@ struct GuiColors {
 
     using RGB = std::tuple<uint8_t, uint8_t, uint8_t>;
 
-    static constexpr std::array ApneaLabelColors = {
-        RGB(0xF1, 0xFC, 0x5A),
-        RGB(0x5A, 0xFC, 0x65),
-        RGB(0x5A, 0xF1, 0xFC),
-        RGB(0x65, 0x5A, 0xFC),
-    };
-
     static constexpr RGB EarClickLabelColor = {0xFC, 0x5A, 0xF1};
     static constexpr RGB EventLabelColor = {0xFC, 0x65, 0x5A};
 
@@ -68,7 +60,20 @@ struct GuiColors {
     apnea_label_color(app::SwallowApneaAnnotationStatus status, uint8_t alpha = 0xff)
     {
         using enum app::SwallowApneaAnnotationStatus;
-        return color(ApneaLabelColors[magic_enum::enum_integer(status)], alpha);
+        switch (status) {
+        case ExEx:
+            return color({0xF1, 0xFC, 0x5A}, alpha);
+        case ExIn:
+            return color({0x5A, 0xFC, 0x65}, alpha);
+        case InEx:
+            return color({0x5A, 0xF1, 0xFC}, alpha);
+        case InIn:
+            break;
+        default:
+            spdlog::error("apnea_label_color: invalid SwallowApneaAnnotationStatus!");
+            break;
+        }
+        return color({0x65, 0x5A, 0xFC}, alpha);
     }
 
     static constexpr ImU32 color(const RGB& rgb, uint8_t alpha = 0xff)
