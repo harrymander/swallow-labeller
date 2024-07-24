@@ -1060,7 +1060,7 @@ void draw_swallow_apnea_annotation_selection(app::ActiveSwallowLabellingTaskView
         }
     }
 
-    ImGui::Spacing();
+    ImGui::Separator();
     constexpr std::array OtherOptions = {
         Option("No swallow", NoSwallow),
         Option("Apnea cut-off", ApneaCutoff),
