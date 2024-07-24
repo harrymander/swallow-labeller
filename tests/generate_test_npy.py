@@ -18,7 +18,6 @@ def write_header(file: IO[str], data: dict[str, str]) -> None:
 def generate_normal_data() -> dict[str, np.ndarray]:
     flow = np.arange(10, 0, -1, dtype=np.float64)
     flow_time = np.arange(flow.size, dtype=np.float64)
-    event = np.mod(np.arange(flow.size), 2) == 0
 
     audio = np.arange(100) / 2
     audio_time = np.arange(audio.size, dtype=np.float64)
@@ -26,7 +25,6 @@ def generate_normal_data() -> dict[str, np.ndarray]:
     return {
         'flow': flow,
         'flow_time': flow_time,
-        'event': event,
         'audio': audio,
         'audio_time': audio_time,
     }
@@ -36,7 +34,6 @@ def generate_no_samples() -> dict[str, np.ndarray]:
     return {
         'flow': np.float64([]),
         'flow_time': np.float64([]),
-        'event': np.uint8([]),
         'audio': np.float64([]),
         'audio_time': np.float64([]),
     }
@@ -83,7 +80,7 @@ def generate_2d_array() -> dict[str, np.ndarray]:
 
 def generate_fortran_order() -> dict[str, np.ndarray]:
     data = generate_normal_data()
-    data['event'] = np.asfortranarray((data['event'], data['event']))
+    data['flow'] = np.asfortranarray((data['flow'], data['flow']))
     return data
 
 

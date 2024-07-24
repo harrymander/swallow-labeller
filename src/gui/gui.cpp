@@ -44,6 +44,43 @@ constexpr float LabelSummaryHeight = 8; // Same as default ImPlotStyle::DigitalB
 
 namespace recap::labeller::gui {
 
+namespace {
+
+namespace {
+
+struct GuiColors {
+    // Generated using
+    // http://www.workwithcolor.com/hsl-color-schemer-01.htm?cp=FC655A&ch=4-96-67&cm=0&sm=4&mil=0&dst=60
+
+    using RGB = std::tuple<uint8_t, uint8_t, uint8_t>;
+
+    static constexpr std::array ApneaLabelColors = {
+        RGB(0xF1, 0xFC, 0x5A),
+        RGB(0x5A, 0xFC, 0x65),
+        RGB(0x5A, 0xF1, 0xFC),
+        RGB(0x65, 0x5A, 0xFC),
+    };
+
+    static constexpr RGB EarClickLabelColor = {0xFC, 0x5A, 0xF1};
+    static constexpr RGB EventLabelColor = {0xFC, 0x65, 0x5A};
+
+    static constexpr ImU32
+    apnea_label_color(app::SwallowApneaAnnotationStatus status, uint8_t alpha = 0xff)
+    {
+        using enum app::SwallowApneaAnnotationStatus;
+        return color(ApneaLabelColors[magic_enum::enum_integer(status)], alpha);
+    }
+
+    static constexpr ImU32 color(const RGB& rgb, uint8_t alpha = 0xff)
+    {
+        return IM_COL32(std::get<0>(rgb), std::get<1>(rgb), std::get<2>(rgb), alpha);
+    }
+};
+
+}; // namespace
+
+}; // namespace
+
 Gui::Gui(app::App& app) :
     m_app(app),
     m_new_active_task_observer(m_app.subscribe_new_active_task([this](const auto& v) {
@@ -414,11 +451,10 @@ void plot_line(const char *id, const std::vector<double>& x, const std::vector<d
     ImPlot::PlotLine(id, x.data(), y.data(), static_cast<int>(y.size()));
 }
 
-void plot_event(const char *id, const SwallowTaskData& data)
+void plot_event(const models::TimeRange& range)
 {
-    ImPlot::PlotDigital(
-        id, data.flow_time.data(), data.event.data(), static_cast<int>(data.event.size())
-    );
+    constexpr ImU32 color = GuiColors::color(GuiColors::EventLabelColor);
+    widgets::draw_plot_range(range.start, range.end, color, -LabelSummaryHeight);
 }
 
 void draw_plot_delta_selector(
@@ -533,7 +569,7 @@ template <typename DrawFunc> void Gui::Plotter::draw(const char *id, float heigh
 }
 
 void Gui::Plotter::plot_data(
-    const std::vector<double>& x, const std::vector<double>& y, const SwallowTaskData& data
+    const std::vector<double>& x, const std::vector<double>& y, const models::TimeRange& event_range
 )
 {
     constexpr ImU32 DeltaSelectorColor = IM_COL32(120, 120, 120, 50);
@@ -548,7 +584,7 @@ void Gui::Plotter::plot_data(
     if (is_mouse_inside_plot()) {
         draw_plot_hovered(x.data(), x.size(), y.data(), m_cursor_format);
     }
-    plot_event("##event", data);
+    plot_event(event_range);
     draw_plot_delta_selector("##delta_selector", m_delta_selector, DeltaSelectorColor);
 }
 
@@ -575,7 +611,7 @@ void Gui::draw_plots(app::ActiveSwallowLabellingTaskView& task_view)
         draw_plot_summary_selector();
         const auto& data = task_view.data();
         plot_line("##summary_flow_plot_line", data.flow_time, data.flow);
-        plot_event("##summary_event", data);
+        plot_event(task_view.info().event_range_secs);
         ImPlot::EndPlot();
     }
 }
@@ -583,7 +619,7 @@ void Gui::draw_plots(app::ActiveSwallowLabellingTaskView& task_view)
 void Gui::draw_flow_plot(app::ActiveSwallowLabellingTaskView& task_view)
 {
     const auto& data = task_view.data();
-    m_flow_plotter.plot_data(data.flow_time, data.flow, data);
+    m_flow_plotter.plot_data(data.flow_time, data.flow, task_view.info().event_range_secs);
 
     draw_apnea_label_region(task_view);
     draw_earclick_label_regions(task_view, LabelSummaryHeight, true);
@@ -616,39 +652,6 @@ void Gui::draw_flow_plot(app::ActiveSwallowLabellingTaskView& task_view)
         }
     }
 }
-
-namespace {
-
-struct GuiColors {
-    // Generated using
-    // http://www.workwithcolor.com/hsl-color-schemer-01.htm?cp=FC655A&ch=4-96-67&cm=0&sm=4&mil=0&dst=60
-
-    using RGB = std::tuple<uint8_t, uint8_t, uint8_t>;
-
-    static constexpr std::array ApneaLabelColors = {
-        RGB(0xF1, 0xFC, 0x5A),
-        RGB(0x5A, 0xFC, 0x65),
-        RGB(0x5A, 0xF1, 0xFC),
-        RGB(0x65, 0x5A, 0xFC),
-    };
-
-    static constexpr RGB EarClickLabelColor = {0xFC, 0x5A, 0xF1};
-    static constexpr RGB EventLabelColor = {0xFC, 0x65, 0x5A};
-
-    static constexpr ImU32
-    apnea_label_color(app::SwallowApneaAnnotationStatus status, uint8_t alpha = 0xff)
-    {
-        using enum app::SwallowApneaAnnotationStatus;
-        return color(ApneaLabelColors[magic_enum::enum_integer(status)], alpha);
-    }
-
-    static constexpr ImU32 color(const RGB& rgb, uint8_t alpha = 0xff)
-    {
-        return IM_COL32(std::get<0>(rgb), std::get<1>(rgb), std::get<2>(rgb), alpha);
-    }
-};
-
-}; // namespace
 
 void Gui::draw_apnea_label_region(
     const app::ActiveSwallowLabellingTaskView& task_view, float height, bool selected_color
@@ -685,7 +688,7 @@ void Gui::draw_apnea_label_region(
 void Gui::draw_audio_plot(app::ActiveSwallowLabellingTaskView& task_view)
 {
     const auto& data = task_view.data();
-    m_audio_plotter.plot_data(data.audio_time, data.audio, data);
+    m_audio_plotter.plot_data(data.audio_time, data.audio, task_view.info().event_range_secs);
 
     draw_earclick_label_regions(task_view);
     draw_apnea_label_region(task_view, LabelSummaryHeight, true);

@@ -2,7 +2,6 @@
 
 #include <cnpy.h>
 
-#include <cstdint>
 #include <stdexcept>
 #include <vector>
 
@@ -34,10 +33,8 @@ template <class T> static std::vector<T> get_array(const cnpy::npz_t& data, cons
 
 SwallowTaskData SwallowTaskData::from_numpy(const cnpy::npz_t& data)
 {
-    const auto event = get_array<uint8_t>(data, "event");
     SwallowTaskData task = {
         .flow = get_array<double>(data, "flow"),
-        .event = std::vector<double>(event.begin(), event.end()),
         .flow_time = get_array<double>(data, "flow_time"),
         .audio = get_array<double>(data, "audio"),
         .audio_time = get_array<double>(data, "audio_time"),
@@ -50,17 +47,13 @@ SwallowTaskData SwallowTaskData::from_numpy(const cnpy::npz_t& data)
     if (flow_size != task.flow_time.size()) {
         throw std::invalid_argument("flow and flow_time length mismatch");
     }
-    if (flow_size != task.event.size()) {
-        throw std::invalid_argument("flow and event length mismatch");
-    }
-
     const auto audio_size = task.audio.size();
     if (audio_size != task.audio_time.size()) {
         throw std::invalid_argument("audio and audio_time length mismatch");
     }
 
     if (audio_size < flow_size) {
-        throw std::invalid_argument("audio field shorter than flow and event");
+        throw std::invalid_argument("audio field shorter than flow field");
     }
 
     return task;

@@ -6,6 +6,7 @@
 #include "gui/widgets/plot-range-dragger.hpp"
 #include "gui/widgets/plot-range-selector.hpp"
 #include "gui/widgets/plot-range.hpp"
+#include "models/time-range.hpp"
 
 #include <fmt/core.h>
 #include <imgui.h>
@@ -42,7 +43,9 @@ private:
         template <typename DrawFunc> void draw(const char *id, float height, DrawFunc&& draw);
 
         void plot_data(
-            const std::vector<double>& x, const std::vector<double>& y, const SwallowTaskData& data
+            const std::vector<double>& x,
+            const std::vector<double>& y,
+            const models::TimeRange& event_range
         );
 
     private:

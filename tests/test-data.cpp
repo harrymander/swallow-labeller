@@ -26,11 +26,6 @@ TEST(TestData, TestLoadNormal)
         ASSERT_EQ(data.flow_time[i], i);
     }
 
-    ASSERT_EQ(data.event.size(), 10);
-    for (int i = 0; i < data.event.size(); i++) {
-        ASSERT_EQ(bool(data.event[i]), i % 2 == 0);
-    }
-
     ASSERT_EQ(data.audio.size(), 100);
     for (int i = 0; i < data.audio.size(); i++) {
         ASSERT_EQ(data.audio[i], (double) i / 2);
@@ -47,7 +42,6 @@ TEST(TestData, TestAudioAndFlowEqualLength)
     const auto data = load_data(test_path::audio_flow_equal_len);
     ASSERT_EQ(data.flow.size(), 10);
     ASSERT_EQ(data.flow_time.size(), 10);
-    ASSERT_EQ(data.event.size(), 10);
     ASSERT_EQ(data.audio.size(), 10);
     ASSERT_EQ(data.audio_time.size(), 10);
 }
@@ -75,7 +69,7 @@ TEST(TestData, TestAudioShorterFails)
     ASSERT_THROW_MSG(
         load_data(test_path::audio_field_shorter),
         std::invalid_argument,
-        "audio field shorter than flow and event"
+        "audio field shorter than flow field"
     );
 }
 
@@ -89,7 +83,7 @@ TEST_P(TestDataMissingField, TestMissingFieldFails)
     ASSERT_THROW_MSG(load_data(path), std::invalid_argument, expected_msg);
 }
 
-const auto Fields = testing::Values("flow", "flow_time", "event", "audio", "audio_time");
+const auto Fields = testing::Values("flow", "flow_time", "audio", "audio_time");
 
 INSTANTIATE_TEST_SUITE_P(MissingFields, TestDataMissingField, Fields);
 
