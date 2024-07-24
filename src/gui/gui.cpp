@@ -1,8 +1,8 @@
-#include <cstddef>
 #define IMGUI_DEFINE_MATH_OPERATORS
 
-#include "app/app.hpp"
 #include "gui.hpp"
+
+#include "app/app.hpp"
 #include "gui/font.hpp"
 #include "gui/widgets/plot-range-selector.hpp"
 #include "gui/widgets/plot-range.hpp"
@@ -20,10 +20,13 @@
 #include <imgui_internal.h>
 #include <imgui_stdlib.h>
 #include <implot.h>
+#include <magic_enum.hpp>
 #include <spdlog/fmt/std.h>
 #include <spdlog/spdlog.h>
 
 #include <array>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <variant>
 
@@ -614,29 +617,66 @@ void Gui::draw_flow_plot(app::ActiveSwallowLabellingTaskView& task_view)
     }
 }
 
+namespace {
+
+struct GuiColors {
+    // Generated using
+    // http://www.workwithcolor.com/hsl-color-schemer-01.htm?cp=FC655A&ch=4-96-67&cm=0&sm=4&mil=0&dst=60
+
+    using RGB = std::tuple<uint8_t, uint8_t, uint8_t>;
+
+    static constexpr std::array ApneaLabelColors = {
+        RGB(0xF1, 0xFC, 0x5A),
+        RGB(0x5A, 0xFC, 0x65),
+        RGB(0x5A, 0xF1, 0xFC),
+        RGB(0x65, 0x5A, 0xFC),
+    };
+
+    static constexpr RGB EarClickLabelColor = {0xFC, 0x5A, 0xF1};
+    static constexpr RGB EventLabelColor = {0xFC, 0x65, 0x5A};
+
+    static constexpr ImU32
+    apnea_label_color(app::SwallowApneaAnnotationStatus status, uint8_t alpha = 0xff)
+    {
+        using enum app::SwallowApneaAnnotationStatus;
+        return color(ApneaLabelColors[magic_enum::enum_integer(status)], alpha);
+    }
+
+    static constexpr ImU32 color(const RGB& rgb, uint8_t alpha = 0xff)
+    {
+        return IM_COL32(std::get<0>(rgb), std::get<1>(rgb), std::get<2>(rgb), alpha);
+    }
+};
+
+}; // namespace
+
 void Gui::draw_apnea_label_region(
     const app::ActiveSwallowLabellingTaskView& task_view, float height, bool selected_color
 ) const
 {
-    static constexpr ImColor SelectingColor = ImColor(1.0F, 1.0F, 0.0F, 0.1F);
-    static constexpr ImColor SelectedColor = ImColor(1.0F, 1.0F, 0.0F, 0.4F);
+    constexpr uint8_t SelectingAlpha = 0x33;
+    constexpr uint8_t SelectedAlpha = 0x66;
 
     if (!(task_view.can_add_new_ear_click_range() || task_view.can_edit_swallow_apnea_range())) {
         return;
     }
 
     const auto *selecting_range = m_annotator.apnea_range_selector.range();
+    const app::SwallowApneaAnnotationStatus status = task_view.swallow_apnea_annotation_status();
     if (selecting_range) {
         widgets::draw_plot_range(
-            *selecting_range, selected_color ? SelectedColor : SelectingColor, height
+            *selecting_range,
+            GuiColors::apnea_label_color(status, selected_color ? SelectedAlpha : SelectingAlpha),
+            height
         );
     } else {
         const auto *range = task_view.swallow_anpea_range();
         if (range) {
+            const ImU32 color = GuiColors::apnea_label_color(status, SelectedAlpha);
             if (m_annotator.apnea_range_dragger.is_editing()) {
-                widgets::draw_plot_range(m_annotator.apnea_temp_range, SelectedColor, height);
+                widgets::draw_plot_range(m_annotator.apnea_temp_range, color, height);
             } else {
-                widgets::draw_plot_range(range->start, range->end, SelectedColor, height);
+                widgets::draw_plot_range(range->start, range->end, color, height);
             }
         }
     }
@@ -691,9 +731,9 @@ void Gui::draw_earclick_label_regions(
     const app::ActiveSwallowLabellingTaskView& task_view, float height, bool selected_color
 ) const
 {
-    constexpr ImColor Color = ImColor(0.0F, 1.0F, 0.0F, 0.1F);
-    constexpr ImColor ColorHovered = ImColor(0.0F, 1.0F, 0.0F, 0.25F);
-    constexpr ImColor ColorSelected = ImColor(0.0F, 1.0F, 0.0F, 0.4F);
+    constexpr ImColor Color = GuiColors::color(GuiColors::EarClickLabelColor, 0x33);
+    constexpr ImColor ColorHovered = GuiColors::color(GuiColors::EarClickLabelColor, 0x44);
+    constexpr ImColor ColorSelected = GuiColors::color(GuiColors::EarClickLabelColor, 0x66);
 
     const auto *labels = task_view.ear_click_labels();
     if (labels == nullptr) {
@@ -947,6 +987,32 @@ bool shortcut_toggle(ImGuiKeyChord chord, bool& val)
     return false;
 }
 
+namespace {
+
+bool colored_radio_button(const char *label, bool selected, const ImColor& base_color)
+{
+    float hue;
+    float sat;
+    float val;
+    ImGui::ColorConvertRGBtoHSV(
+        base_color.Value.x, base_color.Value.y, base_color.Value.z, hue, sat, val
+    );
+    const auto check_color = ImColor::HSV(hue, sat, val + 0.3F);
+    const auto bg_color = ImColor::HSV(hue, sat, val - 0.4F);
+    const auto hover_color = ImColor::HSV(hue, sat, val - 0.3F);
+    const auto active_color = ImColor::HSV(hue, sat, val - 0.25F);
+    widgets::ScopedImColor color_scope{
+        {ImGuiCol_FrameBg, bg_color},
+        {ImGuiCol_FrameBgHovered, hover_color},
+        {ImGuiCol_FrameBgActive, active_color},
+        {ImGuiCol_CheckMark, check_color},
+    };
+
+    return ImGui::RadioButton(label, selected);
+}
+
+}; // namespace
+
 void draw_swallow_apnea_annotation_selection(app::ActiveSwallowLabellingTaskView& task_view)
 {
     using enum app::SwallowApneaAnnotationStatus;
@@ -966,7 +1032,9 @@ void draw_swallow_apnea_annotation_selection(app::ActiveSwallowLabellingTaskView
     };
     for (const auto& opt : SrcOptions) {
         bool selected = opt.value == status;
-        if (ImGui::RadioButton(opt.label, selected) || widgets::global_shortcut(opt.key)) {
+        const bool radio_clicked =
+            colored_radio_button(opt.label, selected, GuiColors::apnea_label_color(opt.value));
+        if (radio_clicked || widgets::global_shortcut(opt.key)) {
             if (!selected) {
                 status = opt.value;
                 status_changed = true;
