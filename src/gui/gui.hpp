@@ -2,6 +2,7 @@
 #define RECAP_LABELLER_GUI_HPP
 
 #include "app/app.hpp"
+#include "app/id-list.hpp"
 #include "gui/widgets/color-scheme-selector.hpp"
 #include "gui/widgets/plot-range-dragger.hpp"
 #include "gui/widgets/plot-range-selector.hpp"
@@ -83,15 +84,19 @@ private:
     Plotter m_flow_plotter;
     Plotter m_audio_plotter;
 
+    struct TimeRangeAnnotator {
+        widgets::PlotRangeSelector range_selector;
+        widgets::PlotRangeDragger range_dragger;
+        widgets::PlotRange temp_range = {NAN, NAN};
+        std::optional<app::IDList<models::TimeRange>::Item::ID> selected_id = std::nullopt;
+        std::optional<app::IDList<models::TimeRange>::Item::ID> hovered_id = std::nullopt;
+    };
+
     struct Annotator {
         widgets::PlotRangeSelector apnea_range_selector;
         widgets::PlotRange apnea_temp_range = {NAN, NAN};
         widgets::PlotRangeDragger apnea_range_dragger;
-        widgets::PlotRangeSelector earclick_range_selector;
-        widgets::PlotRangeDragger earclick_range_dragger;
-        widgets::PlotRange earclick_temp_range = {NAN, NAN};
-        std::optional<app::EarClickLabel::ID> selected_ear_click_id = std::nullopt;
-        std::optional<app::EarClickLabel::ID> hovered_ear_click_id = std::nullopt;
+        TimeRangeAnnotator ear_clicks_annotator;
         std::string note;
 
         Annotator() = default;
@@ -121,15 +126,32 @@ private:
 
     [[nodiscard]] bool draw_annotation_submit(app::ActiveSwallowLabellingTaskView& task_view);
     void draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view);
-    void draw_earclick_labels_listbox(
-        app::ActiveSwallowLabellingTaskView& task_view,
-        const std::vector<app::EarClickLabel>& labels
-    );
     void draw_earclick_label_regions(
         const app::ActiveSwallowLabellingTaskView& task_view,
         float height = 0,
         bool selected_color = false
     ) const;
+
+    static void draw_labels_list_box(
+        app::ActiveSwallowLabellingTaskView& task_view,
+        const char *name,
+        TimeRangeAnnotator& annotator,
+        const std::vector<app::TimeRangeIDList::Item>& labels
+    );
+
+    struct TimeRangeLabelRegionColors {
+        ImColor unselected;
+        ImColor hovered;
+        ImColor selected;
+    };
+
+    static void draw_labels_regions(
+        const std::vector<app::TimeRangeIDList::Item>& labels,
+        const TimeRangeAnnotator& annotator,
+        float height,
+        const TimeRangeLabelRegionColors& colors,
+        bool selected_color
+    );
 
     void draw_unsaved_task_prompt();
 };

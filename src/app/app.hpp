@@ -74,7 +74,8 @@ enum class EarClickAnnotationStatus {
     NoEarClick,
 };
 
-using EarClickLabel = IDList<models::TimeRange>::Item;
+using TimeRangeIDList = IDList<models::TimeRange>;
+using EarClickLabel = TimeRangeIDList::Item;
 
 class ActiveSwallowLabellingTaskView {
 public:
@@ -177,7 +178,7 @@ private:
         models::TimeRange swallow_apnea_range = {NAN, NAN};
 
         EarClickAnnotationStatus ear_click_status = EarClickAnnotationStatus::Ok;
-        IDList<models::TimeRange> ear_click_labels;
+        TimeRangeIDList ear_click_labels;
 
         std::string note;
     };
