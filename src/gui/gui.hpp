@@ -18,6 +18,12 @@
 
 namespace recap::labeller::gui {
 
+struct TimeRangeLabelRegionColors {
+    ImColor unselected;
+    ImColor hovered;
+    ImColor selected;
+};
+
 class Gui {
 public:
     explicit Gui(recap::labeller::app::App& app);
@@ -98,8 +104,9 @@ private:
         widgets::PlotRangeSelector apnea_range_selector;
         widgets::PlotRange apnea_temp_range = {NAN, NAN};
         widgets::PlotRangeDragger apnea_range_dragger;
-        TimeRangeAnnotator ear_clicks_annotator;
+        bool editing_apnea = true;
         TimeRangeAnnotator non_resp_flow_annotator;
+        TimeRangeAnnotator ear_clicks_annotator;
         std::string note;
 
         Annotator() = default;
@@ -118,7 +125,17 @@ private:
 
     void draw_plots(app::ActiveSwallowLabellingTaskView& task_view);
     void draw_flow_plot(app::ActiveSwallowLabellingTaskView& task_view);
+    void draw_flow_label_regions(
+        const app::ActiveSwallowLabellingTaskView& task_view,
+        float height = 0,
+        bool selected_color = false
+    ) const;
     void draw_apnea_label_region(
+        const app::ActiveSwallowLabellingTaskView& task_view,
+        float height = 0,
+        bool selected_color = false
+    ) const;
+    void draw_non_resp_flow_label_regions(
         const app::ActiveSwallowLabellingTaskView& task_view,
         float height = 0,
         bool selected_color = false
@@ -129,6 +146,10 @@ private:
 
     [[nodiscard]] bool draw_annotation_submit(app::ActiveSwallowLabellingTaskView& task_view);
     void draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view);
+    void draw_note_editor(app::ActiveSwallowLabellingTaskView& task_view);
+    void draw_apnea_editor(app::ActiveSwallowLabellingTaskView& task_view);
+    void draw_ear_clicks_editor(app::ActiveSwallowLabellingTaskView& task_view);
+
     void draw_earclick_label_regions(
         const app::ActiveSwallowLabellingTaskView& task_view,
         float height = 0,
@@ -141,12 +162,6 @@ private:
         TimeRangeAnnotator& annotator,
         const std::vector<app::TimeRangeIDList::Item>& labels
     );
-
-    struct TimeRangeLabelRegionColors {
-        ImColor unselected;
-        ImColor hovered;
-        ImColor selected;
-    };
 
     static void draw_labels_regions(
         const std::vector<app::TimeRangeIDList::Item>& labels,

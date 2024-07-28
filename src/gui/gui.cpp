@@ -53,12 +53,13 @@ namespace {
 
 struct GuiColors {
     // Generated using
-    // http://www.workwithcolor.com/hsl-color-schemer-01.htm?cp=FC655A&ch=4-96-67&cm=0&sm=4&mil=0&dst=60
+    // http://www.workwithcolor.com/hsl-color-schemer-01.htm?cp=FC655A&ch=4-96-67&cm=0&sm=4&mil=0&dst=51
 
     using RGB = std::tuple<uint8_t, uint8_t, uint8_t>;
 
-    static constexpr RGB EarClickLabelColor = {0xFC, 0x5A, 0xF1};
     static constexpr RGB EventLabelColor = {0xFC, 0x65, 0x5A};
+    static constexpr RGB EarClickLabelColor = {0xFC, 0x5A, 0xE1};
+    static constexpr RGB NonRespFlowLabelColor = {0x8D, 0x5A, 0xFC};
 
     static constexpr ImU32
     apnea_label_color(app::SwallowApneaAnnotationStatus status, uint8_t alpha = 0xff)
@@ -66,23 +67,32 @@ struct GuiColors {
         using enum app::SwallowApneaAnnotationStatus;
         switch (status) {
         case ExEx:
-            return color({0xF1, 0xFC, 0x5A}, alpha);
+            return color({0xFC, 0xEE, 0x5A}, alpha);
         case ExIn:
-            return color({0x5A, 0xFC, 0x65}, alpha);
+            return color({0x80, 0xFC, 0x5A}, alpha);
         case InEx:
-            return color({0x5A, 0xF1, 0xFC}, alpha);
+            return color({0x5A, 0xFC, 0xBE}, alpha);
         case InIn:
             break;
         default:
             spdlog::error("apnea_label_color: invalid SwallowApneaAnnotationStatus!");
             break;
         }
-        return color({0x65, 0x5A, 0xFC}, alpha);
+        return color({0x5A, 0xB0, 0xFC}, alpha);
     }
 
     static constexpr ImU32 color(const RGB& rgb, uint8_t alpha = 0xff)
     {
         return IM_COL32(std::get<0>(rgb), std::get<1>(rgb), std::get<2>(rgb), alpha);
+    }
+
+    static constexpr TimeRangeLabelRegionColors time_range_label_region_colors(RGB rgb)
+    {
+        return {
+            .unselected = color(rgb, 0x33),
+            .hovered = color(rgb, 0x44),
+            .selected = color(rgb, 0x66),
+        };
     }
 };
 
@@ -630,7 +640,7 @@ void Gui::draw_flow_plot(app::ActiveSwallowLabellingTaskView& task_view)
     const auto& data = task_view.data();
     m_flow_plotter.plot_data(data.flow_time, data.flow, task_view.info().event_range_secs);
 
-    draw_apnea_label_region(task_view);
+    draw_flow_label_regions(task_view);
     draw_earclick_label_regions(task_view, LabelSummaryHeight, true);
 
     if (task_view.can_add_new_swallow_apnea_range()) {
@@ -645,21 +655,60 @@ void Gui::draw_flow_plot(app::ActiveSwallowLabellingTaskView& task_view)
         if (new_range) {
             task_view.add_swallow_apnea_range(new_range->start, new_range->end);
         }
+    } else if (!m_annotator.editing_apnea && task_view.can_add_new_non_resp_flow_label()) {
+        auto new_range = m_annotator.non_resp_flow_annotator.range_selector.update(
+            "##snrf_range_selector", 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl
+        );
+        if (new_range) {
+            const auto new_id = task_view.add_non_resp_flow_label(new_range->start, new_range->end);
+            if (new_id) {
+                m_annotator.non_resp_flow_annotator.selected_id = new_id;
+            }
+        }
     }
 
-    const auto *range = task_view.swallow_anpea_range();
-    if (range && task_view.can_edit_swallow_apnea_range()) {
-        if (!m_annotator.apnea_range_dragger.is_editing()) {
-            m_annotator.apnea_temp_range = {range->start, range->end};
+    if (m_annotator.editing_apnea) {
+        const auto *range = task_view.swallow_anpea_range();
+        if (range && task_view.can_edit_swallow_apnea_range()) {
+            if (!m_annotator.apnea_range_dragger.is_editing()) {
+                m_annotator.apnea_temp_range = {range->start, range->end};
+            }
+            if (m_annotator.apnea_range_dragger.update(
+                    "##apnea_range_dragger", m_annotator.apnea_temp_range
+                )) {
+                task_view.set_swallow_apnea_range(
+                    m_annotator.apnea_temp_range.start, m_annotator.apnea_temp_range.end
+                );
+            }
         }
-        if (m_annotator.apnea_range_dragger.update(
-                "##apnea_range_dragger", m_annotator.apnea_temp_range
-            )) {
-            task_view.set_swallow_apnea_range(
-                m_annotator.apnea_temp_range.start, m_annotator.apnea_temp_range.end
-            );
+    } else if (task_view.can_add_new_non_resp_flow_label()
+               && m_annotator.non_resp_flow_annotator.selected_id.has_value())
+    {
+        // TODO: this is repeated in ear click label updater...
+        auto& annotator = m_annotator.non_resp_flow_annotator;
+        const auto *range = task_view.non_resp_flow_label(*annotator.selected_id);
+        if (range) {
+            if (!annotator.range_dragger.is_editing()) {
+                annotator.temp_range = {range->start, range->end};
+            }
+            if (annotator.range_dragger.update("##snrf_range_dragger", annotator.temp_range)) {
+                task_view.set_non_resp_flow_label(
+                    *annotator.selected_id, annotator.temp_range.start, annotator.temp_range.end
+                );
+            }
+        } else {
+            spdlog::error("No SNRF range for ID = {}", *annotator.selected_id);
+            annotator.selected_id.reset();
         }
     }
+}
+
+void Gui::draw_flow_label_regions(
+    const app::ActiveSwallowLabellingTaskView& task_view, float height, bool selected_color
+) const
+{
+    draw_apnea_label_region(task_view, height, selected_color);
+    draw_non_resp_flow_label_regions(task_view, height, selected_color);
 }
 
 void Gui::draw_apnea_label_region(
@@ -684,7 +733,9 @@ void Gui::draw_apnea_label_region(
     } else {
         const auto *range = task_view.swallow_anpea_range();
         if (range) {
-            const ImU32 color = GuiColors::apnea_label_color(status, SelectedAlpha);
+            const ImU32 color = GuiColors::apnea_label_color(
+                status, selected_color || m_annotator.editing_apnea ? SelectedAlpha : SelectingAlpha
+            );
             if (m_annotator.apnea_range_dragger.is_editing()) {
                 widgets::draw_plot_range(m_annotator.apnea_temp_range, color, height);
             } else {
@@ -694,13 +745,27 @@ void Gui::draw_apnea_label_region(
     }
 }
 
+void Gui::draw_non_resp_flow_label_regions(
+    const app::ActiveSwallowLabellingTaskView& task_view, float height, bool selected_color
+) const
+{
+    constexpr TimeRangeLabelRegionColors colors =
+        GuiColors::time_range_label_region_colors(GuiColors::NonRespFlowLabelColor);
+    const auto *labels = task_view.non_resp_flow_labels();
+    if (labels) {
+        draw_labels_regions(
+            *labels, m_annotator.non_resp_flow_annotator, height, colors, selected_color
+        );
+    }
+}
+
 void Gui::draw_audio_plot(app::ActiveSwallowLabellingTaskView& task_view)
 {
     const auto& data = task_view.data();
     m_audio_plotter.plot_data(data.audio_time, data.audio, task_view.info().event_range_secs);
 
     draw_earclick_label_regions(task_view);
-    draw_apnea_label_region(task_view, LabelSummaryHeight, true);
+    draw_flow_label_regions(task_view, LabelSummaryHeight, true);
 
     if (task_view.can_add_new_ear_click_range()) {
         add_plot_text(HINT_ICON ICON_TEXT_SPACE
@@ -719,25 +784,20 @@ void Gui::draw_audio_plot(app::ActiveSwallowLabellingTaskView& task_view)
     if (task_view.can_add_new_ear_click_range()
         && m_annotator.ear_clicks_annotator.selected_id.has_value())
     {
-        const auto *range =
-            task_view.ear_click_label(*m_annotator.ear_clicks_annotator.selected_id);
+        auto& annotator = m_annotator.ear_clicks_annotator;
+        const auto *range = task_view.ear_click_label(*annotator.selected_id);
         if (range) {
-            if (!m_annotator.ear_clicks_annotator.range_dragger.is_editing()) {
-                m_annotator.ear_clicks_annotator.temp_range = {range->start, range->end};
+            if (!annotator.range_dragger.is_editing()) {
+                annotator.temp_range = {range->start, range->end};
             }
-            if (m_annotator.ear_clicks_annotator.range_dragger.update(
-                    "##earclick_range_dragger", m_annotator.ear_clicks_annotator.temp_range
-                ))
-            {
+            if (annotator.range_dragger.update("##earclick_range_dragger", annotator.temp_range)) {
                 task_view.set_ear_click_label(
-                    *m_annotator.ear_clicks_annotator.selected_id,
-                    m_annotator.ear_clicks_annotator.temp_range.start,
-                    m_annotator.ear_clicks_annotator.temp_range.end
+                    *annotator.selected_id, annotator.temp_range.start, annotator.temp_range.end
                 );
             }
         } else {
-            spdlog::error("No range for ID = {}", *m_annotator.ear_clicks_annotator.selected_id);
-            m_annotator.ear_clicks_annotator.selected_id.reset();
+            spdlog::error("No ear click range for ID = {}", *annotator.selected_id);
+            annotator.selected_id.reset();
         }
     }
 }
@@ -774,11 +834,8 @@ void Gui::draw_earclick_label_regions(
     const app::ActiveSwallowLabellingTaskView& task_view, float height, bool selected_color
 ) const
 {
-    constexpr TimeRangeLabelRegionColors colors = {
-        .unselected = GuiColors::color(GuiColors::EarClickLabelColor, 0x33),
-        .hovered = GuiColors::color(GuiColors::EarClickLabelColor, 0x44),
-        .selected = GuiColors::color(GuiColors::EarClickLabelColor, 0x66),
-    };
+    constexpr TimeRangeLabelRegionColors colors =
+        GuiColors::time_range_label_region_colors(GuiColors::EarClickLabelColor);
     const auto *labels = task_view.ear_click_labels();
     if (labels) {
         draw_labels_regions(
@@ -803,7 +860,7 @@ void Gui::draw_plot_summary_selector()
     const auto *task_view =
         std::get_if<app::ActiveSwallowLabellingTaskView>(&m_app.active_task_view());
     if (task_view) {
-        draw_apnea_label_region(*task_view, LabelSummaryHeight, true);
+        draw_flow_label_regions(*task_view, LabelSummaryHeight, true);
         draw_earclick_label_regions(*task_view, LabelSummaryHeight, true);
     }
 }
@@ -1211,20 +1268,39 @@ void Gui::draw_labels_list_box(
     ImGui::EndListBox();
 }
 
-void Gui::draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view)
+namespace {
+
+void draw_labelling_instructions()
 {
-    constexpr float NoteHeightLines = 3;
-
-    const bool to_save_annotation = draw_annotation_submit(task_view);
-
     ImGui::SeparatorText("Instructions");
     ImGui::TextWrapped("Single apnoea label required, may have multiple ear audio labels.");
     ImGui::TextWrapped("Code pattern using general breathing cycle (i.e. ignoring SNIF/SNRF");
     ImGui::TextWrapped("Expiratory flow is positive");
+}
+
+}; // namespace
+
+void Gui::draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view)
+{
+    const bool to_save_annotation = draw_annotation_submit(task_view);
+
+    draw_labelling_instructions();
+    draw_note_editor(task_view);
+    draw_apnea_editor(task_view);
+    draw_ear_clicks_editor(task_view);
+
+    if (to_save_annotation) {
+        m_app.save_active_task();
+    }
+}
+
+void Gui::draw_note_editor(app::ActiveSwallowLabellingTaskView& task_view)
+{
+    constexpr float HeightNumLines = 3;
 
     ImGui::SeparatorText("Note");
     const float note_height =
-        (NoteHeightLines - 1) * ImGui::GetTextLineHeightWithSpacing() + ImGui::GetTextLineHeight();
+        (HeightNumLines - 1) * ImGui::GetTextLineHeightWithSpacing() + ImGui::GetTextLineHeight();
     bool update_note =
         ImGui::InputTextMultiline("##annotation_note_input", &m_annotator.note, {-1, note_height});
     if (ImGui::SmallButton("Clear##clear_note_text")) {
@@ -1234,12 +1310,32 @@ void Gui::draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view)
     if (update_note) {
         task_view.set_note(m_annotator.note);
     }
+}
 
+void Gui::draw_apnea_editor(app::ActiveSwallowLabellingTaskView& task_view)
+{
     ImGui::SeparatorText("Swallow apnea");
     if (const auto& error = task_view.swallow_apnea_label_error()) {
         ImGui::TextUnformatted(fmt::format(ERR_ICON ICON_TEXT_SPACE "{}", *error).c_str());
     }
+
+    if (task_view.can_edit_swallow_apnea_range() && task_view.can_add_new_non_resp_flow_label()) {
+        if (ImGui::RadioButton("Apnea", m_annotator.editing_apnea) && !m_annotator.editing_apnea) {
+            m_annotator.editing_apnea = true;
+            m_annotator.non_resp_flow_annotator.selected_id.reset();
+        }
+        ImGui::SameLine();
+        if (ImGui::RadioButton("SNRF", !m_annotator.editing_apnea) && m_annotator.editing_apnea) {
+            m_annotator.editing_apnea = false;
+        }
+        ImGui::SetItemTooltip("Swallow non-respiratory flow");
+        ImGui::Spacing();
+    } else {
+        m_annotator.editing_apnea = true;
+    }
+
     const auto *apnea_range = task_view.swallow_anpea_range();
+    draw_swallow_apnea_annotation_selection(task_view);
     if (apnea_range) {
         ImGui::Text(
             "Apnea: [%.3f, %.3f] s (Δ = %.3f s)",
@@ -1254,8 +1350,15 @@ void Gui::draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view)
             }
         }
     }
-    draw_swallow_apnea_annotation_selection(task_view);
 
+    const auto *nrf_labels = task_view.non_resp_flow_labels();
+    if (task_view.can_add_new_non_resp_flow_label() && nrf_labels && !nrf_labels->empty()) {
+        draw_labels_list_box(task_view, "NRF", m_annotator.non_resp_flow_annotator, *nrf_labels);
+    }
+}
+
+void Gui::draw_ear_clicks_editor(app::ActiveSwallowLabellingTaskView& task_view)
+{
     ImGui::SeparatorText("Ear clicks");
     if (const auto& error = task_view.earclick_label_error()) {
         ImGui::TextUnformatted(fmt::format(ERR_ICON ICON_TEXT_SPACE "{}", *error).c_str());
@@ -1271,13 +1374,8 @@ void Gui::draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view)
                                "No ear click labels - hold Ctrl and left click on audio plot to "
                                "add one, or select the relevant option above");
         } else {
-            widgets::ScopedImID scoped_id("##earclick_label_list");
             draw_labels_list_box(task_view, "Ear click", m_annotator.ear_clicks_annotator, *labels);
         }
-    }
-
-    if (to_save_annotation) {
-        m_app.save_active_task();
     }
 }
 
