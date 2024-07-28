@@ -1214,23 +1214,10 @@ void Gui::draw_labels_list_box(
     ImGui::EndListBox();
 }
 
-namespace {
-
-void draw_labelling_instructions()
-{
-    ImGui::SeparatorText("Instructions");
-    ImGui::TextWrapped("Single apnoea label required, may have multiple ear audio labels.");
-    ImGui::TextWrapped("Code pattern using general breathing cycle (i.e. ignoring SNIF/SNRF");
-    ImGui::TextWrapped("Expiratory flow is positive");
-}
-
-}; // namespace
-
 void Gui::draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view)
 {
     const bool to_save_annotation = draw_annotation_submit(task_view);
 
-    draw_labelling_instructions();
     draw_note_editor(task_view);
     draw_apnea_editor(task_view);
     draw_ear_clicks_editor(task_view);
