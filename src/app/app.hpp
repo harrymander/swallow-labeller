@@ -2,6 +2,7 @@
 #define RECAP_LABELLER_APP_INCLUDE_HPP
 
 #include "app/annotation-store.hpp"
+#include "app/id-list.hpp"
 #include "app/view-list.hpp"
 #include "models/annotation.hpp"
 #include "models/data.hpp"
@@ -73,12 +74,7 @@ enum class EarClickAnnotationStatus {
     NoEarClick,
 };
 
-struct EarClickLabel {
-    using ID = std::size_t;
-
-    ID id;
-    models::TimeRange range;
-};
+using EarClickLabel = IDList<models::TimeRange>::Item;
 
 class ActiveSwallowLabellingTaskView {
 public:
@@ -138,7 +134,7 @@ public:
     [[nodiscard]] std::optional<std::string_view> earclick_label_error() const;
 
     [[nodiscard]] const std::vector<EarClickLabel> *ear_click_labels() const;
-    [[nodiscard]] const EarClickLabel *ear_click_label(EarClickLabel::ID id) const;
+    [[nodiscard]] const models::TimeRange *ear_click_label(EarClickLabel::ID id) const;
     std::optional<EarClickLabel::ID> add_ear_click_label(double start, double end);
     void set_ear_click_label(EarClickLabel::ID id, double start, double end);
     void remove_ear_click_label(EarClickLabel::ID id);
@@ -181,8 +177,7 @@ private:
         models::TimeRange swallow_apnea_range = {NAN, NAN};
 
         EarClickAnnotationStatus ear_click_status = EarClickAnnotationStatus::Ok;
-        std::vector<EarClickLabel> ear_click_labels;
-        EarClickLabel::ID next_ear_click_label_id = 1;
+        IDList<models::TimeRange> ear_click_labels;
 
         std::string note;
     };

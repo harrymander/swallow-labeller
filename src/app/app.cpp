@@ -382,19 +382,9 @@ ActiveSwallowLabellingTaskView::Annotation::Annotation(const models::SwallowAnno
     ear_click_status(ear_click_status_from_ear_click_model(annotation.ear_clicks)),
 
     ear_click_labels(VariantVisitor{
-        [](const std::vector<models::TimeRange>& ranges) {
-            EarClickLabel::ID id = 1;
-            std::vector<EarClickLabel> result;
-            result.reserve(ranges.size());
-            for (const auto& range : ranges) {
-                result.emplace_back(id++, range);
-            }
-            return result;
-        },
-        [](auto) { return std::vector<EarClickLabel>{}; },
+        [](const std::vector<models::TimeRange>& ranges) { return ranges; },
+        [](auto) { return std::vector<models::TimeRange>{}; },
     }(annotation.ear_clicks)),
-
-    next_ear_click_label_id(ear_click_labels.empty() ? 1 : ear_click_labels.back().id + 1),
 
     note(optutil::value_or_default(annotation.note))
 {}
@@ -449,7 +439,7 @@ ear_clicks_annotation_model(
     std::vector<models::TimeRange> ranges;
     ranges.reserve(labels.size());
     for (const auto& label : labels) {
-        ranges.push_back(label.range);
+        ranges.push_back(label.item);
     }
     return ranges;
 }
@@ -475,7 +465,7 @@ models::SwallowAnnotation ActiveSwallowLabellingTaskView::Annotation::to_model()
                 swallow_is_ambiguous, swallow_apnea_status, swallow_apnea_range
             ) :
             swallow_apnea_error_model(swallow_apnea_status),
-        .ear_clicks = ear_clicks_annotation_model(ear_click_status, ear_click_labels),
+        .ear_clicks = ear_clicks_annotation_model(ear_click_status, ear_click_labels.items()),
         .note = note_annotation_model(note),
     };
 }
@@ -575,43 +565,24 @@ void ActiveSwallowLabellingTaskView::delete_swallow_apnea_range()
     }
 }
 
-namespace {
-
-std::vector<EarClickLabel>::const_iterator
-find_ear_click(const std::vector<EarClickLabel>& ear_clicks, EarClickLabel::ID id)
-{
-    auto it = std::lower_bound(
-        ear_clicks.begin(),
-        ear_clicks.end(),
-        id,
-        [](const auto& l1, const auto val) { return l1.id < val; }
-    );
-    if (it != ear_clicks.end() && it->id == id) {
-        return it;
-    }
-    return ear_clicks.end();
-}
-
-}; // namespace
-
 const std::vector<EarClickLabel> *ActiveSwallowLabellingTaskView::ear_click_labels() const
 {
-    return can_add_new_ear_click_range() ? &m_annotation.ear_click_labels : nullptr;
+    return can_add_new_ear_click_range() ? &m_annotation.ear_click_labels.items() : nullptr;
 }
 
-const EarClickLabel *ActiveSwallowLabellingTaskView::ear_click_label(EarClickLabel::ID id) const
+const models::TimeRange *ActiveSwallowLabellingTaskView::ear_click_label(EarClickLabel::ID id) const
 {
     if (!can_add_new_ear_click_range()) {
         return nullptr;
     }
 
-    const auto it = find_ear_click(m_annotation.ear_click_labels, id);
-    if (it == m_annotation.ear_click_labels.end()) {
+    const auto *label = m_annotation.ear_click_labels.get_item(id);
+    if (label == nullptr) {
         spdlog::error("No ear click label with ID {}", id);
         return nullptr;
     }
 
-    return &(*it);
+    return label;
 }
 
 void ActiveSwallowLabellingTaskView::remove_ear_click_label(EarClickLabel::ID id)
@@ -621,13 +592,12 @@ void ActiveSwallowLabellingTaskView::remove_ear_click_label(EarClickLabel::ID id
         return;
     }
 
-    const auto it = find_ear_click(m_annotation.ear_click_labels, id);
-    if (it == m_annotation.ear_click_labels.end()) {
-        spdlog::error("No ear click label with ID {} - nothing to remove!", id);
+    const auto *range = m_annotation.ear_click_labels.get_item(id);
+    if (range) {
+        spdlog::debug("Removed ear click label with ID {}: [{}, {}]", id, range->start, range->end);
+        m_annotation.ear_click_labels.remove_item(id);
     } else {
-        const auto& range = it->range;
-        m_annotation.ear_click_labels.erase(it);
-        spdlog::debug("Removed ear click label with ID {}: [{}, {}]", id, range.start, range.end);
+        spdlog::error("No ear click label with ID {} - nothing to remove!", id);
     }
 }
 
@@ -639,10 +609,8 @@ ActiveSwallowLabellingTaskView::add_ear_click_label(double start, double end)
         return std::nullopt;
     }
 
-    const EarClickLabel::ID new_id = m_annotation.next_ear_click_label_id;
-    m_annotation.ear_click_labels.emplace_back(new_id, models::TimeRange{start, end});
+    const auto new_id = m_annotation.ear_click_labels.add_item({start, end});
     spdlog::debug("Added ear click with ID {}: [{}, {}]", new_id, start, end);
-    m_annotation.next_ear_click_label_id++;
     return new_id;
 }
 
@@ -655,13 +623,11 @@ void ActiveSwallowLabellingTaskView::set_ear_click_label(
         return;
     }
 
-    const auto const_it = find_ear_click(m_annotation.ear_click_labels, id);
-    if (const_it == m_annotation.ear_click_labels.end()) {
+    auto *range = m_annotation.ear_click_labels.get_item(id);
+    if (range == nullptr) {
         spdlog::error("No ear click label with ID {} - nothing to change!", id);
     } else {
-        auto it = m_annotation.ear_click_labels.begin()
-            + (const_it - m_annotation.ear_click_labels.cbegin());
-        it->range = {start, end};
+        *range = {start, end};
         spdlog::debug("Changed ear click label with ID {}: [{}, {}]", id, start, end);
     }
 }

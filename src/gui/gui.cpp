@@ -719,7 +719,7 @@ void Gui::draw_audio_plot(app::ActiveSwallowLabellingTaskView& task_view)
         const auto *range = task_view.ear_click_label(*m_annotator.selected_ear_click_id);
         if (range) {
             if (!m_annotator.earclick_range_dragger.is_editing()) {
-                m_annotator.earclick_temp_range = {range->range.start, range->range.end};
+                m_annotator.earclick_temp_range = {range->start, range->end};
             }
             if (m_annotator.earclick_range_dragger.update(
                     "##earclick_range_dragger", m_annotator.earclick_temp_range
@@ -758,8 +758,8 @@ void Gui::draw_earclick_label_regions(
             widgets::draw_plot_range(m_annotator.earclick_temp_range, ColorSelected, height);
         } else {
             widgets::draw_plot_range(
-                label.range.start,
-                label.range.end,
+                label.item.start,
+                label.item.end,
                 selected_color || m_annotator.selected_ear_click_id == label.id ?
                     ColorSelected :
                     (m_annotator.hovered_ear_click_id == label.id ? ColorHovered : Color),
@@ -1217,12 +1217,13 @@ void Gui::draw_earclick_labels_listbox(
     m_annotator.hovered_ear_click_id.reset();
     for (const auto& label : labels) {
         widgets::ScopedImID label_id_scope(static_cast<int>(label.id));
+        const auto& range = label.item;
         std::string str = fmt::format(
             "Ear click {} [{:.3f}, {:.3f} s] (Δ = {:.3f} s)",
             label.id,
-            label.range.start,
-            label.range.end,
-            label.range.end - label.range.start
+            range.start,
+            range.end,
+            range.end - range.start
         );
         const bool selected =
             optutil::has_value_and_equal(m_annotator.selected_ear_click_id, label.id);
