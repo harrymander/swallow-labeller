@@ -148,6 +148,7 @@ private:
     void draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view);
     void draw_note_editor(app::ActiveSwallowLabellingTaskView& task_view);
     void draw_apnea_editor(app::ActiveSwallowLabellingTaskView& task_view);
+    void draw_apnea_annotation_selection(app::ActiveSwallowLabellingTaskView& task_view) const;
     void draw_ear_clicks_editor(app::ActiveSwallowLabellingTaskView& task_view);
 
     void draw_earclick_label_regions(

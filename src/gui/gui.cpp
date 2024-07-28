@@ -1068,61 +1068,6 @@ bool shortcut_toggle(ImGuiKeyChord chord, bool& val)
     return false;
 }
 
-void draw_swallow_apnea_annotation_selection(app::ActiveSwallowLabellingTaskView& task_view)
-{
-    using enum app::SwallowApneaAnnotationStatus;
-
-    widgets::ScopedImID id_scope("##apnea_annotation_status");
-
-    auto status = task_view.swallow_apnea_annotation_status();
-    bool is_ambiguous = task_view.swallow_is_ambiguous();
-    bool status_changed = false;
-
-    using Option = widgets::RadioButtonField<app::SwallowApneaAnnotationStatus>;
-    constexpr std::array SrcOptions = {
-        Option("ex-ex [1]", ExEx, ImGuiKey_1),
-        Option("ex-in [2]", ExIn, ImGuiKey_2),
-        Option("in-ex [3]", InEx, ImGuiKey_3),
-        Option("in-in [4]", InIn, ImGuiKey_4),
-    };
-    for (const auto& opt : SrcOptions) {
-        bool selected = opt.value == status;
-        const bool radio_clicked = widgets::colored_radio_button(
-            opt.label, selected, GuiColors::apnea_label_color(opt.value)
-        );
-        if (radio_clicked || widgets::global_shortcut(opt.key)) {
-            if (!selected) {
-                status = opt.value;
-                status_changed = true;
-                selected = true;
-                spdlog::debug("Apnea SRC selection changed to {}", opt.label);
-            }
-        }
-        if (selected) {
-            ImGui::SameLine();
-            if (ImGui::Checkbox("Ambiguous [a]", &is_ambiguous)
-                || shortcut_toggle(ImGuiKey_A, is_ambiguous)) {
-                spdlog::debug("Swallow apnea is_ambiguous changed: {}", is_ambiguous);
-                task_view.set_swallow_is_ambiguous(is_ambiguous);
-            }
-        }
-    }
-
-    ImGui::Separator();
-    constexpr std::array OtherOptions = {
-        Option("No swallow", NoSwallow),
-        Option("Apnea cut-off", ApneaCutoff),
-        Option("FlowError", FlowError),
-    };
-    if (widgets::radio_button_enums("##other_options", status, OtherOptions)) {
-        status_changed = true;
-    }
-
-    if (status_changed) {
-        task_view.set_swallow_apnea_annotation_status(status);
-    }
-}
-
 bool ear_click_annotation_status_radio(app::EarClickAnnotationStatus& status)
 {
     using enum app::EarClickAnnotationStatus;
@@ -1321,22 +1266,29 @@ void Gui::draw_apnea_editor(app::ActiveSwallowLabellingTaskView& task_view)
     }
 
     if (task_view.can_edit_swallow_apnea_range() && task_view.can_add_new_non_resp_flow_label()) {
+        bool toggle = widgets::global_shortcut(ImGuiKey_S);
         if (ImGui::RadioButton("Apnea", m_annotator.editing_apnea) && !m_annotator.editing_apnea) {
-            m_annotator.editing_apnea = true;
-            m_annotator.non_resp_flow_annotator.selected_id.reset();
+            toggle = true;
         }
         ImGui::SameLine();
         if (ImGui::RadioButton("SNRF", !m_annotator.editing_apnea) && m_annotator.editing_apnea) {
-            m_annotator.editing_apnea = false;
+            toggle = true;
         }
         ImGui::SetItemTooltip("Swallow non-respiratory flow");
+
+        if (toggle) {
+            m_annotator.editing_apnea = !m_annotator.editing_apnea;
+            if (m_annotator.editing_apnea) {
+                m_annotator.non_resp_flow_annotator.selected_id.reset();
+            }
+        }
         ImGui::Spacing();
     } else {
         m_annotator.editing_apnea = true;
     }
 
     const auto *apnea_range = task_view.swallow_anpea_range();
-    draw_swallow_apnea_annotation_selection(task_view);
+    draw_apnea_annotation_selection(task_view);
     if (apnea_range) {
         ImGui::Text(
             "Apnea: [%.3f, %.3f] s (Δ = %.3f s)",
@@ -1363,6 +1315,63 @@ void Gui::draw_apnea_editor(app::ActiveSwallowLabellingTaskView& task_view)
         if (m_annotator.non_resp_flow_annotator.selected_id.has_value()) {
             m_annotator.editing_apnea = false;
         }
+    }
+}
+
+void Gui::draw_apnea_annotation_selection(app::ActiveSwallowLabellingTaskView& task_view) const
+{
+    using enum app::SwallowApneaAnnotationStatus;
+    using Option = widgets::RadioButtonField<app::SwallowApneaAnnotationStatus>;
+
+    widgets::ScopedImID id_scope("##apnea_annotation_status");
+
+    auto status = task_view.swallow_apnea_annotation_status();
+    bool is_ambiguous = task_view.swallow_is_ambiguous();
+    bool status_changed = false;
+
+    ImGui::BeginDisabled(!m_annotator.editing_apnea);
+    constexpr std::array SrcOptions = {
+        Option("ex-ex [1]", ExEx, ImGuiKey_1),
+        Option("ex-in [2]", ExIn, ImGuiKey_2),
+        Option("in-ex [3]", InEx, ImGuiKey_3),
+        Option("in-in [4]", InIn, ImGuiKey_4),
+    };
+    for (const auto& opt : SrcOptions) {
+        bool selected = opt.value == status;
+        const bool radio_clicked = widgets::colored_radio_button(
+            opt.label, selected, GuiColors::apnea_label_color(opt.value)
+        );
+        if (radio_clicked || widgets::global_shortcut(opt.key)) {
+            if (!selected) {
+                status = opt.value;
+                status_changed = true;
+                selected = true;
+                spdlog::debug("Apnea SRC selection changed to {}", opt.label);
+            }
+        }
+        if (selected) {
+            ImGui::SameLine();
+            if (ImGui::Checkbox("Ambiguous [a]", &is_ambiguous)
+                || shortcut_toggle(ImGuiKey_A, is_ambiguous)) {
+                spdlog::debug("Swallow apnea is_ambiguous changed: {}", is_ambiguous);
+                task_view.set_swallow_is_ambiguous(is_ambiguous);
+            }
+        }
+    }
+    ImGui::EndDisabled();
+
+    ImGui::Separator();
+    constexpr std::array OtherOptions = {
+        Option("No swallow", NoSwallow),
+        Option("Apnea cut-off", ApneaCutoff),
+        Option("FlowError", FlowError),
+    };
+    if (widgets::radio_button_enums("##other_options", status, OtherOptions)) {
+        status_changed = true;
+    }
+
+    if (status_changed) {
+        task_view.set_swallow_apnea_annotation_status(status);
     }
 }
 
