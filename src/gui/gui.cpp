@@ -25,6 +25,7 @@
 #include <spdlog/spdlog.h>
 
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -518,11 +519,12 @@ void draw_plot_delta_selector(
 }
 
 // Add text in top left corner of plot
-void add_plot_text(const char *str)
+void add_plot_text(const char *str, unsigned int offset_lines = 0)
 {
+    const ImVec2 pos = ImPlot::GetPlotPos() + ImGui::GetStyle().ItemSpacing;
     ImPlot::PushPlotClipRect();
     ImPlot::GetPlotDrawList()->AddText(
-        ImPlot::GetPlotPos() + ImGui::GetStyle().ItemSpacing,
+        {pos.x, pos.y + ImGui::GetTextLineHeightWithSpacing() * static_cast<float>(offset_lines)},
         ImPlot::GetStyleColorU32(ImPlotCol_InlayText),
         str
     );
@@ -643,9 +645,11 @@ void Gui::draw_flow_plot(app::ActiveSwallowLabellingTaskView& task_view)
     draw_flow_label_regions(task_view);
     draw_earclick_label_regions(task_view, LabelSummaryHeight, true);
 
+    add_plot_text("Positive flow = expiration");
     if (task_view.can_add_new_swallow_apnea_range()) {
-        add_plot_text(HINT_ICON ICON_TEXT_SPACE
-                      "Hold Ctrl and left click and drag to add apnea label");
+        add_plot_text(
+            HINT_ICON ICON_TEXT_SPACE "Hold Ctrl and left click and drag to add apnea label", 1
+        );
     }
 
     if (task_view.can_add_new_swallow_apnea_range()) {
