@@ -14,14 +14,12 @@
 #include <fmt/core.h>
 #include <magic_enum.hpp>
 
-#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <exception>
 #include <filesystem>
 #include <memory>
 #include <optional>
-#include <stdexcept>
 #include <utility>
 #include <vector>
 
