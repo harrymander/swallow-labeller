@@ -1311,7 +1311,7 @@ void Gui::draw_unsaved_task_prompt()
         m_unsaved_task_switch_modal_open = false;
     }
     ImGui::SameLine();
-    if (ImGui::Button("Cancel", size)) {
+    if (ImGui::Button("Cancel", size) || widgets::global_shortcut(ImGuiKey_Escape)) {
         m_app.cancel_unsaved_task_switch();
         m_unsaved_task_switch_modal_open = false;
     }
