@@ -1198,11 +1198,12 @@ bool Gui::draw_annotation_submit(app::ActiveSwallowLabellingTaskView& task_view)
     return save_task;
 }
 
+template <typename Delete>
 void Gui::draw_labels_list_box(
-    app::ActiveSwallowLabellingTaskView& task_view,
     const char *name,
     Gui::TimeRangeAnnotator& annotator,
-    const std::vector<app::TimeRangeIDList::Item>& labels
+    const std::vector<app::TimeRangeIDList::Item>& labels,
+    Delete deleter
 )
 {
     static const char *remove_button_str = DELETE_ICON;
@@ -1256,7 +1257,7 @@ void Gui::draw_labels_list_box(
     }
 
     if (id_to_remove.has_value()) {
-        task_view.remove_ear_click_label(*id_to_remove);
+        deleter(*id_to_remove);
         if (id_to_remove == annotator.selected_id) {
             annotator.selected_id.reset();
         }
@@ -1353,7 +1354,15 @@ void Gui::draw_apnea_editor(app::ActiveSwallowLabellingTaskView& task_view)
 
     const auto *nrf_labels = task_view.non_resp_flow_labels();
     if (task_view.can_add_new_non_resp_flow_label() && nrf_labels && !nrf_labels->empty()) {
-        draw_labels_list_box(task_view, "NRF", m_annotator.non_resp_flow_annotator, *nrf_labels);
+        draw_labels_list_box(
+            "NRF",
+            m_annotator.non_resp_flow_annotator,
+            *nrf_labels,
+            [&](app::EarClickLabel::ID id) { task_view.remove_non_resp_flow_label(id); }
+        );
+        if (m_annotator.non_resp_flow_annotator.selected_id.has_value()) {
+            m_annotator.editing_apnea = false;
+        }
     }
 }
 
@@ -1374,7 +1383,12 @@ void Gui::draw_ear_clicks_editor(app::ActiveSwallowLabellingTaskView& task_view)
                                "No ear click labels - hold Ctrl and left click on audio plot to "
                                "add one, or select the relevant option above");
         } else {
-            draw_labels_list_box(task_view, "Ear click", m_annotator.ear_clicks_annotator, *labels);
+            draw_labels_list_box(
+                "Ear click",
+                m_annotator.ear_clicks_annotator,
+                *labels,
+                [&](app::EarClickLabel::ID id) { task_view.remove_ear_click_label(id); }
+            );
         }
     }
 }

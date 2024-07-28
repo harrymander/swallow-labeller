@@ -156,11 +156,12 @@ private:
         bool selected_color = false
     ) const;
 
+    template <typename Delete>
     static void draw_labels_list_box(
-        app::ActiveSwallowLabellingTaskView& task_view,
         const char *name,
         TimeRangeAnnotator& annotator,
-        const std::vector<app::TimeRangeIDList::Item>& labels
+        const std::vector<app::TimeRangeIDList::Item>& labels,
+        Delete deleter
     );
 
     static void draw_labels_regions(
