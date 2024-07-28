@@ -41,6 +41,9 @@
 #define ICON_TEXT_SPACE "  "
 constexpr float LabelSummaryHeight = 8; // Same as default ImPlotStyle::DigitalBitHeight
 
+#define SAVE_SHORTCUT_STR "Ctrl+S"
+constexpr ImGuiKeyChord SaveShortcutKeyChord = ImGuiMod_Ctrl | ImGuiKey_S;
+
 namespace recap::labeller::gui {
 
 namespace {
@@ -1083,6 +1086,11 @@ template <typename... Args> bool delete_label_button(Args&&...args)
     return clicked;
 }
 
+[[nodiscard]] bool save_shortcut_pushed()
+{
+    return widgets::global_shortcut(SaveShortcutKeyChord);
+}
+
 }; // namespace
 
 bool Gui::draw_annotation_submit(app::ActiveSwallowLabellingTaskView& task_view)
@@ -1097,8 +1105,9 @@ bool Gui::draw_annotation_submit(app::ActiveSwallowLabellingTaskView& task_view)
         can_delete ? ImGui::GetContentRegionAvail().x - del_button_width : -1;
 
     ImGui::BeginDisabled(!task_view.can_save_annotation());
-    const bool save_task = ImGui::Button("Save [Ctrl+S]", {submit_button_width, button_height})
-        || widgets::global_shortcut(ImGuiMod_Ctrl | ImGuiKey_S);
+    const bool save_task =
+        ImGui::Button("Save [" SAVE_SHORTCUT_STR "]", {submit_button_width, button_height})
+        || save_shortcut_pushed();
     ImGui::EndDisabled();
 
     if (can_delete) {
@@ -1289,7 +1298,7 @@ void Gui::draw_unsaved_task_prompt()
     ImGui::Spacing();
 
     if (can_save) {
-        if (ImGui::Button("Save", size)) {
+        if (ImGui::Button("Save", size) || save_shortcut_pushed()) {
             m_app.save_unsaved_task_and_switch();
             m_unsaved_task_switch_modal_open = false;
         }
