@@ -1,18 +1,18 @@
 #include "app.hpp"
 
-#include "annotation-store.hpp"
+#include "app/annotation-store.hpp"
 #include "app/id-list.hpp"
 #include "models/annotation.hpp"
 #include "models/data.hpp"
 #include "models/task-info.hpp"
 #include "models/time-range.hpp"
-#include "spdlog/spdlog.h"
 #include "util/optutil.hpp"
 #include "util/strutil.hpp"
 #include "util/variant-visitor.hpp"
 
 #include <fmt/core.h>
 #include <magic_enum.hpp>
+#include <spdlog/spdlog.h>
 
 #include <cmath>
 #include <cstddef>
