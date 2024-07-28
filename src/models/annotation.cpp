@@ -158,7 +158,9 @@ DEFINE_JSON_ENUM_CONVERTERS(EarClickError, EarClickErrorStrConverter);
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TimeRange, start, end);
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SwallowApneaAnnotation, is_ambiguous, pattern, time);
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
+    SwallowApneaAnnotation, is_ambiguous, pattern, time, non_respiratory_flow
+);
 
 void to_json(nlohmann::json& j, const SwallowAnnotation& annotation)
 {

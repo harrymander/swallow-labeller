@@ -25,6 +25,7 @@ struct SwallowApneaAnnotation {
     bool is_ambiguous;
     SRCPattern pattern;
     TimeRange time;
+    std::vector<TimeRange> non_respiratory_flow;
 
     bool operator==(const SwallowApneaAnnotation&) const = default;
 };

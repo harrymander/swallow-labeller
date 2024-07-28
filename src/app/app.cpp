@@ -1,6 +1,7 @@
 #include "app.hpp"
 
 #include "annotation-store.hpp"
+#include "app/id-list.hpp"
 #include "models/annotation.hpp"
 #include "models/data.hpp"
 #include "models/task-info.hpp"
@@ -379,6 +380,13 @@ ActiveSwallowLabellingTaskView::Annotation::Annotation(const models::SwallowAnno
         },
     }(annotation.swallow_apnea)),
 
+    non_resp_flow_labels(VariantVisitor{
+        [](const models::SwallowApneaAnnotation& annotation) {
+            return annotation.non_respiratory_flow;
+        },
+        [](auto) { return std::vector<models::TimeRange>{}; },
+    }(annotation.swallow_apnea)),
+
     ear_click_status(ear_click_status_from_ear_click_model(annotation.ear_clicks)),
 
     ear_click_labels(VariantVisitor{
@@ -397,9 +405,22 @@ namespace {
     return status == ExEx || status == InEx || status == ExIn || status == InIn;
 }
 
+template <typename T> std::vector<T> id_list_items_vector(const IDList<T>& id_list)
+{
+    std::vector<T> v;
+    v.reserve(id_list.size());
+    for (const auto& item : id_list.items()) {
+        v.push_back(item.item);
+    }
+    return v;
+}
+
 [[nodiscard]] std::variant<models::SwallowApneaAnnotation, models::SwallowApneaError>
 swallow_apnea_annotation_model(
-    bool is_ambiguous, SwallowApneaAnnotationStatus status, models::TimeRange range
+    bool is_ambiguous,
+    SwallowApneaAnnotationStatus status,
+    models::TimeRange range,
+    const TimeRangeIDList& non_resp_flow_labels
 )
 {
     auto pattern = magic_enum::enum_cast<models::SRCPattern>(magic_enum::enum_name(status)).value();
@@ -407,6 +428,7 @@ swallow_apnea_annotation_model(
         .is_ambiguous = is_ambiguous,
         .pattern = pattern,
         .time = range,
+        .non_respiratory_flow = id_list_items_vector(non_resp_flow_labels),
     };
 }
 
@@ -417,9 +439,7 @@ swallow_apnea_error_model(SwallowApneaAnnotationStatus status)
 }
 
 [[nodiscard]] std::variant<std::vector<models::TimeRange>, models::EarClickError>
-ear_clicks_annotation_model(
-    EarClickAnnotationStatus status, const std::vector<EarClickLabel>& labels
-)
+ear_clicks_annotation_model(EarClickAnnotationStatus status, const TimeRangeIDList& labels)
 {
     switch (status) {
     case EarClickAnnotationStatus::NoEarClick:
@@ -434,14 +454,9 @@ ear_clicks_annotation_model(
         // Could throw an exception like above, but will play it safe
         spdlog::error("Ear click status is Ok, but no labels! Returning NoEarClick error");
         return models::EarClickError::NoEarClick;
-    }
+    };
 
-    std::vector<models::TimeRange> ranges;
-    ranges.reserve(labels.size());
-    for (const auto& label : labels) {
-        ranges.push_back(label.item);
-    }
-    return ranges;
+    return id_list_items_vector(labels);
 }
 
 std::optional<std::string> note_annotation_model(std::string note)
@@ -462,10 +477,13 @@ models::SwallowAnnotation ActiveSwallowLabellingTaskView::Annotation::to_model()
     return {
         .swallow_apnea = apnea_status_is_src_pattern(swallow_apnea_status) ?
             swallow_apnea_annotation_model(
-                swallow_is_ambiguous, swallow_apnea_status, swallow_apnea_range
+                swallow_is_ambiguous,
+                swallow_apnea_status,
+                swallow_apnea_range,
+                non_resp_flow_labels
             ) :
             swallow_apnea_error_model(swallow_apnea_status),
-        .ear_clicks = ear_clicks_annotation_model(ear_click_status, ear_click_labels.items()),
+        .ear_clicks = ear_clicks_annotation_model(ear_click_status, ear_click_labels),
         .note = note_annotation_model(note),
     };
 }
@@ -562,6 +580,81 @@ void ActiveSwallowLabellingTaskView::delete_swallow_apnea_range()
         m_annotation.swallow_apnea_range = {NAN, NAN};
     } else {
         spdlog::error("Cannot delete swallow apnea range");
+    }
+}
+
+bool ActiveSwallowLabellingTaskView::can_add_new_non_resp_flow_label() const
+{
+    return can_edit_swallow_apnea_range() && has_apnea_range();
+}
+
+const std::vector<NonRespFlowLabel> *ActiveSwallowLabellingTaskView::non_resp_flow_labels() const
+{
+    return can_add_new_non_resp_flow_label() ? &m_annotation.non_resp_flow_labels.items() : nullptr;
+}
+
+const models::TimeRange *ActiveSwallowLabellingTaskView::non_resp_flow_label(NonRespFlowLabel::ID id
+) const
+{
+    if (!can_add_new_non_resp_flow_label()) {
+        return nullptr;
+    }
+
+    const auto *label = m_annotation.non_resp_flow_labels.get_item(id);
+    if (label == nullptr) {
+        spdlog::error("No non-respiratory flow label with ID {}", id);
+        return nullptr;
+    }
+
+    return label;
+}
+
+std::optional<NonRespFlowLabel::ID>
+ActiveSwallowLabellingTaskView::add_non_resp_flow_label(double start, double end)
+{
+    if (!can_add_new_non_resp_flow_label()) {
+        spdlog::error("Cannot add non-respiratory flow label");
+        return std::nullopt;
+    }
+
+    const auto new_id = m_annotation.non_resp_flow_labels.add_item({start, end});
+    spdlog::debug("Added non-respiratory flow label with ID {}: [{}, {}]", new_id, start, end);
+    return new_id;
+}
+
+void ActiveSwallowLabellingTaskView::set_non_resp_flow_label(
+    NonRespFlowLabel::ID id, double start, double end
+)
+{
+    if (!can_add_new_non_resp_flow_label()) {
+        spdlog::error("Cannot change non-respiratory flow labels");
+        return;
+    }
+
+    auto *range = m_annotation.non_resp_flow_labels.get_item(id);
+    if (range == nullptr) {
+        spdlog::error("No non-respiratory flow label with ID {} - nothing to change!", id);
+    } else {
+        *range = {start, end};
+        spdlog::debug("Changed non-respiratory flow label with ID {}: [{}, {}]", id, start, end);
+    }
+}
+
+void ActiveSwallowLabellingTaskView::remove_non_resp_flow_label(NonRespFlowLabel::ID id)
+{
+    if (!can_add_new_non_resp_flow_label()) {
+        spdlog::error("Cannot delete non-respiratory flow labels!");
+        return;
+    }
+
+    const auto *range = m_annotation.non_resp_flow_labels.get_item(id);
+    if (range) {
+        spdlog::debug(
+            "Removed non-respiratory flow label with ID {}: [{}, {}]", id, range->start, range->end
+        );
+        m_annotation.non_resp_flow_labels.remove_item(id);
+    } else {
+        spdlog::error("No non-respiratory flow label with ID {} - nothing to remove!", id);
     }
 }
 

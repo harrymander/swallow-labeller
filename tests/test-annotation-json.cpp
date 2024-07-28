@@ -1,4 +1,5 @@
 #include "models/annotation.hpp"
+#include "models/time-range.hpp"
 
 #include <gtest/gtest.h>
 
@@ -16,7 +17,10 @@ TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndEarClick)
         "swallow_apnea": {
             "is_ambiguous": false,
             "pattern": "ex-ex",
-            "time": {"start": 0.0, "end": 1.0}
+            "time": {"start": 0.0, "end": 1.0},
+            "non_respiratory_flow": [
+                {"start": 1.05, "end": 1.10}
+            ]
         },
         "ear_clicks": [{"start": 12, "end": 100}, {"start": 200, "end": 300}],
         "note": null
@@ -28,6 +32,8 @@ TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndEarClick)
     EXPECT_EQ(apnea.pattern, SRCPattern::ExEx);
     TimeRange exp_time_range = {0.0, 1.0};
     EXPECT_EQ(apnea.time, exp_time_range);
+    std::vector<TimeRange> exp_non_respiratory_flow = {{1.05, 1.10}};
+    EXPECT_EQ(apnea.non_respiratory_flow, exp_non_respiratory_flow);
 
     ASSERT_TRUE(std::holds_alternative<std::vector<TimeRange>>(annotation.ear_clicks));
     auto clicks = std::get<std::vector<TimeRange>>(annotation.ear_clicks);
@@ -43,7 +49,10 @@ TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndEarClickAndNote)
         "swallow_apnea": {
             "is_ambiguous": false,
             "pattern": "ex-ex",
-            "time": {"start": 0.0, "end": 1.0}
+            "time": {"start": 0.0, "end": 1.0},
+            "non_respiratory_flow": [
+                {"start": 1.05, "end": 1.10}
+            ]
         },
         "ear_clicks": [{"start": 12, "end": 100}, {"start": 200, "end": 300}],
         "note": "Hello, world! β"
@@ -55,6 +64,8 @@ TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndEarClickAndNote)
     EXPECT_EQ(apnea.pattern, SRCPattern::ExEx);
     TimeRange exp_time_range = {0.0, 1.0};
     EXPECT_EQ(apnea.time, exp_time_range);
+    std::vector<TimeRange> exp_non_respiratory_flow = {{1.05, 1.10}};
+    EXPECT_EQ(apnea.non_respiratory_flow, exp_non_respiratory_flow);
 
     ASSERT_TRUE(std::holds_alternative<std::vector<TimeRange>>(annotation.ear_clicks));
     auto clicks = std::get<std::vector<TimeRange>>(annotation.ear_clicks);
@@ -71,7 +82,10 @@ TEST(TestSwallowAnnotationJson, TestParsingInvalidSRCPatternFails)
         "swallow_apnea": {
             "is_ambiguous": false,
             "pattern": "ExEx",
-            "time": {"start": 0.0, "end": 1.0}
+            "time": {"start": 0.0, "end": 1.0},
+            "non_respiratory_flow": [
+                {"start": 1.05, "end": 1.10}
+            ]
         },
         "ear_clicks": [{"start": 12, "end": 100}, {"start": 200, "end": 300}],
         "note": null
@@ -85,7 +99,10 @@ TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndNoEarClick)
         "swallow_apnea": {
             "is_ambiguous": false,
             "pattern": "ex-ex",
-            "time": {"start": 0.0, "end": 1.0}
+            "time": {"start": 0.0, "end": 1.0},
+            "non_respiratory_flow": [
+                {"start": 1.05, "end": 1.10}
+            ]
         },
         "ear_clicks": {"error": "audio-error"},
         "note": null
@@ -97,6 +114,8 @@ TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndNoEarClick)
     EXPECT_EQ(apnea.pattern, SRCPattern::ExEx);
     TimeRange exp_time_range = {0.0, 1.0};
     EXPECT_EQ(apnea.time, exp_time_range);
+    std::vector<TimeRange> exp_non_respiratory_flow = {{1.05, 1.10}};
+    EXPECT_EQ(apnea.non_respiratory_flow, exp_non_respiratory_flow);
 
     ASSERT_TRUE(std::holds_alternative<EarClickError>(annotation.ear_clicks));
     EXPECT_EQ(std::get<EarClickError>(annotation.ear_clicks), EarClickError::AudioError);

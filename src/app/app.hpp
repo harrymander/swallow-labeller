@@ -76,6 +76,7 @@ enum class EarClickAnnotationStatus {
 
 using TimeRangeIDList = IDList<models::TimeRange>;
 using EarClickLabel = TimeRangeIDList::Item;
+using NonRespFlowLabel = TimeRangeIDList::Item;
 
 class ActiveSwallowLabellingTaskView {
 public:
@@ -120,6 +121,13 @@ public:
     {
         add_swallow_apnea_range({start, end});
     }
+
+    [[nodiscard]] bool can_add_new_non_resp_flow_label() const;
+    [[nodiscard]] const std::vector<NonRespFlowLabel> *non_resp_flow_labels() const;
+    [[nodiscard]] const models::TimeRange *non_resp_flow_label(NonRespFlowLabel::ID id) const;
+    std::optional<NonRespFlowLabel::ID> add_non_resp_flow_label(double start, double end);
+    void set_non_resp_flow_label(NonRespFlowLabel::ID id, double start, double end);
+    void remove_non_resp_flow_label(NonRespFlowLabel::ID id);
 
     [[nodiscard]] EarClickAnnotationStatus ear_click_annotation_status() const
     {
@@ -176,6 +184,7 @@ private:
         SwallowApneaAnnotationStatus swallow_apnea_status = SwallowApneaAnnotationStatus::ExEx;
         bool swallow_is_ambiguous = false;
         models::TimeRange swallow_apnea_range = {NAN, NAN};
+        TimeRangeIDList non_resp_flow_labels;
 
         EarClickAnnotationStatus ear_click_status = EarClickAnnotationStatus::Ok;
         TimeRangeIDList ear_click_labels;

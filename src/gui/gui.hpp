@@ -90,6 +90,8 @@ private:
         widgets::PlotRange temp_range = {NAN, NAN};
         std::optional<app::IDList<models::TimeRange>::Item::ID> selected_id = std::nullopt;
         std::optional<app::IDList<models::TimeRange>::Item::ID> hovered_id = std::nullopt;
+
+        TimeRangeAnnotator() = default;
     };
 
     struct Annotator {
@@ -97,6 +99,7 @@ private:
         widgets::PlotRange apnea_temp_range = {NAN, NAN};
         widgets::PlotRangeDragger apnea_range_dragger;
         TimeRangeAnnotator ear_clicks_annotator;
+        TimeRangeAnnotator non_resp_flow_annotator;
         std::string note;
 
         Annotator() = default;
