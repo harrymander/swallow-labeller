@@ -646,10 +646,18 @@ void Gui::draw_flow_plot(app::ActiveSwallowLabellingTaskView& task_view)
     draw_earclick_label_regions(task_view, LabelSummaryHeight, true);
 
     add_plot_text("Positive flow = expiration");
-    if (task_view.can_add_new_swallow_apnea_range()) {
-        add_plot_text(
-            HINT_ICON ICON_TEXT_SPACE "Hold Ctrl and left click and drag to add apnea label", 1
-        );
+    if (m_annotator.editing_apnea) {
+        if (task_view.can_add_new_swallow_apnea_range() || task_view.can_edit_swallow_apnea_range())
+        {
+            add_plot_text("Labelling swallow apnea", 1);
+        }
+        if (task_view.can_add_new_swallow_apnea_range()) {
+            add_plot_text(
+                HINT_ICON ICON_TEXT_SPACE "Hold Ctrl and left click and drag to add apnea label", 2
+            );
+        }
+    } else if (!m_annotator.editing_apnea && task_view.can_add_new_non_resp_flow_label()) {
+        add_plot_text("Labelling non-respiratory flow", 1);
     }
 
     if (task_view.can_add_new_swallow_apnea_range()) {
