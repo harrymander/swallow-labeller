@@ -542,7 +542,12 @@ Gui::Annotator::Annotator(const app::ActiveSwallowLabellingTaskView& task_view) 
         widgets::PlotRange{NAN, NAN}
     )),
     note(task_view.note())
-{}
+{
+    const auto *labels = task_view.ear_click_labels();
+    if (labels && !labels->empty()) {
+        ear_clicks_annotator.selected_id = labels->front().id;
+    }
+}
 
 void Gui::on_new_active_task(const app::App::ActiveTaskVariant& new_task)
 {
