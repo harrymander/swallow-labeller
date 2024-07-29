@@ -481,7 +481,7 @@ void draw_plot_delta_selector(
     const char *id,
     widgets::PlotRangeSelector& selector,
     const ImColor& color,
-    fmt::format_string<double> fmt_str = "t = {:g} s"
+    fmt::format_string<double> fmt_str = "Δt = {:g} s"
 )
 {
     (void) selector.update(id, 0, ImGuiMouseButton_Right);
