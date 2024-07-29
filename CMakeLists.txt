@@ -111,7 +111,7 @@ target_compile_definitions(recap-labeller PRIVATE
     VERSION_STR="${PROJECT_VERSION}"
 )
 if(NOT MSVC)
-    target_compile_options(recap-labeller PRIVATE -Wall -Wextra)
+    target_compile_options(recap-labeller PRIVATE -Wall -Wextra -pedantic)
 endif()
 
 if(LINUX)
