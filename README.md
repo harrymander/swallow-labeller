@@ -1,5 +1,7 @@
 # RECAP swallow labeller
 
+![Screenshot](screenshots/screenshot.png)
+
 Application for labelling swallows built with
 [Dear ImGui](https://github.com/ocornut/imgui) and
 [implot](https://github.com/epezent/implot).
