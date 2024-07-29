@@ -17,6 +17,31 @@ if(WIN32)
         )
     endif()
 endif()
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    option(
+        GLIBCXX_DEBUG_MODE
+        "Enable libstdc++ debug mode for Debug builds"
+        ON
+    )
+    if(GLIBCXX_DEBUG_MODE)
+        add_compile_definitions($<$<CONFIG:Debug>:_GLIBCXX_DEBUG=1>)
+
+        # Enable debug backtrace - only supported on GCC 13+(?). find_library
+        # doesn't seem to work with system libraries, so try to compile a C++
+        # source file with library linked instead to determine if backtrace is
+        # supported
+        include(CheckCXXSourceCompiles)
+        set(backtrace_lib stdc++_libbacktrace)
+        set(CMAKE_REQUIRED_LIBRARIES ${backtrace_lib})
+        check_cxx_source_compiles("int main() {}" HAS_BACKTRACE)
+        if(HAS_BACKTRACE)
+            add_compile_definitions(
+                $<$<CONFIG:Debug>:_GLIBCXX_DEBUG_BACKTRACE=1>
+            )
+            link_libraries(debug ${backtrace_lib})
+        endif()
+    endif()
+endif()
 
 if(VCPKG_TOOLCHAIN)
     set(DEFAULT_FETCH_VENDORED OFF)
