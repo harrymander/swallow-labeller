@@ -1,0 +1,156 @@
+{
+   <insert_a_suppression_name_here>
+   Memcheck:ReallocZero
+   fun:realloc
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.535.183.01
+   obj:*
+   fun:call_init.part.0
+   fun:call_init
+   fun:_dl_init
+   fun:_dl_catch_exception
+   fun:dl_open_worker
+   fun:dl_open_worker
+   fun:_dl_catch_exception
+   fun:_dl_open
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:malloc
+   fun:_dl_find_object_update
+   fun:dl_open_worker_begin
+   fun:_dl_catch_exception
+   fun:dl_open_worker
+   fun:_dl_catch_exception
+   fun:_dl_open
+   fun:dlopen_doit
+   fun:_dl_catch_exception
+   fun:_dl_catch_error
+   fun:_dlerror_run
+   fun:dlopen_implementation
+   fun:dlopen@@GLIBC_2.34
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:realloc
+   obj:/usr/lib/x86_64-linux-gnu/libdbus-1.so.3.19.13
+   obj:/usr/lib/x86_64-linux-gnu/libdbus-1.so.3.19.13
+   fun:dbus_bus_register
+   obj:/usr/lib/x86_64-linux-gnu/libdbus-1.so.3.19.13
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.535.183.01
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:_dbus_strdup
+   obj:/usr/lib/x86_64-linux-gnu/libdbus-1.so.3.19.13
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.535.183.01
+   fun:glXCreateContextAttribsARB
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:_dbus_register_shutdown_func
+   fun:dbus_message_unref
+   obj:/usr/lib/x86_64-linux-gnu/libdbus-1.so.3.19.13
+   fun:dbus_connection_send_with_reply_and_block
+   fun:dbus_bus_register
+   obj:/usr/lib/x86_64-linux-gnu/libdbus-1.so.3.19.13
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:calloc
+   fun:_dbus_hash_table_new
+   obj:/usr/lib/x86_64-linux-gnu/libdbus-1.so.3.19.13
+   obj:/usr/lib/x86_64-linux-gnu/libdbus-1.so.3.19.13
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.535.183.01
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   obj:/usr/lib/x86_64-linux-gnu/libdbus-1.so.3.19.13
+   fun:dbus_threads_init
+   obj:/usr/lib/x86_64-linux-gnu/libdbus-1.so.3.19.13
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.535.183.01
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:calloc
+   obj:/usr/lib/x86_64-linux-gnu/libdbus-1.so.3.19.13
+   fun:dbus_message_new_error
+   fun:dbus_connection_send_with_reply
+   fun:dbus_connection_send_with_reply_and_block
+   fun:dbus_bus_register
+   obj:/usr/lib/x86_64-linux-gnu/libdbus-1.so.3.19.13
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:calloc
+   fun:_dbus_mem_pool_new
+   obj:/usr/lib/x86_64-linux-gnu/libdbus-1.so.3.19.13
+   fun:_dbus_list_prepend
+   fun:_dbus_list_append
+   fun:dbus_parse_address
+   obj:/usr/lib/x86_64-linux-gnu/libdbus-1.so.3.19.13
+   obj:/usr/lib/x86_64-linux-gnu/libdbus-1.so.3.19.13
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+   obj:/usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.535.183.01
+}
