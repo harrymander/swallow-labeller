@@ -96,3 +96,16 @@ TEST(TestObservable, TestNotifyCallsMultipleObservers)
     EXPECT_EQ(c2.total(), -10);
     EXPECT_EQ(c2.called(), 1);
 }
+
+TEST(TestObservable, TestObserverOutlivesObservable)
+{
+    TestObservable *obs = new TestObservable();
+    Callback cb;
+    auto sub = obs->subscribe([&cb](int i) { cb(i); });
+    obs->notify(10);
+    EXPECT_EQ(cb.called(), 1);
+    EXPECT_EQ(cb.total(), 10);
+    delete obs;
+    EXPECT_EQ(cb.called(), 1);
+    EXPECT_EQ(cb.total(), 10);
+}
