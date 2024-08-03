@@ -199,7 +199,8 @@ class App {
 public:
     App(const std::vector<models::SwallowTaskInfo>& swallow_tasks,
         SwallowAnnotationStore annotation_store,
-        const std::filesystem::path& data_dir);
+        const std::filesystem::path& data_dir,
+        bool shuffle_tasks);
 
     ~App();
 

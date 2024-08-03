@@ -57,6 +57,10 @@ int parse_args(argparse::ArgumentParser& program, int argc, const char **argv)
         .help("reads existing annotations from this file rather than file passed to\n"
               "--annotations; WARNING: this will cause any existing annotations in\n"
               "file passed to --annotations to be overwritten!");
+    program.add_argument("--not-shuffled")
+        .implicit_value(true)
+        .default_value(false)
+        .help("do not shuffle labelling tasks by default");
 
     try {
         program.parse_args(argc, argv);
@@ -197,7 +201,9 @@ int main(int argc, const char *argv[])
         return 1;
     }
 
-    app::App app(*labelling_tasks, *annotations_store, data_dir);
+    app::App app(
+        *labelling_tasks, *annotations_store, data_dir, !program.is_used("--not-shuffled")
+    );
     gui::Gui gui(app);
     return platform::run(gui);
 }

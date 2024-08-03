@@ -41,11 +41,16 @@ inline std::vector<std::size_t> range_vector(std::size_t n)
 template <typename T> class ViewList {
 public:
     template <typename Compare = std::less<T>>
-    explicit ViewList(std::vector<T> items, Compare compare = Compare()) :
+    ViewList(std::vector<T> items, bool shuffled, Compare compare = Compare()) :
         m_items(view_list::internal::sorted_vector(std::move(items), compare)),
         m_sorted_indices(view_list::internal::range_vector(m_items.size())),
         m_shuffled_indices(view_list::internal::shuffled_vector(m_sorted_indices))
-    {}
+    {
+        if (shuffled) {
+            shuffle();
+            set_index(0);
+        }
+    }
 
     [[nodiscard]] std::size_t size() const { return m_items.size(); }
 
