@@ -1,19 +1,40 @@
+#include "models/annotation-json.hpp"
 #include "models/annotation.hpp"
 #include "models/time-range.hpp"
+#include "nlohmann/json_fwd.hpp"
 
 #include <gtest/gtest.h>
+#include <nlohmann/json.hpp>
 
 #include <optional>
 #include <stdexcept>
+#include <string_view>
 #include <variant>
 
 // TODO: these tests are a mess
 
 using namespace recap::labeller::models;
 
+void parse_json_str(std::string_view json_str, nlohmann::json& json)
+{
+    try {
+        json = nlohmann::json::parse(json_str);
+    } catch (const nlohmann::json::exception& e) {
+        FAIL() << "Failed to parse JSON: " << e.what();
+    }
+}
+
+void load_annotation_json(SwallowAnnotation& annotation, std::string_view json_str)
+{
+    nlohmann::json json;
+    parse_json_str(json_str, json);
+    annotation = json.template get<SwallowAnnotation>();
+}
+
 TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndEarClick)
 {
-    const auto annotation = SwallowAnnotation::from_json(R"({
+    SwallowAnnotation annotation;
+    load_annotation_json(annotation, R"({
         "swallow_apnea": {
             "is_ambiguous": false,
             "pattern": "ex-ex",
@@ -45,7 +66,8 @@ TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndEarClick)
 
 TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndEarClickAndNote)
 {
-    const auto annotation = SwallowAnnotation::from_json(R"({
+    SwallowAnnotation annotation;
+    load_annotation_json(annotation, R"({
         "swallow_apnea": {
             "is_ambiguous": false,
             "pattern": "ex-ex",
@@ -90,12 +112,14 @@ TEST(TestSwallowAnnotationJson, TestParsingInvalidSRCPatternFails)
         "ear_clicks": [{"start": 12, "end": 100}, {"start": 200, "end": 300}],
         "note": null
     })";
-    EXPECT_THROW(SwallowAnnotation::from_json(json), std::runtime_error);
+    SwallowAnnotation annotation;
+    EXPECT_THROW(load_annotation_json(annotation, json), nlohmann::json::exception);
 }
 
 TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndNoEarClick)
 {
-    const auto annotation = SwallowAnnotation::from_json(R"({
+    SwallowAnnotation annotation;
+    load_annotation_json(annotation, R"({
         "swallow_apnea": {
             "is_ambiguous": false,
             "pattern": "ex-ex",
@@ -125,7 +149,8 @@ TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndNoEarClick)
 
 TEST(TestSwallowAnnotationJson, TestParsingWithEarClickAndNoApnea)
 {
-    const auto annotation = SwallowAnnotation::from_json(R"({
+    SwallowAnnotation annotation;
+    load_annotation_json(annotation, R"({
         "swallow_apnea": { "error": "apnea-cutoff" },
         "ear_clicks": [{"start": 12, "end": 100}, {"start": 200, "end": 300}],
         "note": null
@@ -146,7 +171,8 @@ TEST(TestSwallowAnnotationJson, TestParsingWithEarClickAndNoApnea)
 
 TEST(TestSwallowAnnotationJson, TestParsingWithoutApneaAndEarClick)
 {
-    const auto annotation = SwallowAnnotation::from_json(R"({
+    SwallowAnnotation annotation;
+    load_annotation_json(annotation, R"({
         "swallow_apnea": { "error": "apnea-cutoff" },
         "ear_clicks": { "error": "audio-error" },
         "note": null
@@ -170,7 +196,8 @@ TEST(TestSwallowAnnotationJson, TestParsingMissingApneaFails)
         "note": null
     })";
 
-    EXPECT_THROW(SwallowAnnotation::from_json(json), std::runtime_error);
+    SwallowAnnotation annotation;
+    EXPECT_THROW(load_annotation_json(annotation, json), nlohmann::json::exception);
 }
 
 TEST(TestSwallowAnnotationJson, TestParsingMissingEarClicksFails)
@@ -180,7 +207,8 @@ TEST(TestSwallowAnnotationJson, TestParsingMissingEarClicksFails)
         "note": null
     })";
 
-    EXPECT_THROW(SwallowAnnotation::from_json(json), std::runtime_error);
+    SwallowAnnotation annotation;
+    EXPECT_THROW(load_annotation_json(annotation, json), nlohmann::json::exception);
 }
 
 TEST(TestSwallowAnnotationJson, TestParsingMissingNoteFails)
@@ -190,7 +218,8 @@ TEST(TestSwallowAnnotationJson, TestParsingMissingNoteFails)
         "ear_clicks": { "error": "audio-error" }
     })";
 
-    EXPECT_THROW(SwallowAnnotation::from_json(json), std::runtime_error);
+    SwallowAnnotation annotation;
+    EXPECT_THROW(load_annotation_json(annotation, json), nlohmann::json::exception);
 }
 
 TEST(TestSwallowAnnotationJson, TestParsingInvalidErrorKeyFails)
@@ -201,7 +230,8 @@ TEST(TestSwallowAnnotationJson, TestParsingInvalidErrorKeyFails)
         "note": null
     })";
 
-    EXPECT_THROW(SwallowAnnotation::from_json(json), std::runtime_error);
+    SwallowAnnotation annotation;
+    EXPECT_THROW(load_annotation_json(annotation, json), nlohmann::json::exception);
 }
 
 TEST(TestSwallowAnnotationJson, TestParsingInvalidApneaErrorFails)
@@ -211,7 +241,8 @@ TEST(TestSwallowAnnotationJson, TestParsingInvalidApneaErrorFails)
         "ear_clicks": { "error": "audio-error" },
         "note": null
     })";
-    EXPECT_THROW(SwallowAnnotation::from_json(json), std::runtime_error);
+    SwallowAnnotation annotation;
+    EXPECT_THROW(load_annotation_json(annotation, json), nlohmann::json::exception);
 }
 
 TEST(TestSwallowAnnotationJson, TestParsingInvalidEarClickErrorFails)
@@ -221,7 +252,8 @@ TEST(TestSwallowAnnotationJson, TestParsingInvalidEarClickErrorFails)
         "ear_clicks": { "error": "audio-no-error" },
         "note": null
     })";
-    EXPECT_THROW(SwallowAnnotation::from_json(json), std::runtime_error);
+    SwallowAnnotation annotation;
+    EXPECT_THROW(load_annotation_json(annotation, json), nlohmann::json::exception);
 }
 
 /**
@@ -230,8 +262,9 @@ TEST(TestSwallowAnnotationJson, TestParsingInvalidEarClickErrorFails)
  */
 #define ASSERT_SERIALIZE_DERIALIZE_EQ(annotation)                                                  \
     do {                                                                                           \
-        std::string serialized = annotation.dump_json();                                           \
-        auto annotation_deserialized = SwallowAnnotation::from_json(serialized);                   \
+        std::string serialized = nlohmann::json(annotation).dump();                                \
+        auto json = nlohmann::json::parse(serialized);                                             \
+        auto annotation_deserialized = json.template get<SwallowAnnotation>();                     \
         ASSERT_EQ(annotation, annotation_deserialized);                                            \
     } while (0)
 

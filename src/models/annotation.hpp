@@ -44,11 +44,6 @@ struct SwallowAnnotation {
     std::optional<std::string> note;
 
     bool operator==(const SwallowAnnotation&) const = default;
-
-    // Raises std::runtime_error on parse error
-    static SwallowAnnotation from_json(std::string_view str);
-
-    [[nodiscard]] std::string dump_json() const;
 };
 
 }; // namespace recap::labeller::models

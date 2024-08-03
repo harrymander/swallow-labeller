@@ -2,6 +2,7 @@
 
 #include "models/annotation.hpp"
 #include "models/time-range.hpp"
+#include "nlohmann/detail/exceptions.hpp"
 #include "util/variant-visitor.hpp"
 
 #include <nlohmann/json.hpp>
@@ -105,7 +106,12 @@ public:
             return item.second == str;
         });
         if (it == items.end()) {
-            throw std::runtime_error("Invalid enum value: " + std::string(str));
+            // FIXME: using internal details of JSON library to throw error... The 403 code is for
+            // "key not found" errors:
+            // https://json.nlohmann.me/home/exceptions/#jsonexceptionout_of_range403
+            throw nlohmann::detail::out_of_range::create(
+                403, "Invalid enum value: " + std::string(str), nullptr
+            );
         }
         e = it->first;
     }

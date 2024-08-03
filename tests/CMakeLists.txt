@@ -75,7 +75,6 @@ add_executable(
     test-annotation-json
     test-annotation-json.cpp
     ../src/models/annotation-json.cpp
-    ../src/models/annotation.cpp
 )
 target_link_libraries(
     test-annotation-json
