@@ -58,7 +58,7 @@ using SwallowAnnotationsMap = std::map<std::string, SwallowAnnotation>;
 
 SwallowAnnotationsMap load_swallow_annotations_map_json(std::istream& stream);
 void dump_swallow_annotations_map_json(
-    std::ostream& os, const SwallowAnnotationsMap& map, int indent = -1
+    std::ostream& os, const SwallowAnnotationsMap& map, int indent = 2
 );
 
 }; // namespace recap::labeller::models
