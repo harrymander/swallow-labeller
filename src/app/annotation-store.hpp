@@ -5,12 +5,16 @@
 #include "util/observable.hpp"
 
 #include <filesystem>
+#include <map>
 
 namespace recap::labeller {
 
 class SwallowAnnotationStore {
 public:
-    SwallowAnnotationStore(std::filesystem::path path, models::SwallowAnnotationsMap annotations);
+    /**
+     * Raises std::runtime_error on parse error if existing is non-null
+     */
+    SwallowAnnotationStore(std::filesystem::path path, std::istream *existing);
 
     /**
      * Retrieves annotation with annotation_id and returns pointer to it, or nullptr if no
@@ -65,9 +69,9 @@ public:
 
 private:
     std::filesystem::path path;
-    models::SwallowAnnotationsMap annotations;
     std::string path_str;
     ErrorObservable m_error_observable;
+    std::map<std::string, models::SwallowAnnotation> annotations;
 
     void sync_to_file_notify() const;
 };

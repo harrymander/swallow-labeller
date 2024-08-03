@@ -1,7 +1,9 @@
 #include "annotation-store.hpp"
 
+#include "models/annotation-json.hpp"
 #include "models/annotation.hpp"
 
+#include <nlohmann/json.hpp>
 #include <spdlog/fmt/std.h>
 #include <spdlog/spdlog.h>
 
@@ -11,11 +13,37 @@
 
 namespace recap::labeller {
 
-SwallowAnnotationStore::SwallowAnnotationStore(
-    std::filesystem::path path, models::SwallowAnnotationsMap annotations
-) :
-    path(std::move(path)), annotations(std::move(annotations))
-{}
+namespace {
+
+using SwallowAnnotationsMap = std::map<std::string, models::SwallowAnnotation>;
+
+SwallowAnnotationsMap load_swallow_annotations_map_json(std::istream& stream)
+{
+    try {
+        return nlohmann::json::parse(stream).template get<SwallowAnnotationsMap>();
+    } catch (const nlohmann::json::exception& e) {
+        throw std::runtime_error(std::string("JSON parse error: ") + e.what());
+    }
+}
+
+void dump_swallow_annotations_map_json(std::ostream& os, const SwallowAnnotationsMap& map)
+{
+    constexpr int JsonIndent = 2;
+
+    nlohmann::json json = map;
+    os << json.dump(JsonIndent);
+}
+
+}; // namespace
+
+SwallowAnnotationStore::SwallowAnnotationStore(std::filesystem::path path, std::istream *existing) :
+    path(std::move(path)),
+    annotations(existing ? load_swallow_annotations_map_json(*existing) : SwallowAnnotationsMap())
+{
+    if (existing) {
+        spdlog::info("Loaded {} existing annotations", annotations.size());
+    }
+}
 
 const models::SwallowAnnotation *SwallowAnnotationStore::get_annotation(const std::string& id) const
 {

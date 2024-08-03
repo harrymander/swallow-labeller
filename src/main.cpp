@@ -1,7 +1,6 @@
 #include "app/annotation-store.hpp"
 #include "app/app.hpp"
 #include "gui/gui.hpp"
-#include "models/annotation.hpp"
 #include "models/task-info.hpp"
 #include "platform/platform.hpp"
 
@@ -16,6 +15,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <unordered_set>
@@ -119,60 +119,33 @@ load_labelling_tasks(const argparse::ArgumentParser& program)
     return std::nullopt;
 }
 
-std::optional<models::SwallowAnnotationsMap> load_annotations(const std::filesystem::path& path)
-{
-    std::ifstream stream(path);
-    if (!stream) {
-        spdlog::critical("Could not open annotations file: {}", path);
-        return std::nullopt;
-    }
-    try {
-        auto annotations = models::load_swallow_annotations_map_json(stream);
-        spdlog::debug("Loaded {} annotation(s)", annotations.size());
-        return annotations;
-    } catch (const std::invalid_argument& e) {
-        spdlog::critical("Invalid annotations file: {}", e.what());
-    } catch (const std::runtime_error& e) {
-        spdlog::critical("Error reading from file: {}", e.what());
-    }
-    return std::nullopt;
-}
-
 std::optional<SwallowAnnotationStore> make_annotations_store(const argparse::ArgumentParser& parser)
 {
     auto existing_path = parser.present("--existing-annotations");
     auto annotations_path = std::filesystem::path(parser.get("--annotations")).make_preferred();
-    models::SwallowAnnotationsMap annotations;
+    std::unique_ptr<std::istream> stream;
     if (existing_path.has_value()) {
         spdlog::info(
             "Loading existing annotations from {} rather than {}", *existing_path, annotations_path
         );
-        auto path = std::filesystem::path(*existing_path).make_preferred();
-        auto opt = load_annotations(path);
-        if (!opt.has_value()) {
-            return std::nullopt;
-        }
-        annotations = std::move(*opt);
+        stream = std::make_unique<std::ifstream>(*existing_path);
     } else if (std::filesystem::exists(annotations_path)) {
-        spdlog::info("Path {} exists, trying to load annotations...", annotations_path);
-        auto opt = load_annotations(annotations_path);
-        if (!opt.has_value()) {
-            return std::nullopt;
-        }
-        annotations = std::move(*opt);
+        spdlog::info("Reading existing annotations from {}", annotations_path);
+        stream = std::make_unique<std::ifstream>(annotations_path);
     } else {
         spdlog::info("No existing annotations, creating annotations file at {}", annotations_path);
     }
 
-    SwallowAnnotationStore store(annotations_path, annotations);
-    try {
-        // Sync to file to check that writing works
-        store.sync_to_file();
-        return store;
-    } catch (const std::runtime_error& e) {
-        spdlog::critical("Error writing to annotations file: {}", e.what());
+    if (stream && stream->fail()) {
+        spdlog::critical("Error opening annotations file");
+        return std::nullopt;
     }
 
+    try {
+        return SwallowAnnotationStore(annotations_path, stream.get());
+    } catch (const std::runtime_error& e) {
+        spdlog::critical("Error parsing annotations file: {}", e.what());
+    }
     return std::nullopt;
 }
 
@@ -198,6 +171,13 @@ int main(int argc, const char *argv[])
     }
     auto annotations_store = make_annotations_store(program);
     if (!annotations_store.has_value()) {
+        return 1;
+    }
+    try {
+        // Sync to file to check that writing works
+        annotations_store->sync_to_file();
+    } catch (const std::runtime_error& e) {
+        spdlog::critical("Error writing to annotations file: {}", e.what());
         return 1;
     }
 

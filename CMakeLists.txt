@@ -85,6 +85,7 @@ add_executable(recap-labeller
     src/gui/widgets/plot-range.cpp
     src/gui/widgets/util.cpp
     src/main.cpp
+    src/models/annotation-json.cpp
     src/models/annotation.cpp
     src/models/data.cpp
     src/models/task-info.cpp
