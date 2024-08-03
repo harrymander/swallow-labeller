@@ -77,7 +77,13 @@ private:
     bool m_show_debug_info = true;
 #endif
 
-    bool m_only_show_annotated_tasks = false;
+    enum class AnnotationsVisibility {
+        All,
+        AnnotatedOnly,
+        UnannotatedOnly,
+    };
+
+    AnnotationsVisibility m_annotation_list_visibility = AnnotationsVisibility::All;
     ImGuiTextFilter m_task_list_text_filter;
     std::size_t m_task_list_last_active_index = std::numeric_limits<std::size_t>::max();
 
@@ -119,6 +125,7 @@ private:
     void setup_dockspace() const;
     void draw_critical_error(const std::string& error);
     void draw_main_window();
+    bool draw_list_visibility_control();
     void draw_task_list();
     void draw_menu_bar();
     static void draw_debug_info();

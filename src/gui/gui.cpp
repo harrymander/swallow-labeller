@@ -947,6 +947,40 @@ std::string task_info_str(const app::SwallowLabellingTask& task, bool is_annotat
 
 }; // namespace
 
+bool Gui::draw_list_visibility_control()
+{
+    ImGui::TextUnformatted("Show:");
+    ImGui::SameLine();
+    if (m_annotation_list_visibility == AnnotationsVisibility::All) {
+        if (ImGui::SmallButton("Annotated only")) {
+            m_annotation_list_visibility = AnnotationsVisibility::AnnotatedOnly;
+            return true;
+        }
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Unannotated only")) {
+            m_annotation_list_visibility = AnnotationsVisibility::UnannotatedOnly;
+            return true;
+        }
+    } else {
+        if (ImGui::SmallButton("All")) {
+            m_annotation_list_visibility = AnnotationsVisibility::All;
+            return true;
+        }
+        ImGui::SameLine();
+        if (m_annotation_list_visibility == AnnotationsVisibility::AnnotatedOnly) {
+            if (ImGui::SmallButton("Unannotated only")) {
+                m_annotation_list_visibility = AnnotationsVisibility::UnannotatedOnly;
+                return true;
+            }
+        } else if (ImGui::SmallButton("Annotated only")) {
+            m_annotation_list_visibility = AnnotationsVisibility::AnnotatedOnly;
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void Gui::draw_task_list()
 {
     m_task_list_text_filter.Draw("##task_info_list_filter");
@@ -972,19 +1006,7 @@ void Gui::draw_task_list()
         }
     }
 
-    ImGui::SameLine();
-    bool scroll_to_selected_task = false;
-    const char *show_annotated_str = "Show annotated only";
-    const float show_annotated_button_width =
-        button_padding + ImGui::CalcTextSize(show_annotated_str).x;
-    if (ImGui::Button(
-            m_only_show_annotated_tasks ? "Show all" : show_annotated_str,
-            {show_annotated_button_width, 0}
-        ))
-    {
-        m_only_show_annotated_tasks = !m_only_show_annotated_tasks;
-        scroll_to_selected_task = true;
-    }
+    bool scroll_to_selected_task = draw_list_visibility_control();
 
     ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32_BLACK_TRANS);
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32_BLACK_TRANS);
@@ -1021,7 +1043,13 @@ void Gui::draw_task_list()
             if (has_annotation) {
                 num_annotated += 1;
             }
-            if (!m_only_show_annotated_tasks || has_annotation) {
+
+            const bool show_task = (m_annotation_list_visibility == AnnotationsVisibility::All)
+                || (m_annotation_list_visibility == AnnotationsVisibility::UnannotatedOnly
+                    && !has_annotation)
+                || (m_annotation_list_visibility == AnnotationsVisibility::AnnotatedOnly
+                    && has_annotation);
+            if (show_task) {
                 const std::string str = task_info_str(task, has_annotation);
                 if (m_task_list_text_filter.PassFilter(str.c_str())) {
                     const bool selected = active_index == i;
