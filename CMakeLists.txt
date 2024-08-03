@@ -138,6 +138,8 @@ else()
     message(FATAL_ERROR "Unsupported platform")
 endif()
 
+install(TARGETS recap-labeller DESTINATION bin)
+
 option(ENABLE_LINTING "Enable linting" ON)
 if(ENABLE_LINTING)
     include(cmake/lint.cmake)
