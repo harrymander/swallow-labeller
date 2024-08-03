@@ -949,8 +949,6 @@ std::string task_info_str(const app::SwallowLabellingTask& task, bool is_annotat
 
 bool Gui::draw_list_visibility_control()
 {
-    ImGui::TextUnformatted("Show:");
-    ImGui::SameLine();
     if (m_annotation_list_visibility == AnnotationsVisibility::All) {
         if (ImGui::SmallButton("Annotated only")) {
             m_annotation_list_visibility = AnnotationsVisibility::AnnotatedOnly;
@@ -992,26 +990,23 @@ void Gui::draw_task_list()
         {num_annotated_pos.x, num_annotated_pos.y + ImGui::GetTextLineHeightWithSpacing()}
     );
 
-    const float button_padding = 2 * ImGui::GetStyle().ItemSpacing.x;
-
-    const char *shuffle_button_str = SHUFFLE_ICON ICON_TEXT_SPACE "Shuffle";
-    const float shuffle_button_width = button_padding + ImGui::CalcTextSize(shuffle_button_str).x;
-    if (m_app.tasks_shuffled()) {
-        if (ImGui::Button(UNSHUFFLE_ICON ICON_TEXT_SPACE "Sort", {shuffle_button_width, 0})) {
-            m_app.unshuffle_tasks();
-        }
-    } else {
-        if (ImGui::Button(shuffle_button_str, {shuffle_button_width, 0})) {
-            m_app.shuffle_tasks();
-        }
-    }
-
     bool scroll_to_selected_task = draw_list_visibility_control();
 
     ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32_BLACK_TRANS);
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32_BLACK_TRANS);
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, IM_COL32_BLACK_TRANS);
     ImGui::BeginGroup();
+    if (m_app.tasks_shuffled()) {
+        if (ImGui::SmallButton(UNSHUFFLE_ICON)) {
+            m_app.unshuffle_tasks();
+        }
+        ImGui::SetItemTooltip("Sort tasks");
+    } else {
+        if (ImGui::SmallButton(SHUFFLE_ICON)) {
+            m_app.shuffle_tasks();
+        }
+        ImGui::SetItemTooltip("Shuffle tasks");
+    }
     const bool scroll_to_top = ImGui::SmallButton(ICON_FA_ARROWS_UP_TO_LINE);
     ImGui::SetItemTooltip("Scroll to top");
     if (ImGui::SmallButton(ICON_FA_ARROWS_TO_DOT)) {
