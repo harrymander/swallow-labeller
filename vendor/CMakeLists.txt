@@ -55,6 +55,12 @@ else()
     find_package(spdlog CONFIG REQUIRED)
 endif()
 
+fetchcontent_declare(howardhinnant_date
+  GIT_REPOSITORY https://github.com/HowardHinnant/date.git
+  GIT_TAG 6e921e1b1d21e84a5c82416ba7ecd98e33a436d0 # v3.0.1
+)
+fetchcontent_makeavailable(howardhinnant_date)
+
 fetchcontent_declare(
     cnpy
     GIT_REPOSITORY https://github.com/harrymander/cnpy

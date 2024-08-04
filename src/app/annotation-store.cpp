@@ -2,34 +2,80 @@
 
 #include "models/annotation-json.hpp"
 #include "models/annotation.hpp"
+#include "nlohmann/detail/abi_macros.hpp"
+#include "util/json-optional.hpp"
 
+#include <date/date.h>
+#include <fmt/chrono.h>
 #include <nlohmann/json.hpp>
 #include <spdlog/fmt/std.h>
 #include <spdlog/spdlog.h>
 
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <optional>
+#include <stdexcept>
 #include <string>
+
+#define ISO_UTC_DATETIME_FMT_STR "%Y-%m-%dT%H:%M:%SZ"
+
+using UtcTimePoint = std::chrono::time_point<std::chrono::system_clock>;
+
+NLOHMANN_JSON_NAMESPACE_BEGIN
+
+template <> struct adl_serializer<UtcTimePoint> {
+    static void from_json(const nlohmann::json& json, UtcTimePoint& time)
+    {
+        auto time_str = json.template get<std::string>();
+        std::istringstream ss(time_str);
+        ss >> date::parse(ISO_UTC_DATETIME_FMT_STR, time);
+        if (ss.fail()) {
+            throw std::runtime_error("Invalid datetime string: " + time_str);
+        }
+    }
+
+    static void to_json(nlohmann::json& json, const UtcTimePoint& time)
+    {
+        json = fmt::format(
+            "{:" ISO_UTC_DATETIME_FMT_STR "}", std::chrono::floor<std::chrono::seconds>(time)
+        );
+    }
+};
+
+NLOHMANN_JSON_NAMESPACE_END
 
 namespace recap::labeller {
 
 namespace {
 
+UtcTimePoint utc_time_now()
+{
+    return std::chrono::system_clock::now();
+}
+
 struct SwallowAnnotationResult {
     models::SwallowAnnotation result;
+    UtcTimePoint created_time;
+    std::optional<UtcTimePoint> last_modified_time = std::nullopt;
+
+    SwallowAnnotationResult() = default;
+
+    explicit SwallowAnnotationResult(models::SwallowAnnotation result) :
+        result(std::move(result)), created_time(utc_time_now())
+    {}
+
+    void update_result(models::SwallowAnnotation new_result)
+    {
+        result = std::move(new_result);
+        last_modified_time = utc_time_now();
+    }
 };
 
-[[maybe_unused]] void from_json(const nlohmann::json& json, SwallowAnnotationResult& result)
-
-{
-    result.result = json.template get<models::SwallowAnnotation>();
-}
-
-[[maybe_unused]] void to_json(nlohmann::json& json, const SwallowAnnotationResult& result)
-{
-    json = result.result;
-}
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
+    SwallowAnnotationResult, result, created_time, last_modified_time
+);
 
 }; // namespace
 
@@ -113,7 +159,7 @@ void SwallowAnnotationStore::add_annotation(
         }
 
         spdlog::debug("Annotation for id={} changed", id);
-        existing.result = std::move(annotation);
+        existing.update_result(std::move(annotation));
     } else {
         spdlog::debug("New annotation for id={}", id);
         m_annotations->emplace(id, SwallowAnnotationResult(std::move(annotation)));

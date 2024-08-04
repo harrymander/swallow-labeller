@@ -3,6 +3,7 @@
 #include "models/annotation.hpp"
 #include "models/time-range.hpp"
 #include "nlohmann/detail/exceptions.hpp"
+#include "util/json-optional.hpp"
 #include "util/variant-visitor.hpp"
 
 #include <nlohmann/json.hpp>
@@ -38,30 +39,6 @@ template <typename T, typename E> struct adl_serializer<std::variant<T, E>> {
     {
         if (j.is_object() && j.contains("error") && j.size() == 1) {
             val = j.at("error").template get<E>();
-        } else {
-            val = j.template get<T>();
-        }
-    }
-};
-
-/**
- * JSON parser/serializer for std::optional<T> where T can be serialized/deserialized to/from
- * nlohmann::json. Uses JSON null to represent std::nullopt.
- */
-template <typename T> struct adl_serializer<std::optional<T>> {
-    static void to_json(json& j, const std::optional<T>& val)
-    {
-        if (val.has_value()) {
-            j = *val;
-        } else {
-            j = nullptr;
-        }
-    }
-
-    static void from_json(const json& j, std::optional<T>& val)
-    {
-        if (j.is_null()) {
-            val = std::nullopt;
         } else {
             val = j.template get<T>();
         }
