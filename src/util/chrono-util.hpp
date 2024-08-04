@@ -1,25 +1,25 @@
 #ifndef RECAP_LABELLER_UTIL_CHRONO_UTIL_HPP_INCLUDE
 #define RECAP_LABELLER_UTIL_CHRONO_UTIL_HPP_INCLUDE
 
-#include <utility>
 #ifdef USE_HOWARDHINNANT_DATE
 #include <date/date.h>
+#define DATETIME_PARSE_FUNC date::parse
 #else
 #include <chrono>
+#define DATETIME_PARSE_FUNC std::chrono::parse
 #endif
+
+#include <utility>
 
 namespace recap::labeller::chrono_util {
 
-template <class Fmt, class Parsable> inline auto parse(Fmt&& fmt, Parsable&& parsable)
+template <typename... Args> inline auto parse(Args&&...args)
 {
-#ifdef USE_HOWARDHINNANT_DATE
-    return date::parse
-#else
-    return std::chrono::parse
-#endif
-        (std::forward<Fmt>(fmt), std::forward<Parsable>(parsable));
+    return DATETIME_PARSE_FUNC(std::forward<Args>(args)...);
 }
 
 }; // namespace recap::labeller::chrono_util
+
+#undef DATETIME_PARSE_FUNC
 
 #endif // RECAP_LABELLER_UTIL_CHRONO_UTIL_HPP_INCLUDE
