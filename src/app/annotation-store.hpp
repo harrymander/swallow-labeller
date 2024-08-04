@@ -5,9 +5,10 @@
 #include "util/observable.hpp"
 
 #include <filesystem>
-#include <map>
 
 namespace recap::labeller {
+
+class SwallowAnnotationStoreMap;
 
 class SwallowAnnotationStore {
 public:
@@ -16,6 +17,13 @@ public:
      */
     SwallowAnnotationStore(std::filesystem::path path, std::istream *existing);
 
+    ~SwallowAnnotationStore();
+    SwallowAnnotationStore(SwallowAnnotationStore&&) noexcept;
+    SwallowAnnotationStore& operator=(SwallowAnnotationStore&&) noexcept;
+
+    SwallowAnnotationStore(const SwallowAnnotationStore&) = delete;
+    SwallowAnnotationStore& operator=(const SwallowAnnotationStore&) = delete;
+
     /**
      * Retrieves annotation with annotation_id and returns pointer to it, or nullptr if no
      * annotation with that ID
@@ -23,10 +31,7 @@ public:
     [[nodiscard]] const models::SwallowAnnotation *get_annotation(const std::string& annotation_id
     ) const;
 
-    [[nodiscard]] bool has_annotation(const std::string& id) const
-    {
-        return annotations.contains(id);
-    }
+    [[nodiscard]] bool has_annotation(const std::string& id) const;
 
     /**
      * Returns true if there is an existing annotation with the same id and it is identical to
@@ -71,7 +76,7 @@ private:
     std::filesystem::path path;
     std::string path_str;
     ErrorObservable m_error_observable;
-    std::map<std::string, models::SwallowAnnotation> annotations;
+    std::unique_ptr<SwallowAnnotationStoreMap> m_annotations;
 
     void sync_to_file_notify() const;
 };

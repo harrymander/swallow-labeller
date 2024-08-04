@@ -182,7 +182,10 @@ int main(int argc, const char *argv[])
     }
 
     app::App app(
-        *labelling_tasks, *annotations_store, data_dir, !program.is_used("--not-shuffled")
+        *labelling_tasks,
+        std::move(*annotations_store),
+        data_dir,
+        !program.is_used("--not-shuffled")
     );
     gui::Gui gui(app);
     return platform::run(gui);
