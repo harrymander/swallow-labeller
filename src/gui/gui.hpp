@@ -2,27 +2,10 @@
 #define RECAP_LABELLER_GUI_HPP
 
 #include "app/app.hpp"
-#include "app/id-list.hpp"
-#include "gui/widgets/color-scheme-selector.hpp"
-#include "gui/widgets/plot-range-dragger.hpp"
-#include "gui/widgets/plot-range-selector.hpp"
-#include "gui/widgets/plot-range.hpp"
-#include "models/time-range.hpp"
 
-#include <fmt/core.h>
-#include <imgui.h>
-
-#include <limits>
-#include <optional>
-#include <string>
+#include <memory>
 
 namespace recap::labeller::gui {
-
-struct TimeRangeLabelRegionColors {
-    ImColor unselected;
-    ImColor hovered;
-    ImColor selected;
-};
 
 class Gui {
 public:
@@ -38,149 +21,11 @@ public:
     void stop();
     static void set_scaling_factor(float scaling_factor);
 
-    [[nodiscard]] bool ready_to_stop() const { return m_app.can_stop(); }
+    [[nodiscard]] bool ready_to_stop() const;
 
 private:
-    class Plotter {
-    public:
-        Plotter(
-            std::string ylabel, fmt::format_string<double> cursor_format, widgets::PlotRange& xrange
-        );
-
-        template <typename DrawFunc> void draw(const char *id, float height, DrawFunc&& draw);
-
-        void plot_data(
-            const std::vector<double>& x,
-            const std::vector<double>& y,
-            const models::TimeRange& event_range
-        );
-
-    private:
-        std::string m_ylabel;
-        fmt::format_string<double> m_cursor_format;
-        widgets::PlotRange& m_xrange;
-        widgets::PlotRangeSelector m_delta_selector;
-    };
-
-    bool m_first_draw = true;
-    std::string m_ini_path;
-    bool m_show_imgui_demo_window = false;
-    bool m_show_implot_demo_window = false;
-    bool m_show_imgui_metrics = false;
-    bool m_critical_error_modal_open = false;
-    bool m_unsaved_task_switch_modal_open = false;
-    recap::labeller::gui::widgets::ColorSchemeSelector m_color_scheme_selector;
-
-#if NDEBUG
-    bool m_show_debug_info = false;
-#else
-    bool m_show_debug_info = true;
-#endif
-
-    enum class AnnotationsVisibility {
-        All,
-        AnnotatedOnly,
-        UnannotatedOnly,
-    };
-
-    AnnotationsVisibility m_annotation_list_visibility = AnnotationsVisibility::All;
-    ImGuiTextFilter m_task_list_text_filter;
-    std::size_t m_task_list_last_active_index = std::numeric_limits<std::size_t>::max();
-
-    widgets::PlotRangeDragger m_plot_summary_dragger;
-    widgets::PlotRangeSelector m_plot_summary_selector;
-    widgets::PlotRange m_plot_summary_range = {NAN, NAN};
-
-    recap::labeller::app::App& m_app;
-    recap::labeller::app::App::NewActiveTaskObservable::Observer m_new_active_task_observer;
-    Plotter m_flow_plotter;
-    Plotter m_audio_plotter;
-
-    struct TimeRangeAnnotator {
-        widgets::PlotRangeSelector range_selector;
-        widgets::PlotRangeDragger range_dragger;
-        widgets::PlotRange temp_range = {NAN, NAN};
-        std::optional<app::IDList<models::TimeRange>::Item::ID> selected_id = std::nullopt;
-        std::optional<app::IDList<models::TimeRange>::Item::ID> hovered_id = std::nullopt;
-
-        TimeRangeAnnotator() = default;
-    };
-
-    struct Annotator {
-        widgets::PlotRangeSelector apnea_range_selector;
-        widgets::PlotRange apnea_temp_range = {NAN, NAN};
-        widgets::PlotRangeDragger apnea_range_dragger;
-        bool editing_apnea = true;
-        TimeRangeAnnotator non_resp_flow_annotator;
-        TimeRangeAnnotator ear_clicks_annotator;
-        std::string note;
-
-        Annotator() = default;
-        explicit Annotator(const app::ActiveSwallowLabellingTaskView& task_view);
-    };
-
-    Annotator m_annotator;
-
-    void setup_imgui_ini();
-    void setup_dockspace() const;
-    void draw_critical_error(const std::string& error);
-    void draw_main_window();
-    bool draw_list_visibility_control();
-    void draw_task_list();
-    void draw_menu_bar();
-    static void draw_debug_info();
-
-    void draw_plots(app::ActiveSwallowLabellingTaskView& task_view);
-    void draw_flow_plot(app::ActiveSwallowLabellingTaskView& task_view);
-    void draw_flow_label_regions(
-        const app::ActiveSwallowLabellingTaskView& task_view,
-        float height = 0,
-        bool selected_color = false
-    ) const;
-    void draw_apnea_label_region(
-        const app::ActiveSwallowLabellingTaskView& task_view,
-        float height = 0,
-        bool selected_color = false
-    ) const;
-    void draw_non_resp_flow_label_regions(
-        const app::ActiveSwallowLabellingTaskView& task_view,
-        float height = 0,
-        bool selected_color = false
-    ) const;
-    void draw_audio_plot(app::ActiveSwallowLabellingTaskView& task_view);
-    void draw_plot_summary_selector();
-    void on_new_active_task(const app::App::ActiveTaskVariant& new_task);
-
-    [[nodiscard]] bool draw_annotation_submit(app::ActiveSwallowLabellingTaskView& task_view);
-    void draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view);
-    void draw_note_editor(app::ActiveSwallowLabellingTaskView& task_view);
-    void draw_apnea_editor(app::ActiveSwallowLabellingTaskView& task_view);
-    void draw_apnea_annotation_selection(app::ActiveSwallowLabellingTaskView& task_view) const;
-    void draw_ear_clicks_editor(app::ActiveSwallowLabellingTaskView& task_view);
-
-    void draw_earclick_label_regions(
-        const app::ActiveSwallowLabellingTaskView& task_view,
-        float height = 0,
-        bool selected_color = false
-    ) const;
-
-    template <typename Delete>
-    static void draw_labels_list_box(
-        const char *name,
-        TimeRangeAnnotator& annotator,
-        const std::vector<app::TimeRangeIDList::Item>& labels,
-        Delete deleter
-    );
-
-    static void draw_labels_regions(
-        const std::vector<app::TimeRangeIDList::Item>& labels,
-        const TimeRangeAnnotator& annotator,
-        float height,
-        const TimeRangeLabelRegionColors& colors,
-        bool selected_color
-    );
-
-    void draw_unsaved_task_prompt();
+    class Impl;
+    std::unique_ptr<Impl> m_pimpl;
 };
 
 }; // namespace recap::labeller::gui
