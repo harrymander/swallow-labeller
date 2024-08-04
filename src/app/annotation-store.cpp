@@ -3,7 +3,7 @@
 #include "models/annotation-json.hpp"
 #include "models/annotation.hpp"
 #include "nlohmann/detail/abi_macros.hpp"
-#include "util/chrono-util.hpp"
+#include "util/chrono.hpp"
 #include "util/json-optional.hpp"
 
 #include <fmt/chrono.h>
@@ -30,7 +30,7 @@ template <> struct adl_serializer<UtcTimePoint> {
     {
         auto time_str = json.template get<std::string>();
         std::istringstream ss(time_str);
-        ss >> recap::labeller::chrono_util::parse(ISO_UTC_DATETIME_FMT_STR, time);
+        ss >> recap::labeller::chrono::parse(ISO_UTC_DATETIME_FMT_STR, time);
         if (ss.fail()) {
             throw std::runtime_error("Invalid datetime string: " + time_str);
         }
