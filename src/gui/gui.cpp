@@ -1356,7 +1356,6 @@ void Gui::draw_apnea_annotation_selection(app::ActiveSwallowLabellingTaskView& t
     bool is_ambiguous = task_view.swallow_is_ambiguous();
     bool status_changed = false;
 
-    ImGui::BeginDisabled(!m_annotator.editing_apnea);
     constexpr std::array SrcOptions = {
         Option("ex-ex [1]", ExEx, ImGuiKey_1),
         Option("ex-in [2]", ExIn, ImGuiKey_2),
@@ -1385,7 +1384,6 @@ void Gui::draw_apnea_annotation_selection(app::ActiveSwallowLabellingTaskView& t
             }
         }
     }
-    ImGui::EndDisabled();
 
     ImGui::Separator();
     constexpr std::array OtherOptions = {
