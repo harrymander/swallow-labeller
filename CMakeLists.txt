@@ -95,8 +95,8 @@ target_include_directories(recap-labeller PRIVATE src)
 target_compile_features(recap-labeller PRIVATE cxx_std_20)
 target_link_libraries(recap-labeller PRIVATE
     argparse::argparse
+    chrono_util
     cnpy::cnpy
-    date::date
     fmt::fmt
     IconFontCppHeaders
     imgui::demo
