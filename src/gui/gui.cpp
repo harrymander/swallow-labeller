@@ -1187,7 +1187,7 @@ private:
         const char *name,
         TimeRangeAnnotator& annotator,
         const std::vector<app::TimeRangeIDList::Item>& labels,
-        Delete deleter
+        const Delete& deleter
     )
     {
         static const char *remove_button_str = DELETE_ICON;
