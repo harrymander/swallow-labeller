@@ -153,7 +153,7 @@ public:
     void set_note(std::string note) { m_annotation.note = std::move(note); }
 
     // TODO
-    [[nodiscard]] bool can_delete_annotation() const { return true; }
+    [[nodiscard]] static constexpr bool can_delete_annotation() { return true; }
 
     [[nodiscard]] bool can_save_annotation() const;
 
