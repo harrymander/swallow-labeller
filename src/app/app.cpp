@@ -258,8 +258,12 @@ void App::discard_unsaved_task_and_switch()
 
 void App::reload_active_task()
 {
-    spdlog::info("Reloading active task...");
-    load_active_task();
+    if (active_task_unsaved()) {
+        spdlog::error("Current task is unsaved, cannot reload");
+    } else {
+        spdlog::info("Reloading active task...");
+        load_active_task();
+    }
 }
 
 void App::save_active_task()
