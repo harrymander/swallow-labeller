@@ -64,7 +64,14 @@ if(NOT MSVC)
       GIT_REPOSITORY https://github.com/HowardHinnant/date.git
       GIT_TAG 6e921e1b1d21e84a5c82416ba7ecd98e33a436d0 # v3.0.1
     )
-    fetchcontent_makeavailable(howardhinnant_date)
+    if(NOT howardhinnant_date_POPULATED)
+        fetchcontent_populate(howardhinnant_date)
+        add_subdirectory(
+            ${howardhinnant_date_SOURCE_DIR}
+            ${howardhinnant_date_BINARY_DIR}
+            EXCLUDE_FROM_ALL
+        )
+    endif()
 
     target_link_libraries(chrono_util INTERFACE date::date)
     target_compile_definitions(chrono_util INTERFACE USE_HOWARDHINNANT_DATE)
