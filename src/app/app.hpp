@@ -238,6 +238,7 @@ public:
      * functions.
      */
     void set_active_task_index(std::size_t index);
+    void go_to_next_unannotated_task();
     void go_to_previous_task_in_history();
     void go_to_next_task_in_history();
     void reload_active_task();

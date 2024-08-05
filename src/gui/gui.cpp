@@ -42,6 +42,7 @@
 #define EXIT_ICON ICON_FA_XMARK
 #define SHUFFLE_ICON ICON_FA_SHUFFLE
 #define UNSHUFFLE_ICON ICON_FA_SORT
+#define SKIP_TASK_ICON ICON_FA_FORWARD
 #define ICON_TEXT_SPACE "  "
 constexpr float LabelSummaryHeight = 8; // Same as default ImPlotStyle::DigitalBitHeight
 
@@ -1110,8 +1111,17 @@ private:
         return widgets::global_shortcut(SaveShortcutKeyChord);
     }
 
-    bool draw_annotation_submit(app::ActiveSwallowLabellingTaskView& task_view)
+    enum class AnnotationSubmitAction {
+        None,
+        Save,
+        Skip,
+    };
+
+    AnnotationSubmitAction draw_annotation_submit(app::ActiveSwallowLabellingTaskView& task_view)
     {
+        using enum AnnotationSubmitAction;
+        AnnotationSubmitAction action = None;
+
         static const char *del_str = ICON_TEXT_SPACE ICON_FA_TRASH_CAN ICON_TEXT_SPACE;
         const float del_button_width =
             ImGui::CalcTextSize(del_str).x + ImGui::GetStyle().ItemInnerSpacing.x * 4;
@@ -1122,9 +1132,11 @@ private:
             can_delete ? ImGui::GetContentRegionAvail().x - del_button_width : -1;
 
         ImGui::BeginDisabled(!task_view.can_save_annotation());
-        const bool save_task =
-            ImGui::Button("Save [" SAVE_SHORTCUT_STR "]", {submit_button_width, button_height})
-            || save_shortcut_pushed();
+        if (ImGui::Button("Save [" SAVE_SHORTCUT_STR "]", {submit_button_width, button_height})
+            || save_shortcut_pushed())
+        {
+            action = Save;
+        }
         ImGui::EndDisabled();
 
         if (can_delete) {
@@ -1136,13 +1148,18 @@ private:
             ImGui::SetItemTooltip("Delete annotation");
         }
 
+        if (ImGui::Button("Skip" ICON_TEXT_SPACE SKIP_TASK_ICON) && action == None) {
+            action = Skip;
+        }
+        ImGui::SetItemTooltip("Skip to next unannotated task");
+        ImGui::SameLine();
         bool auto_advance = m_app.auto_advance_on_save();
-        if (ImGui::Checkbox("Auto-advance to next task", &auto_advance)) {
+        if (ImGui::Checkbox("Auto-advance to next task on save", &auto_advance)) {
             m_app.set_auto_advance_on_save(auto_advance);
             spdlog::debug("{}abled auto-advance on save", auto_advance ? "En" : "Dis");
         }
 
-        return save_task;
+        return action;
     }
 
     static bool delete_button()
@@ -1240,14 +1257,22 @@ private:
 
     void draw_label_editor(app::ActiveSwallowLabellingTaskView& task_view)
     {
-        const bool to_save_annotation = draw_annotation_submit(task_view);
+        const AnnotationSubmitAction action = draw_annotation_submit(task_view);
 
         draw_note_editor(task_view);
         draw_apnea_editor(task_view);
         draw_ear_clicks_editor(task_view);
 
-        if (to_save_annotation) {
+        switch (action) {
+            using enum AnnotationSubmitAction;
+        case Save:
             m_app.save_active_task();
+            break;
+        case Skip:
+            m_app.go_to_next_unannotated_task();
+            break;
+        case None:
+            break;
         }
     }
 

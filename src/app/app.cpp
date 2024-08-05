@@ -197,6 +197,11 @@ void App::set_active_task_index(std::size_t index)
     switch_active_task_index([this, index]() { m_swallow_task_list.set_index(index); });
 }
 
+void App::go_to_next_unannotated_task()
+{
+    auto_advance_active_task();
+}
+
 void App::go_to_next_task_in_history()
 {
     if (!m_swallow_task_list.can_go_forward()) {
