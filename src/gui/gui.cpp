@@ -583,6 +583,10 @@ private:
             [this](app::ActiveSwallowLabellingTaskView& task) { draw_plots(task); },
             [this](const app::ActiveSwallowLabellingTaskErrorView& error) {
                 ImGui::Text(ERR_ICON ICON_TEXT_SPACE "%s", error.error_msg().c_str());
+                if (ImGui::Button("Go to next unannotated task" ICON_TEXT_SPACE SKIP_TASK_ICON)) {
+                    m_app.go_to_next_unannotated_task();
+                }
+                ImGui::SameLine();
                 if (ImGui::Button("Retry...")) {
                     m_app.reload_active_task();
                 }
