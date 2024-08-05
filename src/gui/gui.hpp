@@ -13,9 +13,9 @@ public:
     ~Gui();
 
     Gui(const Gui&) = delete;
-    Gui operator=(const Gui&) = delete;
+    Gui& operator=(const Gui&) = delete;
     Gui(Gui&&) = delete;
-    Gui operator=(Gui&&) = delete;
+    Gui& operator=(Gui&&) = delete;
 
     void draw();
     void stop();
