@@ -41,16 +41,31 @@ TEST(TestViewList, TestCurrentItemMaintainedOnUnshuffle)
     ASSERT_EQ(list.index_item(), item);
 }
 
-TEST(TestViewList, TestNoHistoryAfterConstruction)
+TEST(TestViewList, TestNoHistoryAfterConstructionNotShuffled)
 {
     ViewList<int> list({5, 3, 2, 1, 4}, false);
     EXPECT_FALSE(list.can_go_back());
     EXPECT_FALSE(list.can_go_forward());
 }
 
-TEST(TestViewList, TestNoHistoryAfterConstructionAndSettingSameIndex)
+TEST(TestViewList, TestNoHistoryAfterConstructionAndSettingSameIndexNotShuffled)
 {
     ViewList<int> list({5, 3, 2, 1, 4}, false);
+    list.set_index(0);
+    EXPECT_FALSE(list.can_go_back());
+    EXPECT_FALSE(list.can_go_forward());
+}
+
+TEST(TestViewList, TestNoHistoryAfterConstructionShuffled)
+{
+    ViewList<int> list({5, 3, 2, 1, 4}, true);
+    EXPECT_FALSE(list.can_go_back());
+    EXPECT_FALSE(list.can_go_forward());
+}
+
+TEST(TestViewList, TestNoHistoryAfterConstructionAndSettingSameIndexShuffled)
+{
+    ViewList<int> list({5, 3, 2, 1, 4}, true);
     list.set_index(0);
     EXPECT_FALSE(list.can_go_back());
     EXPECT_FALSE(list.can_go_forward());

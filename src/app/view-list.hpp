@@ -42,15 +42,11 @@ template <typename T> class ViewList {
 public:
     template <typename Compare = std::less<T>>
     ViewList(std::vector<T> items, bool shuffled, Compare compare = Compare()) :
+        m_shuffled(shuffled),
         m_items(view_list::internal::sorted_vector(std::move(items), compare)),
         m_sorted_indices(view_list::internal::range_vector(m_items.size())),
         m_shuffled_indices(view_list::internal::shuffled_vector(m_sorted_indices))
-    {
-        if (shuffled) {
-            shuffle();
-            set_index(0);
-        }
-    }
+    {}
 
     [[nodiscard]] std::size_t size() const { return m_items.size(); }
 
@@ -149,11 +145,11 @@ private:
         m_fwrd_indices.clear();
     }
 
-    bool m_shuffled = false;
     std::size_t m_index = 0;
     std::vector<std::size_t> m_back_indices;
     std::vector<std::size_t> m_fwrd_indices;
 
+    bool m_shuffled;
     std::vector<T> m_items;
     std::vector<std::size_t> m_sorted_indices;
     std::vector<std::size_t> m_shuffled_indices;
