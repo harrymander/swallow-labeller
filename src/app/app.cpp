@@ -472,8 +472,6 @@ std::optional<std::string> note_annotation_model(std::string note)
 
 models::SwallowAnnotation ActiveSwallowLabellingTaskView::Annotation::to_model() const
 {
-    using namespace models;
-
     return {
         .swallow_apnea = apnea_status_is_src_pattern(swallow_apnea_status) ?
             swallow_apnea_annotation_model(
