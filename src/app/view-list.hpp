@@ -68,6 +68,7 @@ public:
         }
         m_index = static_cast<std::size_t>(std::distance(m_shuffled_indices.begin(), it));
         m_shuffled = true;
+        clear_history();
     }
 
     void unshuffle()
@@ -78,6 +79,7 @@ public:
 
         m_index = m_shuffled_indices[m_index];
         m_shuffled = false;
+        clear_history();
     }
 
     [[nodiscard]] std::size_t index() const { return m_index; }
@@ -94,7 +96,34 @@ public:
         if (index >= m_items.size()) {
             throw std::out_of_range("index out of range");
         }
-        m_index = index;
+
+        if (m_index != index) {
+            m_back_indices.push_back(m_index);
+            m_index = index;
+            m_fwrd_indices.clear();
+        }
+    }
+
+    [[nodiscard]] bool can_go_back() const { return !m_back_indices.empty(); }
+
+    [[nodiscard]] bool can_go_forward() const { return !m_fwrd_indices.empty(); }
+
+    void go_back()
+    {
+        if (can_go_back()) {
+            m_fwrd_indices.push_back(m_index);
+            m_index = m_back_indices.back();
+            m_back_indices.pop_back();
+        }
+    }
+
+    void go_forward()
+    {
+        if (can_go_forward()) {
+            m_back_indices.push_back(m_index);
+            m_index = m_fwrd_indices.back();
+            m_fwrd_indices.pop_back();
+        }
     }
 
     [[nodiscard]] const T& at(std::size_t index) const { return at(*this, index); }
@@ -114,8 +143,16 @@ private:
         return self.m_items.at(index);
     }
 
+    void clear_history()
+    {
+        m_back_indices.clear();
+        m_fwrd_indices.clear();
+    }
+
     bool m_shuffled = false;
     std::size_t m_index = 0;
+    std::vector<std::size_t> m_back_indices;
+    std::vector<std::size_t> m_fwrd_indices;
 
     std::vector<T> m_items;
     std::vector<std::size_t> m_sorted_indices;

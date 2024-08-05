@@ -108,33 +108,25 @@ public:
     UnsavedTaskHandler& operator=(UnsavedTaskHandler&&) = delete;
 };
 
-class UnsavedTaskSwitcher : public App::UnsavedTaskHandler {
+template <typename Submit> class UnsavedTaskSwitcher : public App::UnsavedTaskHandler {
 public:
-    UnsavedTaskSwitcher(App& app, std::size_t next_task_index) :
-        m_app(app), m_next_task_index(next_task_index)
-    {}
+    UnsavedTaskSwitcher(App& app, Submit submit) : m_app(app), m_submit(std::move(submit)) {}
 
     void cancel() override
     {
-        spdlog::debug(
-            "Cancelling task index switch to {}, staying on {}",
-            m_next_task_index,
-            m_app.m_swallow_task_list.index()
-        );
+        spdlog::debug("Cancelling task switch, staying on {}", m_app.m_swallow_task_list.index());
     }
 
     void submit() override
     {
-        spdlog::debug(
-            "Switching task index {} -> {}", m_app.m_swallow_task_list.index(), m_next_task_index
-        );
-        m_app.m_swallow_task_list.set_index(m_next_task_index);
+        spdlog::debug("Switching task");
+        m_submit();
         m_app.load_active_task();
     }
 
 private:
     App& m_app;
-    std::size_t m_next_task_index;
+    Submit m_submit;
 };
 
 class UnsavedTaskCloser : public App::UnsavedTaskHandler {
@@ -172,6 +164,21 @@ void App::stop()
     }
 }
 
+template <typename Submit> void App::switch_active_task_index(Submit&& submit)
+{
+    auto switcher =
+        std::make_unique<UnsavedTaskSwitcher<Submit>>(*this, std::forward<Submit>(submit));
+    if (active_task_unsaved()) {
+        spdlog::debug(
+            "Task switch from index={} requested, but annotation unsaved; blocking switch",
+            m_swallow_task_list.index()
+        );
+        m_unsaved_task_handler = std::move(switcher);
+    } else {
+        switcher->submit();
+    }
+}
+
 void App::set_active_task_index(std::size_t index)
 {
     if (m_unsaved_task_handler) {
@@ -187,18 +194,25 @@ void App::set_active_task_index(std::size_t index)
         return;
     }
 
-    if (active_task_unsaved()) {
-        spdlog::debug(
-            "Task switch {} -> {} requested but task is unsaved; blocking task switch",
-            m_swallow_task_list.index(),
-            index
-        );
-        m_unsaved_task_handler = std::make_unique<UnsavedTaskSwitcher>(*this, index);
-    } else {
-        spdlog::debug("Setting task index to {}", index);
-        m_swallow_task_list.set_index(index);
-        load_active_task();
+    switch_active_task_index([this, index]() { m_swallow_task_list.set_index(index); });
+}
+
+void App::go_to_next_task_in_history()
+{
+    if (!m_swallow_task_list.can_go_forward()) {
+        spdlog::error("Cannot go forward in task history");
+        return;
     }
+    switch_active_task_index([this]() { m_swallow_task_list.go_forward(); });
+}
+
+void App::go_to_previous_task_in_history()
+{
+    if (!m_swallow_task_list.can_go_back()) {
+        spdlog::error("Cannot go backwards in task history");
+        return;
+    }
+    switch_active_task_index([this]() { m_swallow_task_list.go_back(); });
 }
 
 void App::cancel_unsaved_task_switch()

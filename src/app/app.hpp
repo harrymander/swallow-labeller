@@ -225,12 +225,21 @@ public:
 
     [[nodiscard]] std::size_t active_task_index() const { return m_swallow_task_list.index(); }
 
+    [[nodiscard]] bool can_go_to_previous_task() const { return m_swallow_task_list.can_go_back(); }
+
+    [[nodiscard]] bool can_go_to_forward_task() const
+    {
+        return m_swallow_task_list.can_go_forward();
+    }
+
     /**
      * [FIXME] The below functions may change the active task view, so any references returned from
      * active_task_view() may be invalidated and should not be used following a call to any of these
      * functions.
      */
     void set_active_task_index(std::size_t index);
+    void go_to_previous_task_in_history();
+    void go_to_next_task_in_history();
     void reload_active_task();
     void cancel_unsaved_task_switch();
     void save_unsaved_task_and_switch();
@@ -268,11 +277,10 @@ public:
 
     void set_auto_advance_on_save(bool advance) { m_auto_advance_on_save = advance; }
 
-    class UnsavedTaskHandler;
-
 private:
-    friend class UnsavedTaskSwitcher;
+    class UnsavedTaskHandler;
     friend class UnsavedTaskCloser;
+    template <typename Submit> friend class UnsavedTaskSwitcher;
 
     SwallowLabellingTaskList m_swallow_task_list;
     SwallowAnnotationStore m_annotation_store;
@@ -289,6 +297,7 @@ private:
     [[nodiscard]] bool active_task_unsaved() const;
     void load_active_task();
     void auto_advance_active_task();
+    template <typename Submit> void switch_active_task_index(Submit&& submit);
 
     template <typename T, typename... Args>
     static std::unique_ptr<ActiveTaskVariant> make_unique_active_task(Args&&...);

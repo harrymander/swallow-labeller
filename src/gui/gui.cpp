@@ -977,9 +977,32 @@ private:
         );
     }
 
+    void draw_task_history_controls()
+    {
+        ImGui::BeginDisabled(!m_app.can_go_to_previous_task());
+        if (ImGui::ArrowButton("##prev_task", ImGuiDir_Left)
+            || widgets::global_shortcut(ImGuiMod_Alt | ImGuiKey_LeftArrow))
+        {
+            m_app.go_to_previous_task_in_history();
+        }
+        ImGui::SetItemTooltip("Go back [Alt+Left]");
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+        ImGui::BeginDisabled(!m_app.can_go_to_forward_task());
+        if (ImGui::ArrowButton("##fwrd_task", ImGuiDir_Right)
+            || widgets::global_shortcut(ImGuiMod_Alt | ImGuiKey_RightArrow))
+        {
+            m_app.go_to_next_task_in_history();
+        }
+        ImGui::SetItemTooltip("Go forward [Alt+Right]");
+        ImGui::EndDisabled();
+    }
+
     void draw_task_list()
     {
         m_task_list_text_filter.Draw("##task_info_list_filter");
+        ImGui::SameLine();
+        draw_task_history_controls();
 
         const auto& tasks = m_app.tasks();
 
