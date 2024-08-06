@@ -119,8 +119,9 @@ public:
 
     void submit() override
     {
-        spdlog::debug("Switching task");
+        const auto old_index = m_app.m_swallow_task_list.index();
         m_submit();
+        spdlog::debug("Switched task index {} -> {}", old_index, m_app.m_swallow_task_list.index());
         m_app.load_active_task();
     }
 
@@ -297,6 +298,7 @@ bool App::active_task_unsaved() const
 
 void App::auto_advance_active_task()
 {
+    spdlog::debug("Finding next unannotated task...");
     const std::size_t active_index = m_swallow_task_list.index();
     std::size_t index = active_index + 1;
     while (index != active_index) {
