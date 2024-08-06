@@ -11,7 +11,7 @@
 
 namespace recap::labeller::models {
 
-enum class SRCPattern {
+enum class SrcPattern {
     ExEx,
     ExIn,
     InEx,
@@ -20,7 +20,7 @@ enum class SRCPattern {
 
 struct SwallowApneaAnnotation {
     bool is_ambiguous;
-    SRCPattern pattern;
+    SrcPattern pattern;
     TimeRange time;
     std::vector<TimeRange> non_respiratory_flow;
 

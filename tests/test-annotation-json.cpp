@@ -50,7 +50,7 @@ TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndEarClick)
     ASSERT_TRUE(std::holds_alternative<SwallowApneaAnnotation>(annotation.swallow_apnea));
     auto apnea = std::get<SwallowApneaAnnotation>(annotation.swallow_apnea);
     EXPECT_FALSE(apnea.is_ambiguous);
-    EXPECT_EQ(apnea.pattern, SRCPattern::ExEx);
+    EXPECT_EQ(apnea.pattern, SrcPattern::ExEx);
     TimeRange exp_time_range = {0.0, 1.0};
     EXPECT_EQ(apnea.time, exp_time_range);
     std::vector<TimeRange> exp_non_respiratory_flow = {{1.05, 1.10}};
@@ -83,7 +83,7 @@ TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndEarClickAndNote)
     ASSERT_TRUE(std::holds_alternative<SwallowApneaAnnotation>(annotation.swallow_apnea));
     auto apnea = std::get<SwallowApneaAnnotation>(annotation.swallow_apnea);
     EXPECT_FALSE(apnea.is_ambiguous);
-    EXPECT_EQ(apnea.pattern, SRCPattern::ExEx);
+    EXPECT_EQ(apnea.pattern, SrcPattern::ExEx);
     TimeRange exp_time_range = {0.0, 1.0};
     EXPECT_EQ(apnea.time, exp_time_range);
     std::vector<TimeRange> exp_non_respiratory_flow = {{1.05, 1.10}};
@@ -135,7 +135,7 @@ TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndNoEarClick)
     ASSERT_TRUE(std::holds_alternative<SwallowApneaAnnotation>(annotation.swallow_apnea));
     auto apnea = std::get<SwallowApneaAnnotation>(annotation.swallow_apnea);
     EXPECT_FALSE(apnea.is_ambiguous);
-    EXPECT_EQ(apnea.pattern, SRCPattern::ExEx);
+    EXPECT_EQ(apnea.pattern, SrcPattern::ExEx);
     TimeRange exp_time_range = {0.0, 1.0};
     EXPECT_EQ(apnea.time, exp_time_range);
     std::vector<TimeRange> exp_non_respiratory_flow = {{1.05, 1.10}};
@@ -274,7 +274,7 @@ TEST(TestSwallowAnnotationJson, TestSerializingWithApneaAndEarClickAndNote)
         .swallow_apnea =
             SwallowApneaAnnotation{
                 .is_ambiguous = true,
-                .pattern = SRCPattern::ExEx,
+                .pattern = SrcPattern::ExEx,
                 .time = {0.0, 1.0},
             },
         .ear_clicks = std::vector<TimeRange>{{12, 100}, {200, 300}},
@@ -289,7 +289,7 @@ TEST(TestSwallowAnnotationJson, TestSerializingWithApneaAndNoEarClickAndNote)
         .swallow_apnea =
             SwallowApneaAnnotation{
                 .is_ambiguous = true,
-                .pattern = SRCPattern::ExEx,
+                .pattern = SrcPattern::ExEx,
                 .time = {0.0, 1.0},
             },
         .ear_clicks = EarClickError::NoEarClick,

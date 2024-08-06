@@ -449,7 +449,7 @@ swallow_apnea_annotation_model(
     const TimeRangeIDList& non_resp_flow_labels
 )
 {
-    auto pattern = magic_enum::enum_cast<models::SRCPattern>(magic_enum::enum_name(status)).value();
+    auto pattern = magic_enum::enum_cast<models::SrcPattern>(magic_enum::enum_name(status)).value();
     return models::SwallowApneaAnnotation{
         .is_ambiguous = is_ambiguous,
         .pattern = pattern,

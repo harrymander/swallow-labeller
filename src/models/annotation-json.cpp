@@ -98,10 +98,10 @@ private:
 };
 
 constexpr EnumStrConverter SRCPatternStrConverter{std::array{
-    std::make_pair(SRCPattern::ExEx, "ex-ex"),
-    std::make_pair(SRCPattern::ExIn, "ex-in"),
-    std::make_pair(SRCPattern::InEx, "in-ex"),
-    std::make_pair(SRCPattern::InIn, "in-in"),
+    std::make_pair(SrcPattern::ExEx, "ex-ex"),
+    std::make_pair(SrcPattern::ExIn, "ex-in"),
+    std::make_pair(SrcPattern::InEx, "in-ex"),
+    std::make_pair(SrcPattern::InIn, "in-in"),
 }};
 
 constexpr EnumStrConverter ApneaErrorStrConverter{std::array{
@@ -129,7 +129,7 @@ constexpr EnumStrConverter EarClickErrorStrConverter{std::array{
         (converter).from_json(j, e);                                                               \
     }
 
-DEFINE_JSON_ENUM_CONVERTERS(SRCPattern, SRCPatternStrConverter);
+DEFINE_JSON_ENUM_CONVERTERS(SrcPattern, SRCPatternStrConverter);
 DEFINE_JSON_ENUM_CONVERTERS(SwallowApneaError, ApneaErrorStrConverter);
 DEFINE_JSON_ENUM_CONVERTERS(EarClickError, EarClickErrorStrConverter);
 #undef DEFINE_JSON_ENUM_CONVERTERS
