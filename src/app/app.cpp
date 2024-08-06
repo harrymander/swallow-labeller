@@ -436,7 +436,7 @@ template <typename T> std::vector<T> id_list_items_vector(const IDList<T>& id_li
     std::vector<T> v;
     v.reserve(id_list.size());
     for (const auto& item : id_list.items()) {
-        v.push_back(item.item);
+        v.push_back(item.item); // cppcheck-suppress useStlAlgorithm
     }
     return v;
 }
