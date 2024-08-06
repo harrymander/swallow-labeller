@@ -272,7 +272,8 @@ void App::save_active_task()
     auto *task_view = std::get_if<ActiveSwallowLabellingTaskView>(m_active_task.get());
     if (task_view) {
         spdlog::debug("Saving annotation for active task");
-        if (task_view->save_annotation() && m_auto_advance_on_save) {
+        if (task_view->save_annotation() && m_auto_advance_on_save
+            && !m_swallow_task_list.can_go_forward()) {
             auto_advance_active_task();
         }
     } else {
