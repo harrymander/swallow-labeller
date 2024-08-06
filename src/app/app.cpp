@@ -477,7 +477,6 @@ ear_clicks_annotation_model(EarClickAnnotationStatus status, const TimeRangeIDLi
     }
 
     if (labels.empty()) {
-        // Could throw an exception like above, but will play it safe
         spdlog::error("Ear click status is Ok, but no labels! Returning NoEarClick error");
         return models::EarClickError::NoEarClick;
     };
