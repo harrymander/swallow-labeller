@@ -105,7 +105,7 @@ bool ButtonRed(const char *label, const ImVec2& size)
     return ImGui::Button(label, size);
 }
 
-bool item_disabled()
+bool item_disabled() // cppcheck-suppress unusedFunction
 {
     return ImGui::GetItemFlags() & ImGuiItemFlags_Disabled;
 }
