@@ -10,6 +10,7 @@ set(DEMO_DIR ${CMAKE_CURRENT_BINARY_DIR}/demofiles)
 set(DEMO_TASKS_JSON ${DEMO_DIR}/tasks.json)
 set(DEMO_DATA_DIR ${DEMO_DIR}/data)
 set(DEMO_ANNOTATIONS_JSON ${DEMO_DIR}/demo-annotations.json)
+set(DEMO_LOG_FILE ${DEMO_DIR}/log.txt)
 
 add_custom_command(
     OUTPUT ${DEMO_TASKS_JSON}
@@ -32,10 +33,12 @@ add_custom_target(
         --tasks ${DEMO_TASKS_JSON}
         --data-dir ${DEMO_DATA_DIR}
         --annotations ${DEMO_ANNOTATIONS_JSON}
+        --log ${DEMO_LOG_FILE}
     WORKING_DIRECTORY ${DEMO_DIR}
     COMMENT
 "\nRunning demo:
   Tasks JSON: ${DEMO_TASKS_JSON}
   Data dir: ${DEMO_DATA_DIR}
-  Annotations JSON: ${DEMO_ANNOTATIONS_JSON}"
+  Annotations JSON: ${DEMO_ANNOTATIONS_JSON}
+  Log file: ${DEMO_LOG_FILE}"
 )
