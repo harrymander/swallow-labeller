@@ -123,6 +123,7 @@ if(LINUX)
     target_sources(
         recap-labeller PRIVATE
         src/platform/glfw-opengl3.cpp
+        src/util/os-linux.cpp
         src/util/os-posix.cpp
     )
 elseif(WIN32 AND MSVC)

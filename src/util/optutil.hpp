@@ -35,6 +35,11 @@ inline R map_or(const T *ptr, Map map_func, const R& default_value)
     return ptr == nullptr ? default_value : map_func(*ptr);
 }
 
+template <class T, class F> auto transform(const std::optional<T>& opt, F&& func)
+{
+    return opt.has_value() ? std::make_optional(func(*opt)) : std::nullopt;
+}
+
 }; // namespace recap::labeller::optutil
 
 #endif // RECAP_LABELLER_UTIL_OPTUTIL_HPP_INCLUDE

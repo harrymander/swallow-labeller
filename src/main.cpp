@@ -1,8 +1,11 @@
 #include "app/annotation-store.hpp"
 #include "app/app.hpp"
+#include "fmt/core.h"
 #include "gui/gui.hpp"
 #include "models/task-info.hpp"
 #include "platform/platform.hpp"
+#include "util/optutil.hpp"
+#include "util/os.hpp"
 
 #include <argparse/argparse.hpp>
 #include <spdlog/fmt/std.h>
@@ -25,23 +28,23 @@ namespace {
 
 using namespace recap::labeller;
 
-void setup_logging(std::optional<std::string>&& logfile)
+void setup_console_logging()
 {
     spdlog::set_level(spdlog::level::debug);
+    spdlog::default_logger()->sinks() = {std::make_shared<spdlog::sinks::stderr_color_sink_mt>()};
+}
 
-    auto& sinks = spdlog::default_logger()->sinks();
-    sinks = {std::make_shared<spdlog::sinks::stderr_color_sink_mt>()};
-    if (logfile) {
-        spdlog::debug("Logging to {}", *logfile);
-        auto sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(*logfile);
-        sinks.push_back(sink);
+void setup_file_logging(const std::filesystem::path& path)
+{
+    spdlog::debug("Logging to {}", path);
+    auto sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(path.string());
+    spdlog::default_logger()->sinks().push_back(sink);
 
-        // Create a separate temporary logger to write start message just to file:
-        spdlog::set_automatic_registration(false);
-        spdlog::logger("", {sink})
-            .info("*************************** NEW LOG START ***************************");
-        spdlog::set_automatic_registration(true);
-    }
+    // Create a separate temporary logger to write start message just to file:
+    spdlog::set_automatic_registration(false);
+    spdlog::logger("", {sink})
+        .info("*************************** NEW LOG START ***************************");
+    spdlog::set_automatic_registration(true);
 }
 
 [[noreturn]] void throw_invalid_path(const std::string& path, const std::string& reason)
@@ -98,42 +101,132 @@ std::string check_path_writable(const std::string& path_str)
     return path_str;
 }
 
-int parse_args(argparse::ArgumentParser& program, int argc, const char **argv)
+int create_directories_if_not_exist(const std::filesystem::path& dir)
 {
-    program.add_argument("--log").help("file to log to").action(check_path_writable);
-    program.add_argument("--tasks", "-t")
-        .required()
-        .help("path to labelling tasks JSON")
-        .action(check_path_writable);
-    program.add_argument("--data-dir", "-d")
-        .required()
-        .help("directory containing data files")
-        .action(check_is_dir);
-    program.add_argument("--annotations", "-a")
-        .required()
-        .help("path to write annotations to; if exists and --existing-annotations\n"
-              "not passed, reads existing annotations from this file")
-        .action(check_path_writable);
-    program.add_argument("--existing-annotations", "-e")
-        .help("reads existing annotations from this file rather than file passed to\n"
-              "--annotations; WARNING: this will cause any existing annotations in\n"
-              "file passed to --annotations to be overwritten!")
-        .action(check_is_file);
-    program.add_argument("--not-shuffled")
-        .implicit_value(true)
-        .default_value(false)
-        .help("do not shuffle labelling tasks by default");
+    if (std::filesystem::exists(dir)) {
+        if (std::filesystem::is_directory(dir)) {
+            spdlog::debug("Directory {} already exists", dir);
+            return 0;
+        }
 
-    try {
-        program.parse_args(argc, argv);
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << '\n';
-        std::cerr << program;
+        spdlog::error("Path {} exists but is not a directory", dir);
         return -1;
     }
 
+    std::error_code ec;
+    std::filesystem::create_directories(dir, ec);
+    if (ec) {
+        spdlog::error("Error creating directory {}: {}", dir, ec.message());
+        return -1;
+    }
+
+    spdlog::debug("Created directory {}", dir);
     return 0;
 }
+
+std::optional<std::filesystem::path> get_app_data_dir()
+{
+    auto dir = os::get_user_data_dir();
+    if (dir) {
+        dir->append(PROGRAM_NAME);
+        spdlog::debug("App data dir: {}", *dir);
+        return dir;
+    }
+    return std::nullopt;
+}
+
+struct ProgramOptions {
+    static std::optional<ProgramOptions> from_cli_arguments(
+        const char *program_name, const char *program_version, int argc, const char **argv
+    )
+    {
+        argparse::ArgumentParser parser(program_name, program_version);
+        parser.add_argument("--log").help("file to log to").action(check_path_writable);
+        parser.add_argument("--tasks", "-t")
+            .help("path to labelling tasks JSON")
+            .action(check_path_writable);
+        parser.add_argument("--data-dir", "-d")
+            .help("directory containing data files")
+            .action(check_is_dir);
+        parser.add_argument("--annotations", "-a")
+            .help("path to write annotations to; if exists and --existing-annotations\n"
+                  "not passed, reads existing annotations from this file")
+            .action(check_path_writable);
+        parser.add_argument("--existing-annotations", "-e")
+            .help("reads existing annotations from this file rather than file passed to\n"
+                  "--annotations; WARNING: this will cause any existing annotations in\n"
+                  "file passed to --annotations to be overwritten!")
+            .action(check_is_file);
+        parser.add_argument("--not-shuffled")
+            .implicit_value(true)
+            .default_value(false)
+            .help("do not shuffle labelling tasks by default");
+        parser.add_argument("--no-app-data-dir")
+            .implicit_value(true)
+            .default_value(false)
+            .help("by default, if any of --data-dir, --tasks, --annotations are not provided,\n"
+                  "they will be set relative to the user app data dir. If this is passed, then\n"
+                  "all paths must be explicitly provided.");
+
+        auto print_usage_error = [&](const std::exception& exc) {
+            std::cerr << "Error: " << exc.what() << '\n';
+            std::cerr << parser;
+        };
+
+        try {
+            parser.parse_args(argc, argv);
+        } catch (const std::exception& error) {
+            print_usage_error(error);
+            return std::nullopt;
+        }
+
+        std::optional<std::filesystem::path> app_data_dir = std::nullopt;
+        if (!parser.is_used("--no-app-data-dir")) {
+            app_data_dir = get_app_data_dir();
+            if (app_data_dir && create_directories_if_not_exist(*app_data_dir)) {
+                app_data_dir.reset();
+            }
+        }
+
+        auto data_path = [&](const char *argname,
+                             const char *default_filename) -> std::filesystem::path {
+            auto path_str = parser.present(argname);
+            if (path_str) {
+                return {*path_str};
+            }
+
+            if (!app_data_dir) {
+                throw std::runtime_error(fmt::format("{} required", argname));
+            }
+
+            return *app_data_dir / std::filesystem::path(default_filename);
+        };
+
+        try {
+            return ProgramOptions{
+                .log_file = parser.present("--log"),
+                .data_dir = data_path("--data-dir", "swallow-data"),
+                .tasks_file = data_path("--tasks", "tasks.json"),
+                .annotations_file = data_path("--annotations", "annotations.json").make_preferred(),
+                .existing_annotations = optutil::transform(
+                    parser.present("--existing-annotations"),
+                    [](const std::string& path) { return std::filesystem::path(path); }
+                ),
+                .shuffled = !parser.is_used("--not-shuffled"),
+            };
+        } catch (const std::runtime_error& error) {
+            print_usage_error(error);
+            return std::nullopt;
+        }
+    }
+
+    std::optional<std::string> log_file;
+    std::filesystem::path data_dir;
+    std::filesystem::path tasks_file;
+    std::filesystem::path annotations_file;
+    std::optional<std::filesystem::path> existing_annotations;
+    bool shuffled;
+};
 
 // TODO: this whole structure is a mess, need to encapsulate task management in a class...
 bool all_task_ids_unique(const std::vector<models::SwallowTaskInfo>& tasks)
@@ -151,12 +244,11 @@ bool all_task_ids_unique(const std::vector<models::SwallowTaskInfo>& tasks)
 }
 
 std::optional<std::vector<models::SwallowTaskInfo>>
-load_labelling_tasks(const argparse::ArgumentParser& program)
+load_labelling_tasks(const std::filesystem::path& tasks_path)
 {
-    auto tasks_path = program.get<std::string>("--tasks");
     std::ifstream stream(tasks_path);
     if (!stream) {
-        spdlog::critical("Could not open labelling tasks file: {}", tasks_path);
+        spdlog::critical("Could not open labelling tasks file {}", tasks_path);
         return std::nullopt;
     }
 
@@ -181,10 +273,11 @@ load_labelling_tasks(const argparse::ArgumentParser& program)
     return std::nullopt;
 }
 
-std::optional<SwallowAnnotationStore> make_annotations_store(const argparse::ArgumentParser& parser)
+std::optional<SwallowAnnotationStore> make_annotations_store(
+    const std::filesystem::path& annotations_path,
+    const std::optional<std::filesystem::path>& existing_path
+)
 {
-    auto existing_path = parser.present("--existing-annotations");
-    auto annotations_path = std::filesystem::path(parser.get("--annotations")).make_preferred();
     std::unique_ptr<std::istream> stream;
     if (existing_path.has_value()) {
         spdlog::info(
@@ -215,17 +308,22 @@ std::optional<SwallowAnnotationStore> make_annotations_store(const argparse::Arg
 
 int main(int argc, const char *argv[])
 {
-    argparse::ArgumentParser program(PROGRAM_NAME, VERSION_STR);
-    if (parse_args(program, argc, argv) < 0) {
+    setup_console_logging();
+    auto parse_options = ProgramOptions::from_cli_arguments(PROGRAM_NAME, VERSION_STR, argc, argv);
+    if (!parse_options) {
         return 2;
     }
-    setup_logging(program.present("--log"));
+    const auto& options = *parse_options;
+    if (options.log_file) {
+        setup_file_logging(*options.log_file);
+    }
 
-    auto labelling_tasks = load_labelling_tasks(program);
+    auto labelling_tasks = load_labelling_tasks(options.tasks_file);
     if (!labelling_tasks.has_value()) {
         return 1;
     }
-    auto annotations_store = make_annotations_store(program);
+    auto annotations_store =
+        make_annotations_store(options.annotations_file, options.existing_annotations);
     if (!annotations_store.has_value()) {
         return 1;
     }
@@ -238,10 +336,7 @@ int main(int argc, const char *argv[])
     }
 
     app::App app(
-        *labelling_tasks,
-        std::move(*annotations_store),
-        std::filesystem::path(program.get<std::string>("--data-dir")),
-        !program.is_used("--not-shuffled")
+        *labelling_tasks, std::move(*annotations_store), options.data_dir, options.shuffled
     );
     gui::Gui gui(app);
     return platform::run(gui);
