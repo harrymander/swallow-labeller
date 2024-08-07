@@ -44,19 +44,81 @@ void setup_logging(std::optional<std::string>&& logfile)
     }
 }
 
+[[noreturn]] void throw_invalid_path(const std::string& path, const std::string& reason)
+{
+    throw std::invalid_argument("Invalid path '" + path + "': " + reason);
+}
+
+std::string check_is_dir(const std::string& path_str)
+{
+    std::filesystem::path path(path_str);
+    if (!std::filesystem::exists(path)) {
+        throw_invalid_path(path_str, "does not exist");
+    }
+    if (!std::filesystem::is_directory(path)) {
+        throw_invalid_path(path_str, "not a directory");
+    }
+
+    return path_str;
+}
+
+std::string check_is_file(const std::string& path_str)
+{
+    std::filesystem::path path(path_str);
+    if (!std::filesystem::exists(path)) {
+        throw_invalid_path(path_str, "does not exist");
+    }
+    if (!std::filesystem::is_regular_file(path)) {
+        throw_invalid_path(path_str, "not a regular file");
+    }
+
+    return path_str;
+}
+
+std::string check_path_writable(const std::string& path_str)
+{
+    // Doesn't really check if path is writable, just checks that is not a directory and parent
+    // directory exists.
+
+    std::filesystem::path path(path_str);
+    if (std::filesystem::is_directory(path)) {
+        throw_invalid_path(path_str, "is a directory");
+    }
+
+    if (path.has_parent_path()) {
+        auto parent = path.parent_path();
+        if (!std::filesystem::exists(parent)) {
+            throw_invalid_path(path_str, "parent path does not exist");
+        }
+        if (!std::filesystem::is_directory(parent)) {
+            throw_invalid_path(path_str, "parent path is not a directory");
+        }
+    }
+
+    return path_str;
+}
+
 int parse_args(argparse::ArgumentParser& program, int argc, const char **argv)
 {
-    program.add_argument("--log").help("file to log to");
-    program.add_argument("--tasks", "-t").required().help("path to labelling tasks JSON");
-    program.add_argument("--data-dir", "-d").required().help("directory containing data files");
+    program.add_argument("--log").help("file to log to").action(check_path_writable);
+    program.add_argument("--tasks", "-t")
+        .required()
+        .help("path to labelling tasks JSON")
+        .action(check_path_writable);
+    program.add_argument("--data-dir", "-d")
+        .required()
+        .help("directory containing data files")
+        .action(check_is_dir);
     program.add_argument("--annotations", "-a")
         .required()
         .help("path to write annotations to; if exists and --existing-annotations\n"
-              "not passed, reads existing annotations from this file");
+              "not passed, reads existing annotations from this file")
+        .action(check_path_writable);
     program.add_argument("--existing-annotations", "-e")
         .help("reads existing annotations from this file rather than file passed to\n"
               "--annotations; WARNING: this will cause any existing annotations in\n"
-              "file passed to --annotations to be overwritten!");
+              "file passed to --annotations to be overwritten!")
+        .action(check_is_file);
     program.add_argument("--not-shuffled")
         .implicit_value(true)
         .default_value(false)
@@ -65,7 +127,7 @@ int parse_args(argparse::ArgumentParser& program, int argc, const char **argv)
     try {
         program.parse_args(argc, argv);
     } catch (const std::exception& e) {
-        std::cerr << e.what() << '\n';
+        std::cerr << "Error: " << e.what() << '\n';
         std::cerr << program;
         return -1;
     }
@@ -91,7 +153,7 @@ bool all_task_ids_unique(const std::vector<models::SwallowTaskInfo>& tasks)
 std::optional<std::vector<models::SwallowTaskInfo>>
 load_labelling_tasks(const argparse::ArgumentParser& program)
 {
-    std::string tasks_path = program.get("--tasks");
+    auto tasks_path = program.get<std::string>("--tasks");
     std::ifstream stream(tasks_path);
     if (!stream) {
         spdlog::critical("Could not open labelling tasks file: {}", tasks_path);
@@ -159,12 +221,6 @@ int main(int argc, const char *argv[])
     }
     setup_logging(program.present("--log"));
 
-    const std::filesystem::path data_dir = program.get("--data-dir");
-    if (!std::filesystem::is_directory(data_dir)) {
-        spdlog::critical("Data directory does not exist: {}", data_dir);
-        return 1;
-    }
-
     auto labelling_tasks = load_labelling_tasks(program);
     if (!labelling_tasks.has_value()) {
         return 1;
@@ -184,7 +240,7 @@ int main(int argc, const char *argv[])
     app::App app(
         *labelling_tasks,
         std::move(*annotations_store),
-        data_dir,
+        std::filesystem::path(program.get<std::string>("--data-dir")),
         !program.is_used("--not-shuffled")
     );
     gui::Gui gui(app);
