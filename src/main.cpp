@@ -101,27 +101,32 @@ std::string check_path_writable(const std::string& path_str)
     return path_str;
 }
 
-int create_directories_if_not_exist(const std::filesystem::path& dir)
+bool create_directories_if_not_exist(const std::filesystem::path& dir)
 {
     if (std::filesystem::exists(dir)) {
         if (std::filesystem::is_directory(dir)) {
             spdlog::debug("Directory {} already exists", dir);
-            return 0;
+            return true;
         }
 
         spdlog::error("Path {} exists but is not a directory", dir);
-        return -1;
+        return false;
     }
 
     std::error_code ec;
-    std::filesystem::create_directories(dir, ec);
+    const bool created = std::filesystem::create_directories(dir, ec);
     if (ec) {
         spdlog::error("Error creating directory {}: {}", dir, ec.message());
-        return -1;
+        return false;
+    }
+
+    if (!created) {
+        spdlog::error("Directory {} not created!", dir);
+        return false;
     }
 
     spdlog::debug("Created directory {}", dir);
-    return 0;
+    return true;
 }
 
 std::optional<std::filesystem::path> get_app_data_dir()
@@ -183,7 +188,7 @@ struct ProgramOptions {
         std::optional<std::filesystem::path> app_data_dir = std::nullopt;
         if (!parser.is_used("--no-app-data-dir")) {
             app_data_dir = get_app_data_dir();
-            if (app_data_dir && create_directories_if_not_exist(*app_data_dir)) {
+            if (app_data_dir && !create_directories_if_not_exist(*app_data_dir)) {
                 app_data_dir.reset();
             }
         }
