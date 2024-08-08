@@ -5,6 +5,12 @@ cmake_policy(SET CMP0091 NEW)
 
 project(recap-labeller LANGUAGES CXX VERSION 0.1.0)
 
+# Program options
+option(RECAP_LABELLER_LOG_TO_APP_DATA_DIR "Log to app data directory" OFF)
+
+include(CMakePrintHelpers)
+cmake_print_variables(RECAP_LABELLER_LOG_TO_APP_DATA_DIR)
+
 set(CMAKE_CXX_STANDARD 20)
 if(WIN32)
     # Disables the min/max preprocessor macros, so not to interfere with
@@ -75,6 +81,9 @@ imgui_compressed_c_array(
     fontawesome_free_solid
 )
 
+set(OPTIONS_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/gen/include)
+configure_file(src/options.h.in ${OPTIONS_INCLUDE_DIR}/options.h)
+
 add_executable(recap-labeller
     src/app/annotation-store.cpp
     src/app/app.cpp
@@ -91,7 +100,7 @@ add_executable(recap-labeller
     ${FONTAWESOME_CPP_FILE}
     ${SOURCE_SANS_CPP_FILE}
 )
-target_include_directories(recap-labeller PRIVATE src)
+target_include_directories(recap-labeller PRIVATE src ${OPTIONS_INCLUDE_DIR})
 target_compile_features(recap-labeller PRIVATE cxx_std_20)
 target_link_libraries(recap-labeller PRIVATE
     argparse::argparse

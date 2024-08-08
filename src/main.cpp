@@ -3,6 +3,7 @@
 #include "fmt/core.h"
 #include "gui/gui.hpp"
 #include "models/task-info.hpp"
+#include "options.h"
 #include "platform/platform.hpp"
 #include "util/optutil.hpp"
 #include "util/os.hpp"
@@ -145,8 +146,15 @@ struct ProgramOptions {
         const char *program_name, const char *program_version, int argc, const char **argv
     )
     {
+        constexpr const char *LogCliHelp =
+#ifdef RECAP_LABELLER_LOG_TO_APP_DATA_DIR
+            "file to log to; if not provided logs to user app data dir";
+#else
+            "file to log to";
+#endif
+
         argparse::ArgumentParser parser(program_name, program_version);
-        parser.add_argument("--log").help("file to log to").action(check_path_writable);
+        parser.add_argument("--log").help(LogCliHelp).action(check_path_writable);
         parser.add_argument("--tasks", "-t")
             .help("path to labelling tasks JSON")
             .action(check_path_writable);
@@ -207,9 +215,15 @@ struct ProgramOptions {
             return *app_data_dir / std::filesystem::path(default_filename);
         };
 
+#ifdef RECAP_LABELLER_LOG_TO_APP_DATA_DIR
+        auto log_file = data_path("--log", "logs.txt");
+#else
+        auto log_file = parser.present("--log");
+#endif // RECAP_LABELLER_LOG_TO_APP_DATA_DIR
+
         try {
             return ProgramOptions{
-                .log_file = parser.present("--log"),
+                .log_file = log_file,
                 .data_dir = data_path("--data-dir", "swallow-data"),
                 .tasks_file = data_path("--tasks", "tasks.json"),
                 .annotations_file = data_path("--annotations", "annotations.json").make_preferred(),
