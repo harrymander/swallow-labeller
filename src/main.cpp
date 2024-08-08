@@ -309,9 +309,7 @@ std::optional<SwallowAnnotationStore> make_annotations_store(
     return std::nullopt;
 }
 
-}; // namespace
-
-int main(int argc, const char *argv[])
+int run_main(int argc, const char *argv[])
 {
     setup_console_logging();
     auto parse_options = ProgramOptions::from_cli_arguments(PROGRAM_NAME, VERSION_STR, argc, argv);
@@ -345,4 +343,23 @@ int main(int argc, const char *argv[])
     );
     gui::Gui gui(app);
     return platform::run(gui);
+}
+
+}; // namespace
+
+int main(int argc, const char *argv[])
+{
+#if NDEBUG
+    try {
+        return run_main(argc, argv);
+    } catch (const std::exception& error) {
+        std::cerr << "Error: " << error.what() << '\n';
+        return 1;
+    } catch (...) {
+        std::cerr << "An unknown error occurred!\n";
+        return 1;
+    }
+#else
+    return run_main(argc, argv);
+#endif
 }
