@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <vector>
+
 using recap::labeller::Observable;
 
 using TestObservable = Observable<int>;
@@ -108,4 +110,25 @@ TEST(TestObservable, TestObserverOutlivesObservable)
     delete obs;
     EXPECT_EQ(cb.called(), 1);
     EXPECT_EQ(cb.total(), 10);
+}
+
+TEST(TestObservable, TestRvaluesAreNotMoved)
+{
+    Callback cb;
+    auto observer_callback = [&](std::vector<int> v) {
+        cb(static_cast<int>(v.size()));
+        v.clear();
+    };
+
+    Observable<std::vector<int>> observable;
+    auto obs1 = observable.subscribe(observer_callback);
+    auto obs2 = observable.subscribe(observer_callback);
+
+    // observer_callback takes a copy of the vector and clears it, but notify takes a forwarding
+    // reference. Test that the rvalue passed to notify is not cleared in the second call to
+    // observer_callback. (Effectively we are checking that std::forward is not called twice on the
+    // args.)
+    observable.notify(std::vector<int>{1, 2, 3});
+    EXPECT_EQ(cb.called(), 2);
+    EXPECT_EQ(cb.total(), 6);
 }

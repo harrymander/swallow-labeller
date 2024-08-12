@@ -50,7 +50,7 @@ public:
     template <typename... Args> void notify(Args&&...args) const
     {
         for (const auto& observer : *m_observers) {
-            observer(std::forward<Args>(args)...);
+            observer(args...);
         }
     }
 
