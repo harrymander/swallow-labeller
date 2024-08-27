@@ -2,12 +2,14 @@
 
 #include <Objbase.h>
 #include <Shlobj.h>
+#include <spdlog/fmt/std.h>
 #include <spdlog/spdlog.h>
 
 #include <cstdlib>
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <system_error>
 
 namespace recap::labeller::os {
 
@@ -71,6 +73,32 @@ std::optional<std::filesystem::path> get_user_data_dir()
     }
 
     return std::nullopt;
+}
+
+void open_path_in_file_explorer(const std::filesystem::path& path)
+{
+    std::error_code ec;
+    auto abs_path = std::filesystem::absolute(path, ec);
+    if (ec) {
+        spdlog::error("Error getting absolute path for {}: {}", path, ec.message());
+        return;
+    }
+
+    PIDLIST_ABSOLUTE pidlist = ILCreateFromPath(abs_path.c_str());
+    if (pidlist == nullptr) {
+        spdlog::error("Error getting ITEMIDLIST from path {}", abs_path);
+        return;
+    }
+
+    HRESULT res = SHOpenFolderAndSelectItems(pidlist, 0, nullptr, 0);
+    if (res != S_OK) {
+        spdlog::error(
+            "Error opening {} in explorer: {}", path, std::system_category().message(res)
+        );
+    } else {
+        spdlog::debug("Opened {} in explorer", path);
+    }
+    ILFree(pidlist);
 }
 
 }; // namespace recap::labeller::os

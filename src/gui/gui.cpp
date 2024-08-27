@@ -899,6 +899,9 @@ private:
             if (ImGui::MenuItem("Quit", "Alt+F4")) {
                 stop();
             }
+            if (ImGui::MenuItem("Open annotations file in explorer...")) {
+                os::open_path_in_file_explorer(m_app.annotations_path());
+            }
             ImGui::EndMenu();
         }
 

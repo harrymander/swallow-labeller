@@ -72,8 +72,10 @@ public:
      */
     void sync_to_file() const;
 
+    [[nodiscard]] const std::filesystem::path& path() const { return m_path; }
+
 private:
-    std::filesystem::path path;
+    std::filesystem::path m_path;
     std::string path_str;
     ErrorObservable m_error_observable;
     std::unique_ptr<SwallowAnnotationStoreMap> m_annotations;

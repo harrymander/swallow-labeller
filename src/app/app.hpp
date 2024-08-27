@@ -278,6 +278,11 @@ public:
 
     void set_auto_advance_on_save(bool advance) { m_auto_advance_on_save = advance; }
 
+    [[nodiscard]] const std::filesystem::path& annotations_path() const
+    {
+        return m_annotation_store.path();
+    }
+
 private:
     class UnsavedTaskHandler;
     friend class UnsavedTaskCloser;

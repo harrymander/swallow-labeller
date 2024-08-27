@@ -105,7 +105,7 @@ void dump_swallow_annotations_map_json(std::ostream& os, const SwallowAnnotation
 }; // namespace
 
 SwallowAnnotationStore::SwallowAnnotationStore(std::filesystem::path path, std::istream *existing) :
-    path(std::move(path)),
+    m_path(std::move(path)),
     m_annotations(
         existing ? load_swallow_annotations_map_json(*existing) :
                    std::make_unique<SwallowAnnotationStoreMap>()
@@ -183,10 +183,10 @@ void SwallowAnnotationStore::sync_to_file() const
 {
     std::ofstream stream;
     stream.exceptions(std::ios::badbit | std::ios::failbit);
-    stream.open(path);
+    stream.open(m_path);
     dump_swallow_annotations_map_json(stream, *m_annotations);
     stream << '\n';
-    spdlog::debug("Wrote {} annotations to {}", m_annotations->size(), path);
+    spdlog::debug("Wrote {} annotations to {}", m_annotations->size(), m_path);
 }
 
 void SwallowAnnotationStore::sync_to_file_notify() const
