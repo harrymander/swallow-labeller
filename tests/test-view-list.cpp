@@ -251,7 +251,7 @@ TEST(TestViewList, TestShufflingAlreadyShuffledDoesNotResetHistory)
     ASSERT_TRUE(list.can_go_forward());
 }
 
-TEST(TestViewList, TestUnshufflingAlreadyUnshuffledDoesNotResetsHistory)
+TEST(TestViewList, TestUnshufflingAlreadyUnshuffledDoesNotResetHistory)
 {
     auto list = view_list_with_back_and_forward_histories(false);
 
