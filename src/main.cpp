@@ -72,6 +72,11 @@ std::string check_is_file(const std::string& path_str)
     if (!std::filesystem::exists(path)) {
         throw_invalid_path(path_str, "does not exist");
     }
+
+    // We won't check for all path types, just check for common ones to give better error messages
+    if (std::filesystem::is_directory(path)) {
+        throw_invalid_path(path_str, "is a directory");
+    }
     if (!std::filesystem::is_regular_file(path)) {
         throw_invalid_path(path_str, "not a regular file");
     }
@@ -157,7 +162,7 @@ struct ProgramOptions {
         parser.add_argument("--log").help(LogCliHelp).action(check_path_writable);
         parser.add_argument("--tasks", "-t")
             .help("path to labelling tasks JSON")
-            .action(check_path_writable);
+            .action(check_is_file);
         parser.add_argument("--data-dir", "-d")
             .help("directory containing data files")
             .action(check_is_dir);
