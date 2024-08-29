@@ -898,17 +898,19 @@ private:
 
     void annotations_path_open()
     {
-        const bool pushed = ImGui::MenuItem("Open annotations file in explorer...");
         if (m_open_annotations_path_future.valid()) {
             if (m_open_annotations_path_future.wait_for(std::chrono::seconds(0))
                 == std::future_status::ready) {
                 (void) m_open_annotations_path_future.get();
             }
         }
-        if (pushed && !m_open_annotations_path_future.valid()) {
+        bool can_open = !m_open_annotations_path_future.valid();
+        ImGui::BeginDisabled(!can_open);
+        if (ImGui::MenuItem("Open annotations file in explorer...") && can_open) {
             m_open_annotations_path_future =
                 os::open_path_in_file_explorer(m_app.annotations_path());
         }
+        ImGui::EndDisabled();
     }
 
     void draw_menu_bar()
