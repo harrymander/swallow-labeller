@@ -40,7 +40,7 @@ std::optional<std::filesystem::path> get_user_data_dir()
         return pw_dir;
     }
 
-    spdlog::error("Error getting password file entry for user: {}", std::strerror(errno));
+    spdlog::error("Error getting password file entry for user: {}", ::strerrordesc_np(errno));
     return std::nullopt;
 }
 
@@ -57,7 +57,7 @@ std::future<OsOpenStatus> xdg_open(const std::filesystem::path& path)
     return std::async(std::launch::async, [path]() {
         ::pid_t pid = fork();
         if (pid < 0) {
-            spdlog::error("fork(2) error: {}", std::strerror(errno));
+            spdlog::error("fork(2) error: {}", ::strerrordesc_np(errno));
             return OsOpenStatus::Error;
         }
 
@@ -67,7 +67,7 @@ std::future<OsOpenStatus> xdg_open(const std::filesystem::path& path)
         } else {
             int retval;
             if (::waitpid(pid, &retval, 0) < 0) {
-                spdlog::error("waitpid(2) error: {}", std::strerror(errno));
+                spdlog::error("waitpid(2) error: {}", ::strerrordesc_np(errno));
                 return OsOpenStatus::Error;
             }
 
