@@ -7,9 +7,12 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <future>
+#include <memory>
 #include <optional>
 #include <string>
 #include <system_error>
+#include <type_traits>
 
 namespace recap::labeller::os {
 
@@ -75,30 +78,69 @@ std::optional<std::filesystem::path> get_user_data_dir()
     return std::nullopt;
 }
 
-void open_path_in_file_explorer(const std::filesystem::path& path)
+namespace {
+
+bool init_com_lib()
+{
+    HRESULT res = CoInitialize(nullptr);
+    if (res == S_OK) {
+        return true;
+    }
+    if (res == S_FALSE) {
+        spdlog::warn("COM library already initialised");
+        return true;
+    }
+
+    spdlog::error("Error initialising COM library: {}", std::system_category().message(res));
+    return false;
+}
+
+struct ItemIdListDeleter {
+    void operator()(PIDLIST_ABSOLUTE pidlist) const { ILFree(pidlist); }
+};
+
+using UniqueItemIdList =
+    std::unique_ptr<std::remove_pointer_t<PIDLIST_ABSOLUTE>, ItemIdListDeleter>;
+
+OsOpenStatus open_path_in_file_explorer_sync(const std::filesystem::path& path)
 {
     std::error_code ec;
     auto abs_path = std::filesystem::absolute(path, ec);
     if (ec) {
         spdlog::error("Error getting absolute path for {}: {}", path, ec.message());
-        return;
+        return OsOpenStatus::Error;
     }
 
-    PIDLIST_ABSOLUTE pidlist = ILCreateFromPath(abs_path.c_str());
-    if (pidlist == nullptr) {
+    UniqueItemIdList pidlist(ILCreateFromPath(abs_path.c_str()));
+    if (!pidlist) {
         spdlog::error("Error getting ITEMIDLIST from path {}", abs_path);
-        return;
+        return OsOpenStatus::Error;
     }
 
-    HRESULT res = SHOpenFolderAndSelectItems(pidlist, 0, nullptr, 0);
+    if (!init_com_lib()) {
+        return OsOpenStatus::Error;
+    }
+
+    HRESULT res = SHOpenFolderAndSelectItems(pidlist.get(), 0, nullptr, 0);
     if (res != S_OK) {
         spdlog::error(
             "Error opening {} in explorer: {}", path, std::system_category().message(res)
         );
-    } else {
-        spdlog::debug("Opened {} in explorer", path);
+        return OsOpenStatus::Error;
     }
-    ILFree(pidlist);
+
+    spdlog::debug("Opened {} in explorer", path);
+    return OsOpenStatus::Success;
+}
+
+}; // namespace
+
+std::future<OsOpenStatus> open_path_in_file_explorer(const std::filesystem::path& path)
+{
+    spdlog::debug("Opening {} in explorer...", path);
+    return std::async(std::launch::async, [path]() {
+        return open_path_in_file_explorer_sync(path);
+    });
 }
 
 }; // namespace recap::labeller::os

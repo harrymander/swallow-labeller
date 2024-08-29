@@ -1,9 +1,10 @@
+#include <future>
+#include <memory>
 #define IMGUI_DEFINE_MATH_OPERATORS
-
-#include "gui.hpp"
 
 #include "app/app.hpp"
 #include "app/id-list.hpp"
+#include "gui.hpp"
 #include "gui/font.hpp"
 #include "gui/widgets/color-scheme-selector.hpp"
 #include "gui/widgets/plot-range-dragger.hpp"
@@ -395,6 +396,8 @@ private:
     recap::labeller::app::App::NewActiveTaskObservable::Observer m_new_active_task_observer;
     Plotter m_flow_plotter;
     Plotter m_audio_plotter;
+
+    std::future<os::OsOpenStatus> m_open_annotations_path_future;
 
     static bool is_valid_ini_path(const std::filesystem::path& path)
     {
@@ -893,15 +896,28 @@ private:
         }
     }
 
+    void annotations_path_open()
+    {
+        const bool pushed = ImGui::MenuItem("Open annotations file in explorer...");
+        if (m_open_annotations_path_future.valid()) {
+            if (m_open_annotations_path_future.wait_for(std::chrono::seconds(0))
+                == std::future_status::ready) {
+                (void) m_open_annotations_path_future.get();
+            }
+        }
+        if (pushed && !m_open_annotations_path_future.valid()) {
+            m_open_annotations_path_future =
+                os::open_path_in_file_explorer(m_app.annotations_path());
+        }
+    }
+
     void draw_menu_bar()
     {
         if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("Quit", "Alt+F4")) {
                 stop();
             }
-            if (ImGui::MenuItem("Open annotations file in explorer...")) {
-                os::open_path_in_file_explorer(m_app.annotations_path());
-            }
+            annotations_path_open();
             ImGui::EndMenu();
         }
 

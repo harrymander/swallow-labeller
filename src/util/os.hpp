@@ -2,6 +2,7 @@
 #define RECAP_LABELLER_UTIL_OS_HPP_INCLUDE
 
 #include <filesystem>
+#include <future>
 #include <optional>
 #include <string>
 
@@ -20,11 +21,17 @@ std::optional<std::string> getenv(const char *name);
  */
 std::optional<std::filesystem::path> get_user_data_dir();
 
+enum class OsOpenStatus {
+    Success,
+    Error,
+};
+
 /**
  * Opens a path in the system file explorer. If possible, will open the folder with file at path
  * selected.
  */
-void open_path_in_file_explorer(const std::filesystem::path& path);
+[[nodiscard]] std::future<OsOpenStatus> open_path_in_file_explorer(const std::filesystem::path& path
+);
 
 }; // namespace recap::labeller::os
 
