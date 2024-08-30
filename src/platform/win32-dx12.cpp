@@ -7,6 +7,7 @@
 // default ImTextureID is defined as void*. This define is set in the example .vcxproj file and need
 // to be replicated in your app or by adding it to your imconfig.h file.
 
+#include "app/app.hpp"
 #include "gui/gui.hpp"
 #include "platform.hpp"
 
@@ -22,6 +23,7 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <memory>
 #include <system_error>
 
 #ifdef _DEBUG
@@ -74,9 +76,10 @@ static recap::labeller::gui::Gui *g_gui;
     L"" VERSION_STR
 
 // Main code
-int recap::labeller::platform::run(recap::labeller::gui::Gui& gui)
+int recap::labeller::platform::run(recap::labeller::app::App& app)
 {
-    g_gui = &gui;
+    auto gui = std::make_unique<recap::labeller::gui::Gui>(app);
+    g_gui = gui.get();
 
     // Create application window
     ImGui_ImplWin32_EnableDpiAwareness();
@@ -123,7 +126,7 @@ int recap::labeller::platform::run(recap::labeller::gui::Gui& gui)
 
     const float scale_factor = GetDPIScalingFactor();
     if (scale_factor > 0) {
-        gui.set_scaling_factor(scale_factor);
+        gui->set_scaling_factor(scale_factor);
     }
 
     // Setup Platform/Renderer backends
@@ -141,7 +144,7 @@ int recap::labeller::platform::run(recap::labeller::gui::Gui& gui)
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     // Main loop
-    while (!gui.ready_to_stop()) {
+    while (!gui->ready_to_stop()) {
         // Poll and handle messages (inputs, window resize, etc.)
         // See the WndProc() function below for our to dispatch events to the Win32 backend.
         MSG msg;
@@ -155,7 +158,7 @@ int recap::labeller::platform::run(recap::labeller::gui::Gui& gui)
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
-        gui.draw();
+        gui->draw();
 
         // Rendering
         ImGui::Render();
@@ -500,7 +503,9 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             return 0;
         break;
     case WM_CLOSE:
-        g_gui->stop();
+        if (g_gui) {
+            g_gui->stop();
+        }
         return 0;
     case WM_DESTROY:
         ::PostQuitMessage(0);

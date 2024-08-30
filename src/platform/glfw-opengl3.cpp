@@ -4,12 +4,15 @@
 // documentation from the docs/ folder + read the top of imgui.cpp. Read online:
 // https://github.com/ocornut/imgui/tree/master/docs
 
+#include "app/app.hpp"
 #include "gui/gui.hpp"
 #include "platform.hpp"
 
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 #include <imgui.h>
+
+#include <memory>
 
 #define GL_SILENCE_DEPRECATION
 #if defined(IMGUI_IMPL_OPENGL_ES2)
@@ -79,10 +82,11 @@ static bool should_stop(GLFWwindow *window)
     return false;
 }
 
-int run(recap::labeller::gui::Gui& gui)
+int run(recap::labeller::app::App& app)
 {
-    if (setup_stop_signal_handler() < 0)
+    if (setup_stop_signal_handler() < 0) {
         return 1;
+    }
 
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()) {
@@ -126,6 +130,8 @@ int run(recap::labeller::gui::Gui& gui)
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
 
+    auto gui = std::make_unique<gui::Gui>(app);
+
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
@@ -152,12 +158,12 @@ int run(recap::labeller::gui::Gui& gui)
 
         const bool stopping = should_stop(window);
         if (stopping) {
-            gui.stop();
+            gui->stop();
             glfwSetWindowShouldClose(window, 0);
             signal_stop = 0;
         }
-        gui.draw();
-        running = !gui.ready_to_stop();
+        gui->draw();
+        running = !gui->ready_to_stop();
         if (stopping && running) {
             spdlog::warn("Exit request received, but GUI is blocking exit");
         }
@@ -183,6 +189,8 @@ int run(recap::labeller::gui::Gui& gui)
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
+
+    gui.reset();
 
     spdlog::debug("Destroying GLFW window...");
     glfwDestroyWindow(window);

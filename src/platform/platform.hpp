@@ -1,11 +1,11 @@
 #ifndef INCLUDE_RECAP_LABELLER_PLATFORM_HPP
 #define INCLUDE_RECAP_LABELLER_PLATFORM_HPP
 
-#include "gui/gui.hpp"
+#include "app/app.hpp"
 
 namespace recap::labeller::platform {
 
-int run(recap::labeller::gui::Gui& g);
+int run(recap::labeller::app::App& app);
 
 };
 

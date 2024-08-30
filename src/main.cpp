@@ -1,7 +1,6 @@
 #include "app/annotation-store.hpp"
 #include "app/app.hpp"
 #include "fmt/core.h"
-#include "gui/gui.hpp"
 #include "models/task-info.hpp"
 #include "options.h"
 #include "platform/platform.hpp"
@@ -360,8 +359,7 @@ int run_main(int argc, const char *argv[])
     app::App app(
         *labelling_tasks, std::move(*annotations_store), options.data_dir, options.shuffled
     );
-    gui::Gui gui(app);
-    return platform::run(gui);
+    return platform::run(app);
 }
 
 }; // namespace
