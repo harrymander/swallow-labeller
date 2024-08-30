@@ -45,12 +45,20 @@ if(FETCH_VENDORED)
         GIT_TAG adc7d2ba57e142b6ad018e01057233478a74c1e8 # v0.9.6
     )
     fetchcontent_makeavailable(magic_enum)
+
+    fetchcontent_declare(
+        nativefiledialog_extended
+        GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended
+        GIT_TAG 86d5f2005fe1c00747348a12070fec493ea2407e  # v1.2.1
+    )
+    fetchcontent_makeavailable(nativefiledialog_extended)
 else()
     set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL ON)
 
     find_package(argparse CONFIG REQUIRED)
     find_package(fmt CONFIG REQUIRED)
     find_package(magic_enum CONFIG REQUIRED)
+    find_package(nfd CONFIG REQUIRED)
     find_package(nlohmann_json CONFIG REQUIRED)
     find_package(spdlog CONFIG REQUIRED)
 endif()

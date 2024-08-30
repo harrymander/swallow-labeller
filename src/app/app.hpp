@@ -283,6 +283,8 @@ public:
         return m_annotation_store.path();
     }
 
+    void save_annotations_to_path(const std::filesystem::path& path) const;
+
 private:
     class UnsavedTaskHandler;
     friend class UnsavedTaskCloser;

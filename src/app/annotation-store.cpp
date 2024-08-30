@@ -179,14 +179,14 @@ void SwallowAnnotationStore::remove_annotation(const std::string& id)
     }
 }
 
-void SwallowAnnotationStore::sync_to_file() const
+void SwallowAnnotationStore::sync_to_file(const std::filesystem::path& path) const
 {
     std::ofstream stream;
     stream.exceptions(std::ios::badbit | std::ios::failbit);
-    stream.open(m_path);
+    stream.open(path);
     dump_swallow_annotations_map_json(stream, *m_annotations);
     stream << '\n';
-    spdlog::debug("Wrote {} annotations to {}", m_annotations->size(), m_path);
+    spdlog::debug("Wrote {} annotations to {}", m_annotations->size(), path);
 }
 
 void SwallowAnnotationStore::sync_to_file_notify() const

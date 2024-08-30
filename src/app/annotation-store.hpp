@@ -65,12 +65,19 @@ public:
     }
 
     /**
-     * Forces writing annotations to file.
+     * Writes annotations to path.
      *
      * Raises std::runtime_error if there is an error writing to file; **will not notify any
      * observers if there is an error**
      */
-    void sync_to_file() const;
+    void sync_to_file(const std::filesystem::path& path) const;
+
+    /**
+     * Writes annotations to file at path() (the path passed to constructor).
+     *
+     * Equivalent to sync_to_file(path())
+     */
+    void sync_to_file() const { sync_to_file(m_path); }
 
     [[nodiscard]] const std::filesystem::path& path() const { return m_path; }
 

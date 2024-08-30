@@ -23,6 +23,8 @@
 #include <imgui_internal.h>
 #include <imgui_stdlib.h>
 #include <implot.h>
+#include <nfd.h>
+#include <nfd.hpp>
 #include <spdlog/fmt/std.h>
 #include <spdlog/spdlog.h>
 
@@ -399,6 +401,7 @@ private:
     Plotter m_audio_plotter;
 
     std::future<os::OsOpenStatus> m_open_annotations_path_future;
+    bool m_nfd_available = true;
 
     static bool is_valid_ini_path(const std::filesystem::path& path)
     {
@@ -897,6 +900,34 @@ private:
         }
     }
 
+    void annotations_save_copy()
+    {
+        static const std::array<nfdfilteritem_t, 1> save_filters = {{
+            {"JSON", "json"},
+        }};
+
+        spdlog::info("Selecting annotations file save copy path...");
+        NFD::UniquePath save_path;
+        nfdresult_t res = NFD::SaveDialog(
+            save_path,
+            save_filters.data(),
+            static_cast<nfdfiltersize_t>(save_filters.size()),
+            nullptr,
+            "annotations.json"
+        );
+        if (res == NFD_OKAY) {
+            if (save_path) {
+                m_app.save_annotations_to_path(save_path.get());
+            } else {
+                spdlog::error("NFD::SaveDialog returned okay, but path string is null");
+            }
+        } else if (res == NFD_CANCEL) {
+            spdlog::info("Annotations file save copy cancelled");
+        } else {
+            spdlog::error("Error picking annotations save path: {}", NFD::GetError());
+        }
+    }
+
     void annotations_path_open()
     {
         if (m_open_annotations_path_future.valid()) {
@@ -920,6 +951,11 @@ private:
             if (ImGui::MenuItem("Quit", "Alt+F4")) {
                 stop();
             }
+            ImGui::BeginDisabled(!m_nfd_available);
+            if (ImGui::MenuItem("Save a copy of annotations file...") && m_nfd_available) {
+                annotations_save_copy();
+            }
+            ImGui::EndDisabled();
             annotations_path_open();
             ImGui::EndMenu();
         }
@@ -1588,6 +1624,13 @@ public:
         m_flow_plotter("Flow (L/min)", "{:g} L/min", m_plot_summary_range),
         m_audio_plotter("Ear audio (V)", "{:g} V", m_plot_summary_range)
     {
+        if (NFD::Init() != NFD_OKAY) {
+            spdlog::error("Error initialising NFD: {}", NFD::GetError());
+            m_nfd_available = false;
+        } else {
+            spdlog::debug("NFD initialised");
+        }
+
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImPlot::CreateContext();
@@ -1603,6 +1646,10 @@ public:
 
     ~Impl()
     {
+        if (m_nfd_available) {
+            NFD::Quit();
+        }
+
         ImPlot::DestroyContext();
         ImGui::DestroyContext();
     }

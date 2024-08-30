@@ -113,6 +113,7 @@ target_link_libraries(recap-labeller PRIVATE
     implot::demo
     implot::implot
     magic_enum::magic_enum
+    nfd::nfd
     nlohmann_json::nlohmann_json
     spdlog::spdlog
 )

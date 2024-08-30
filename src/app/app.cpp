@@ -12,6 +12,7 @@
 
 #include <fmt/core.h>
 #include <magic_enum.hpp>
+#include <spdlog/fmt/std.h>
 #include <spdlog/spdlog.h>
 
 #include <cmath>
@@ -20,6 +21,7 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -278,6 +280,15 @@ void App::save_active_task()
         }
     } else {
         spdlog::error("Cannot save annotation for active task: in error state");
+    }
+}
+
+void App::save_annotations_to_path(const std::filesystem::path& path) const
+{
+    try {
+        m_annotation_store.sync_to_file(path);
+    } catch (const std::runtime_error& error) {
+        spdlog::error("Error saving annotations to {}: {}", path, error.what());
     }
 }
 
