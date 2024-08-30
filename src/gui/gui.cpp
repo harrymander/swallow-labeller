@@ -1,10 +1,9 @@
-#include <future>
-#include <memory>
 #define IMGUI_DEFINE_MATH_OPERATORS
+
+#include "gui.hpp"
 
 #include "app/app.hpp"
 #include "app/id-list.hpp"
-#include "gui.hpp"
 #include "gui/font.hpp"
 #include "gui/widgets/color-scheme-selector.hpp"
 #include "gui/widgets/plot-range-dragger.hpp"
@@ -32,6 +31,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <future>
+#include <memory>
 #include <variant>
 
 #define FILE_ERR_ICON ICON_FA_FILE_CIRCLE_EXCLAMATION
