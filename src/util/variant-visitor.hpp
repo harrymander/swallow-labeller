@@ -8,16 +8,12 @@ namespace recap::labeller {
 template <class... Ts> struct VariantVisitor : Ts... {
     using Ts::operator()...;
 
-    template <class... Vs> auto visit(const std::variant<Vs...>& v) const
+    template <class... Vs> auto operator()(const std::variant<Vs...>& v) const
     {
         return std::visit(*this, v);
     }
 
-    template <class... Vs> auto visit(std::variant<Vs...>& v) { return std::visit(*this, v); }
-
-    template <class... Vs> auto operator()(const std::variant<Vs...>& v) const { return visit(v); }
-
-    template <class... Vs> auto operator()(std::variant<Vs...>& v) { return visit(v); }
+    template <class... Vs> auto operator()(std::variant<Vs...>& v) { return std::visit(*this, v); }
 };
 
 }; // namespace recap::labeller
