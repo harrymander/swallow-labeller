@@ -12,8 +12,6 @@
 #include <backends/imgui_impl_opengl3.h>
 #include <imgui.h>
 
-#include <memory>
-
 #define GL_SILENCE_DEPRECATION
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
@@ -82,6 +80,69 @@ static bool should_stop(GLFWwindow *window)
     return false;
 }
 
+static void run_gui(app::App& app, const char *glsl_version, GLFWwindow *window)
+{
+    gui::Gui gui(app);
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init(glsl_version);
+
+    // Main loop
+    bool running = true;
+    spdlog::debug("Running main loop...");
+    while (running) {
+        // Poll and handle events (inputs, window resize, etc.)
+        // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui
+        // wants to use your inputs.
+        // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main
+        // application, or clear/overwrite your copy of the mouse data.
+        // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main
+        // application, or clear/overwrite your copy of the keyboard data. Generally you may always
+        // pass all inputs to dear imgui, and hide them from your application based on those two
+        // flags.
+        glfwPollEvents();
+
+        // Start the Dear ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        const bool stopping = should_stop(window);
+        if (stopping) {
+            gui.stop();
+            glfwSetWindowShouldClose(window, 0);
+            signal_stop = 0;
+        }
+        gui.draw();
+        running = !gui.ready_to_stop();
+        if (stopping && running) {
+            spdlog::warn("Exit request received, but GUI is blocking exit");
+        }
+
+        // Rendering
+        ImGui::Render();
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+        constexpr ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+        glClearColor(
+            clear_color.x * clear_color.w,
+            clear_color.y * clear_color.w,
+            clear_color.z * clear_color.w,
+            clear_color.w
+        );
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        glfwSwapBuffers(window);
+    }
+
+    // Cleanup
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+}
+
 int run(recap::labeller::app::App& app)
 {
     if (setup_stop_signal_handler() < 0) {
@@ -130,67 +191,7 @@ int run(recap::labeller::app::App& app)
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
 
-    auto gui = std::make_unique<gui::Gui>(app);
-
-    // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init(glsl_version);
-
-    // Main loop
-    bool running = true;
-    spdlog::debug("Running main loop...");
-    while (running) {
-        // Poll and handle events (inputs, window resize, etc.)
-        // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui
-        // wants to use your inputs.
-        // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main
-        // application, or clear/overwrite your copy of the mouse data.
-        // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main
-        // application, or clear/overwrite your copy of the keyboard data. Generally you may always
-        // pass all inputs to dear imgui, and hide them from your application based on those two
-        // flags.
-        glfwPollEvents();
-
-        // Start the Dear ImGui frame
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-
-        const bool stopping = should_stop(window);
-        if (stopping) {
-            gui->stop();
-            glfwSetWindowShouldClose(window, 0);
-            signal_stop = 0;
-        }
-        gui->draw();
-        running = !gui->ready_to_stop();
-        if (stopping && running) {
-            spdlog::warn("Exit request received, but GUI is blocking exit");
-        }
-
-        // Rendering
-        ImGui::Render();
-        int display_w, display_h;
-        glfwGetFramebufferSize(window, &display_w, &display_h);
-        glViewport(0, 0, display_w, display_h);
-        constexpr ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-        glClearColor(
-            clear_color.x * clear_color.w,
-            clear_color.y * clear_color.w,
-            clear_color.z * clear_color.w,
-            clear_color.w
-        );
-        glClear(GL_COLOR_BUFFER_BIT);
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-        glfwSwapBuffers(window);
-    }
-
-    // Cleanup
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-
-    gui.reset();
+    run_gui(app, glsl_version, window);
 
     spdlog::debug("Destroying GLFW window...");
     glfwDestroyWindow(window);
