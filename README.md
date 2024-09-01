@@ -17,14 +17,17 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release .
 cmake --build build --parallel
 ```
 
-Requires `zlib`, `glfw3`, and `opengl3` to be installed. `zlib` can be provided
-via vcpkg by adding `--toolchain vcpkg/scripts/buildsystems/vcpkg.cmake` to the
-first configure command, provided that the `vcpkg` submodule is cloned.
+Requires `zlib`, `glfw3`, and `opengl3` to be installed. Third party
+dependencies are fetched using CMake FetchContent by default; to disable, set
+`FETCH_VENDORED` to false. The dependencies can can then be provided by the
+system or via vcpkg by ensuring the `vcpkg` subdmodule is cloned and passing
+`--toolchain=vcpkg/scripts/buildsystems/vcpkg.cmake` to the `cmake` configure
+command.
 
 ### Windows (MSVC)
 
-The following command uses vcpkg to install `zlib`, so the `vcpkg` submodule
-must be cloned.
+The CMake preset for Windows uses vcpkg, so the `vcpkg` submodule must be
+cloned.
 
 ```
 cmake --preset windows-static
