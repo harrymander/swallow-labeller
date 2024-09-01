@@ -948,15 +948,17 @@ private:
     void draw_menu_bar()
     {
         if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("Quit", "Alt+F4")) {
-                stop();
-            }
             ImGui::BeginDisabled(!m_nfd_available);
             if (ImGui::MenuItem("Save a copy of annotations file...") && m_nfd_available) {
                 annotations_save_copy();
             }
             ImGui::EndDisabled();
             annotations_path_open();
+
+            ImGui::Separator();
+            if (ImGui::MenuItem("Quit", "Alt+F4")) {
+                stop();
+            }
             ImGui::EndMenu();
         }
 
