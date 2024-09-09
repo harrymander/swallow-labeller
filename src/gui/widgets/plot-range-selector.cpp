@@ -77,7 +77,7 @@ PlotRangeSelector::update(ImGuiID id, Flags flags, ImGuiMouseButton mouse_button
         ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
     }
 
-    if (!cancelled && last_selecting && !m_selecting) {
+    if (!cancelled && last_selecting && !m_selecting && (m_range.end != m_range.start)) {
         // TODO: not sure if this is needed...
         if (m_range.end < m_range.start) {
             std::swap(m_range.start, m_range.end);
