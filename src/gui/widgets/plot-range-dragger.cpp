@@ -104,7 +104,7 @@ bool PlotRangeDragger::update(ImGuiID id, PlotRange& range, double min_range)
 {
     const ImPlotPlot *current_plot = ImPlot::GetCurrentPlot();
     IM_ASSERT_USER_ERROR(
-        current_plot != nullptr, "drag_xrect needs to be called between BeginPlot and EndPlot"
+        current_plot != nullptr, "update() needs to be called between BeginPlot and EndPlot"
     );
     ImPlot::SetupLock();
 

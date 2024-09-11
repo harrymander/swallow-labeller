@@ -27,7 +27,9 @@ std::optional<PlotRange> PlotRangeSelector::update(
     ImGuiID id, Flags flags, ImGuiMouseButton mouse_button, ImGuiKey key, double min_range
 )
 {
-    IM_ASSERT_USER_ERROR(ImPlot::GetCurrentPlot(), "update() needs to be called inside a plot");
+    IM_ASSERT_USER_ERROR(
+        ImPlot::GetCurrentPlot(), "update() needs to be called between BeginPlot and EndPlot"
+    );
     IM_ASSERT_USER_ERROR(
         ImHasFlag(ImPlot::GetCurrentPlot()->Flags, ImPlotFlags_NoBoxSelect),
         "Plot box select must be disabled"
