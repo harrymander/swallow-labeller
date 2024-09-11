@@ -80,9 +80,27 @@ bool drag_range(ImGuiID id, float& x0, float& x1, const ImRect& limits, bool& he
     return false;
 }
 
+void expand_to_range(double& xmin, double& xmax, double range)
+{
+    if (std::fabs(xmax - xmin) >= range) {
+        return;
+    }
+
+    const double xmouse = ImPlot::GetPlotMousePos().x;
+    const double delta = range - (xmax - xmin);
+    const ImPlotRange xlim = ImPlot::GetPlotLimits().X;
+    if (std::fabs(xmax - xmouse) < std::fabs(xmin - xmouse)) {
+        xmax = std::min(xlim.Max, xmax + delta);
+        xmin = std::max(xlim.Min, xmin - (range - (xmax - xmin)));
+    } else {
+        xmin = std::max(xlim.Min, xmin - delta);
+        xmax = std::min(xlim.Max, xmax + (range - (xmax - xmin)));
+    }
+}
+
 }; // namespace
 
-bool PlotRangeDragger::update(ImGuiID id, PlotRange& range)
+bool PlotRangeDragger::update(ImGuiID id, PlotRange& range, double min_range)
 {
     const ImPlotPlot *current_plot = ImPlot::GetCurrentPlot();
     IM_ASSERT_USER_ERROR(
@@ -126,6 +144,7 @@ bool PlotRangeDragger::update(ImGuiID id, PlotRange& range)
     }
     if (m_modified && !held) {
         m_modified = false;
+        expand_to_range(xmin, xmax, min_range);
         return true;
     }
     return false;

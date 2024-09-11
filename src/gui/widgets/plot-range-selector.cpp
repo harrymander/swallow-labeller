@@ -23,8 +23,9 @@ bool key_down_or_none(ImGuiKey key)
 
 }; // namespace
 
-std::optional<PlotRange>
-PlotRangeSelector::update(ImGuiID id, Flags flags, ImGuiMouseButton mouse_button, ImGuiKey key)
+std::optional<PlotRange> PlotRangeSelector::update(
+    ImGuiID id, Flags flags, ImGuiMouseButton mouse_button, ImGuiKey key, double min_range
+)
 {
     IM_ASSERT_USER_ERROR(ImPlot::GetCurrentPlot(), "update() needs to be called inside a plot");
     IM_ASSERT_USER_ERROR(
@@ -77,7 +78,9 @@ PlotRangeSelector::update(ImGuiID id, Flags flags, ImGuiMouseButton mouse_button
         ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
     }
 
-    if (!cancelled && last_selecting && !m_selecting && (m_range.end != m_range.start)) {
+    if (!cancelled && last_selecting && !m_selecting
+        && std::fabs(m_range.end - m_range.start) > min_range)
+    {
         // TODO: not sure if this is needed...
         if (m_range.end < m_range.start) {
             std::swap(m_range.start, m_range.end);

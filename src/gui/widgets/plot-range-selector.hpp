@@ -6,6 +6,7 @@
 
 #include <imgui.h>
 
+#include <cassert>
 #include <cmath>
 #include <optional>
 
@@ -48,11 +49,13 @@ public:
         const Id& id,
         Flags flags = Flag::Default,
         ImGuiMouseButton mouse_button = DefaultMouseButton,
-        ImGuiKey key = DefaultKey
+        ImGuiKey key = DefaultKey,
+        double min_range = 0
     )
     {
+        assert(min_range >= 0);
         ScopedImID id_scope(id);
-        return update(ImGui::GetID("##plot_range_maker"), flags, mouse_button, key);
+        return update(ImGui::GetID("##plot_range_maker"), flags, mouse_button, key, min_range);
     }
 
     /**
@@ -67,7 +70,7 @@ public:
 
 private:
     [[nodiscard]] std::optional<PlotRange>
-    update(ImGuiID id, Flags flags, ImGuiMouseButton mouse_button, ImGuiKey key);
+    update(ImGuiID id, Flags flags, ImGuiMouseButton mouse_button, ImGuiKey key, double min_range);
 
     bool m_selecting = false;
     PlotRange m_range = {NAN, NAN};

@@ -324,6 +324,9 @@ private:
 
 class Gui::Impl {
 private:
+    static constexpr double FlowMinSelectionRange = 1.0 / 1000;
+    static constexpr double AudioMinSelectionRange = FlowMinSelectionRange;
+
     enum class AnnotationsVisibility {
         All,
         AnnotatedOnly,
@@ -673,14 +676,22 @@ private:
 
         if (task_view.can_add_new_swallow_apnea_range()) {
             auto new_range = m_annotator.apnea_range_selector.update(
-                "##apnea_range_selector", 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl
+                "##apnea_range_selector",
+                0,
+                ImGuiMouseButton_Left,
+                ImGuiKey_LeftCtrl,
+                FlowMinSelectionRange
             );
             if (new_range) {
                 task_view.add_swallow_apnea_range(new_range->start, new_range->end);
             }
         } else if (!m_annotator.editing_apnea && task_view.can_add_new_non_resp_flow_label()) {
             auto new_range = m_annotator.non_resp_flow_annotator.range_selector.update(
-                "##snrf_range_selector", 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl
+                "##snrf_range_selector",
+                0,
+                ImGuiMouseButton_Left,
+                ImGuiKey_LeftCtrl,
+                FlowMinSelectionRange
             );
             if (new_range) {
                 const auto new_id =
@@ -698,8 +709,9 @@ private:
                     m_annotator.apnea_temp_range = {range->start, range->end};
                 }
                 if (m_annotator.apnea_range_dragger.update(
-                        "##apnea_range_dragger", m_annotator.apnea_temp_range
-                    )) {
+                        "##apnea_range_dragger", m_annotator.apnea_temp_range, FlowMinSelectionRange
+                    ))
+                {
                     task_view.set_swallow_apnea_range(
                         m_annotator.apnea_temp_range.start, m_annotator.apnea_temp_range.end
                     );
@@ -715,7 +727,10 @@ private:
                 if (!annotator.range_dragger.is_editing()) {
                     annotator.temp_range = {range->start, range->end};
                 }
-                if (annotator.range_dragger.update("##snrf_range_dragger", annotator.temp_range)) {
+                if (annotator.range_dragger.update(
+                        "##snrf_range_dragger", annotator.temp_range, FlowMinSelectionRange
+                    ))
+                {
                     task_view.set_non_resp_flow_label(
                         *annotator.selected_id, annotator.temp_range.start, annotator.temp_range.end
                     );
@@ -802,7 +817,11 @@ private:
             add_plot_text(HINT_ICON ICON_TEXT_SPACE
                           "Hold Ctrl and left click and drag to add ear click label(s)");
             auto new_range = m_annotator.ear_clicks_annotator.range_selector.update(
-                "##earclick_new_range_selector", 0, ImGuiMouseButton_Left, ImGuiKey_LeftCtrl
+                "##earclick_new_range_selector",
+                0,
+                ImGuiMouseButton_Left,
+                ImGuiKey_LeftCtrl,
+                AudioMinSelectionRange
             );
             if (new_range) {
                 auto new_id = task_view.add_ear_click_label(new_range->start, new_range->end);
@@ -822,8 +841,9 @@ private:
                     annotator.temp_range = {range->start, range->end};
                 }
                 if (annotator.range_dragger.update(
-                        "##earclick_range_dragger", annotator.temp_range
-                    )) {
+                        "##earclick_range_dragger", annotator.temp_range, AudioMinSelectionRange
+                    ))
+                {
                     task_view.set_ear_click_label(
                         *annotator.selected_id, annotator.temp_range.start, annotator.temp_range.end
                     );

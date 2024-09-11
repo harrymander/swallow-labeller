@@ -26,10 +26,11 @@ public:
      *
      * Must be called inside ImPlot::PlotBegin/End.
      */
-    template <class Id> bool update(const Id& id, PlotRange& range)
+    template <class Id> bool update(const Id& id, PlotRange& range, double min_range = 0)
     {
+        assert(min_range >= 0);
         recap::labeller::gui::widgets::ScopedImID id_scope(id);
-        return update(ImGui::GetID("##plot_range_dragger"), range);
+        return update(ImGui::GetID("##plot_range_dragger"), range, min_range);
     }
 
     /**
@@ -41,7 +42,7 @@ public:
     [[nodiscard]] bool is_editing() const { return m_modified; }
 
 private:
-    bool update(ImGuiID id, PlotRange& range);
+    bool update(ImGuiID id, PlotRange& range, double min_range);
     bool m_modified = false;
 };
 
