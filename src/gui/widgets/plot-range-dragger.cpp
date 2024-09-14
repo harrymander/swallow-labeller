@@ -82,12 +82,13 @@ bool drag_range(ImGuiID id, float& x0, float& x1, const ImRect& limits, bool& he
 
 void expand_to_range(double& xmin, double& xmax, double range)
 {
-    if (std::fabs(xmax - xmin) >= range) {
+    const double xdiff = xmax - xmin;
+    if (xdiff >= range) {
         return;
     }
 
     const double xmouse = ImPlot::GetPlotMousePos().x;
-    const double delta = range - (xmax - xmin);
+    const double delta = range - xdiff;
     const ImPlotRange xlim = ImPlot::GetPlotLimits().X;
     if (std::fabs(xmax - xmouse) < std::fabs(xmin - xmouse)) {
         xmax = std::min(xlim.Max, xmax + delta);
