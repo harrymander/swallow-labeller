@@ -164,7 +164,6 @@ private:
 
     [[nodiscard]] bool save_annotation();
     [[nodiscard]] bool has_apnea_range() const;
-    [[nodiscard]] bool valid_apnea_annotation() const;
     [[nodiscard]] bool valid_earclick_annotation() const;
 
     ActiveSwallowLabellingTaskView(

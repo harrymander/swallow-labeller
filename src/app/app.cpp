@@ -15,6 +15,7 @@
 #include <spdlog/fmt/std.h>
 #include <spdlog/spdlog.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <exception>
@@ -553,8 +554,23 @@ bool ActiveSwallowLabellingTaskView::can_add_new_swallow_apnea_range() const
 
 std::optional<std::string_view> ActiveSwallowLabellingTaskView::swallow_apnea_label_error() const
 {
+    constexpr double MaximumSnrfTimeSeconds = 0.2;
+    static const std::string SnrfErrorString = fmt::format(
+        "SNRF label too long, must be shorted than {:g} seconds!", MaximumSnrfTimeSeconds
+    );
+
     if (can_add_new_swallow_apnea_range()) {
         return "Missing swallow apnea label";
+    }
+
+    if (can_edit_swallow_apnea_range()) {
+        const auto& labels = m_annotation.non_resp_flow_labels.items();
+        if (std::any_of(labels.begin(), labels.end(), [](const auto& label) {
+                return label.item.end - label.item.start >= MaximumSnrfTimeSeconds;
+            }))
+        {
+            return SnrfErrorString;
+        }
     }
 
     return std::nullopt;
@@ -759,11 +775,6 @@ void ActiveSwallowLabellingTaskView::set_ear_click_label(
     }
 }
 
-bool ActiveSwallowLabellingTaskView::valid_apnea_annotation() const
-{
-    return !apnea_status_is_src_pattern(m_annotation.swallow_apnea_status) || has_apnea_range();
-}
-
 bool ActiveSwallowLabellingTaskView::valid_earclick_annotation() const
 {
     return m_annotation.ear_click_status != EarClickAnnotationStatus::Ok
@@ -772,7 +783,7 @@ bool ActiveSwallowLabellingTaskView::valid_earclick_annotation() const
 
 bool ActiveSwallowLabellingTaskView::can_save_annotation() const
 {
-    return valid_apnea_annotation() && valid_earclick_annotation();
+    return !swallow_apnea_label_error().has_value() && valid_earclick_annotation();
 }
 
 bool ActiveSwallowLabellingTaskView::save_annotation()
