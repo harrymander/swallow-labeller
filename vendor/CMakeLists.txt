@@ -42,7 +42,7 @@ if(FETCH_VENDORED)
     fetchcontent_declare(
         magic_enum
         GIT_REPOSITORY https://github.com/Neargye/magic_enum
-        GIT_TAG adc7d2ba57e142b6ad018e01057233478a74c1e8 # v0.9.6
+        GIT_TAG dd6a39d0ba1852cf06907e0f0573a2a10d23c2ad # v0.9.6
     )
     fetchcontent_makeavailable(magic_enum)
 
