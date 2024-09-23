@@ -65,9 +65,20 @@ endif()
 
 # GCC doesn't support C++20 std::chrono::parse, but date::parse doesn't work on
 # MSVC. Fortunately, std::chrono::parse works on MSVC; so we use Howard
-# Hinnant's date library on GCC and stdlib on MSVC...
+# Hinnant's date library on GCC and stdlib on MSVC, with the option to manually
+# select which library is used
 add_library(chrono_util INTERFACE)
-if(NOT MSVC)
+if(MSVC)
+    set(USE_HOWARDHINNANT_DATE_DEFAULT off)
+else()
+    set(USE_HOWARDHINNANT_DATE_DEFAULT on)
+endif()
+option(
+    USE_HOWARDHINNANT_DATE
+    "Use Howard Hinnant's date library instead of stdlib chrono"
+    ${USE_HOWARDHINNANT_DATE_DEFAULT}
+)
+if(USE_HOWARDHINNANT_DATE)
     fetchcontent_declare(howardhinnant_date
       GIT_REPOSITORY https://github.com/HowardHinnant/date.git
       GIT_TAG 6e921e1b1d21e84a5c82416ba7ecd98e33a436d0 # v3.0.1
