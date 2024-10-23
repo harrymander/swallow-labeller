@@ -660,7 +660,8 @@ private:
         add_plot_text("Positive flow = expiration");
         if (m_annotator.editing_apnea) {
             if (task_view.can_add_new_swallow_apnea_range()
-                || task_view.can_edit_swallow_apnea_range()) {
+                || task_view.can_edit_swallow_apnea_range())
+            {
                 add_plot_text("Labelling swallow apnea", 1);
             }
             if (task_view.can_add_new_swallow_apnea_range()) {
@@ -865,7 +866,8 @@ private:
     {
         for (const auto& label : labels) {
             if (annotator.range_dragger.is_editing() && annotator.selected_id == label.id)
-                [[unlikely]] {
+                [[unlikely]]
+            {
                 widgets::draw_plot_range(annotator.temp_range, colors.selected, height);
             } else {
                 const auto& color = selected_color || annotator.selected_id == label.id ?
@@ -952,7 +954,8 @@ private:
     {
         if (m_open_annotations_path_future.valid()) {
             if (m_open_annotations_path_future.wait_for(std::chrono::seconds(0))
-                == std::future_status::ready) {
+                == std::future_status::ready)
+            {
                 (void) m_open_annotations_path_future.get();
             }
         }
@@ -1390,7 +1393,8 @@ private:
         {
             bool toggle = widgets::global_shortcut(ImGuiKey_S);
             if (ImGui::RadioButton("Apnea", m_annotator.editing_apnea)
-                && !m_annotator.editing_apnea) {
+                && !m_annotator.editing_apnea)
+            {
                 toggle = true;
             }
             ImGui::SameLine();
@@ -1497,7 +1501,8 @@ private:
             if (selected) {
                 ImGui::SameLine();
                 if (ImGui::Checkbox("Ambiguous [a]", &is_ambiguous)
-                    || shortcut_toggle(ImGuiKey_A, is_ambiguous)) {
+                    || shortcut_toggle(ImGuiKey_A, is_ambiguous))
+                {
                     spdlog::debug("Swallow apnea is_ambiguous changed: {}", is_ambiguous);
                     task_view.set_swallow_is_ambiguous(is_ambiguous);
                 }
@@ -1714,15 +1719,9 @@ public:
         m_first_draw = false;
     }
 
-    void stop()
-    {
-        m_app.stop();
-    }
+    void stop() { m_app.stop(); }
 
-    [[nodiscard]] bool ready_to_stop() const
-    {
-        return m_app.can_stop();
-    }
+    [[nodiscard]] bool ready_to_stop() const { return m_app.can_stop(); }
 };
 
 Gui::Gui(app::App& app) : m_pimpl(std::make_unique<Impl>(app)) {}

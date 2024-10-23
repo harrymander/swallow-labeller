@@ -276,7 +276,8 @@ void App::save_active_task()
     if (task_view) {
         spdlog::debug("Saving annotation for active task");
         if (task_view->save_annotation() && m_auto_advance_on_save
-            && !m_swallow_task_list.can_go_forward()) {
+            && !m_swallow_task_list.can_go_forward())
+        {
             auto_advance_active_task();
         }
     } else {
@@ -413,9 +414,7 @@ ActiveSwallowLabellingTaskView::Annotation::Annotation(const models::SwallowAnno
 
     swallow_apnea_range(VariantVisitor{
         [](const models::SwallowApneaAnnotation& annotation) { return annotation.time; },
-        [](auto) {
-            return models::TimeRange{NAN, NAN};
-        },
+        [](auto) { return models::TimeRange{NAN, NAN}; },
     }(annotation.swallow_apnea)),
 
     non_resp_flow_labels(VariantVisitor{
