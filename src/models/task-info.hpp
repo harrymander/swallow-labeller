@@ -34,7 +34,7 @@ struct SwallowTaskInfo {
     TimeRange event_range_secs;
     LabellingDataFile npz_file;
 
-    [[nodiscard]] const std::string& get_id() const { return npz_file.checksum; }
+    [[nodiscard]] const std::string& get_id() const { return npz_file.path; }
 
     auto operator<=>(const SwallowTaskInfo&) const = default;
 };
