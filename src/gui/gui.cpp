@@ -1168,9 +1168,11 @@ private:
                             ImGui::ScrollToItem();
                         }
                         const auto& err = task.error_msg();
-                        if (err.has_value() && ImGui::BeginItemTooltip()) {
-                            ImGui::Text(ERR_ICON ICON_TEXT_SPACE "%s", err->c_str());
-                            ImGui::EndTooltip();
+                        if (err.has_value()) {
+                            ImGui::SetItemTooltip(ERR_ICON ICON_TEXT_SPACE "%s", err->c_str());
+                        } else if (!has_annotation && has_suggested_annotation) {
+                            ImGui::SetItemTooltip(SUGGESTED_ANNOTATION_TASK_ICON ICON_TEXT_SPACE
+                                                  "Task has suggested annotations");
                         }
                     }
                 }
