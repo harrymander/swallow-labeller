@@ -8,6 +8,7 @@ set(DEMO_GEN_PY ${CMAKE_CURRENT_SOURCE_DIR}/gen-demo.py)
 
 set(DEMO_DIR ${CMAKE_CURRENT_BINARY_DIR}/demofiles)
 set(DEMO_TASKS_JSON ${DEMO_DIR}/tasks.json)
+set(DEMO_SUGGESTIONS_JSON ${DEMO_DIR}/suggested-annotations.json)
 set(DEMO_DATA_DIR ${DEMO_DIR}/data)
 set(DEMO_ANNOTATIONS_JSON ${DEMO_DIR}/demo-annotations.json)
 set(DEMO_LOG_FILE ${DEMO_DIR}/log.txt)
@@ -20,6 +21,7 @@ add_custom_command(
     COMMAND
         ${Python3_EXECUTABLE} ${DEMO_GEN_PY}
         --tasks-json ${DEMO_TASKS_JSON}
+        --suggestions-json ${DEMO_SUGGESTIONS_JSON}
         --data-dir ${DEMO_DATA_DIR}
     COMMENT "Generating demo tasks"
 )
@@ -33,6 +35,7 @@ add_custom_target(
         --tasks ${DEMO_TASKS_JSON}
         --data-dir ${DEMO_DATA_DIR}
         --annotations ${DEMO_ANNOTATIONS_JSON}
+        --suggestions ${DEMO_SUGGESTIONS_JSON}
         --log ${DEMO_LOG_FILE}
         --no-app-data-dir
     WORKING_DIRECTORY ${DEMO_DIR}
@@ -40,6 +43,7 @@ add_custom_target(
 "\nRunning demo:
   Tasks JSON: ${DEMO_TASKS_JSON}
   Data dir: ${DEMO_DATA_DIR}
+  Suggested annotations JSON: ${DEMO_SUGGESTIONS_JSON}
   Annotations JSON: ${DEMO_ANNOTATIONS_JSON}
   Log file: ${DEMO_LOG_FILE}"
 )

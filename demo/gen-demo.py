@@ -1,9 +1,11 @@
 import argparse
 import dataclasses
+import datetime
 import hashlib
 import json
 import os.path
 import random
+import textwrap
 from io import BytesIO
 from typing import Optional
 
@@ -19,10 +21,13 @@ def random_md5_hexdigest() -> str:
 
 
 @dataclasses.dataclass
-@dataclasses.dataclass
 class TimeRange:
     start: float
     end: float
+
+    def __post_init__(self):
+        if self.end <= self.start:
+            raise ValueError("end must be greater than start")
 
 
 @dataclasses.dataclass
@@ -41,6 +46,31 @@ class SwallowTask:
     csv_range_secs: TimeRange
     event_range_secs: TimeRange
     npz_file: FileInfo
+
+    def annotation_id(self) -> str:
+        return self.npz_file.path
+
+
+@dataclasses.dataclass
+class SwallowApneaAnnotation:
+    is_ambiguous: bool
+    non_respiratory_flow: list[TimeRange]
+    pattern: str
+    time: TimeRange
+
+
+@dataclasses.dataclass
+class AnnotationResult:
+    ear_clicks: list[TimeRange]
+    note: str
+    swallow_apnea: SwallowApneaAnnotation
+
+
+@dataclasses.dataclass
+class Annotation:
+    created_time: str
+    result: AnnotationResult
+    last_modified_time: None | str
 
 
 def random_sinusoid(t, f0, amplitude, sigma):
@@ -126,9 +156,78 @@ def gen_random_task(
     return task
 
 
+def random_text(k: int) -> str:
+    ipsum = """Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+    eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
+    minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex
+    ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate
+    velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
+    cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id
+    est laborum"""
+    return ' '.join(random.choices(ipsum.split(), k=k))
+
+
+def gen_random_annotation(task: SwallowTask) -> Annotation:
+    def random_time_range(d1: float, d2: float) -> TimeRange:
+        if d2 <= d1:
+            raise ValueError("d2 must be greater than d1")
+
+        min_start = max(
+            task.csv_range_secs.start,
+            task.event_range_secs.start - random.uniform(.1, 2),
+        )
+        csv_end = task.csv_range_secs.end
+        max_start = min(
+            csv_end,
+            task.event_range_secs.end + random.uniform(.1, 2),
+        )
+        start = random.uniform(min_start, (min_start + max_start) * .6)
+        return TimeRange(
+            start,
+            min(start + random.uniform(d1, d2), csv_end),
+        )
+
+    result = AnnotationResult(
+        note='\n'.join(textwrap.wrap(random_text(random.randint(6, 12)), 30)),
+        ear_clicks=[
+            random_time_range(0.1, 0.5) for _ in range(random.randint(1, 4))
+        ],
+        swallow_apnea=SwallowApneaAnnotation(
+            is_ambiguous=random.randint(0, 4) == 0,
+            non_respiratory_flow=[
+                random_time_range(0.05, 0.199)
+                for _ in range(random.randint(0, 2))
+            ],
+            pattern=random.choice(('ex-ex', 'ex-in', 'in-in', 'in-ex')),
+            time=random_time_range(0.3, 0.8),
+        ),
+    )
+    now = datetime.datetime.now(datetime.UTC)
+    last_modified = None
+    if random.randint(0, 3):
+        delta = datetime.timedelta(
+            seconds=random.randint(1, 59),
+            minutes=random.randint(1, 59),
+            hours=random.randint(1, 12),
+            days=random.randint(0, 10),
+        )
+        last_modified = now + delta
+
+    time_fmt = '%Y-%m-%dT%H:%M:%SZ'
+    return Annotation(
+        result=result,
+        created_time=now.strftime(time_fmt),
+        last_modified_time=(
+            last_modified.strftime(time_fmt)
+            if last_modified else None
+        ),
+    )
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--tasks-json', required=True)
+    parser.add_argument('--suggestions-json', required=True)
     parser.add_argument('--data-dir', required=True)
     args = parser.parse_args()
 
@@ -158,9 +257,18 @@ def main():
         for s in range(8, 10)
     )
 
-    tasks_dict = [dataclasses.asdict(t) for t in tasks]
+    tasks_json = [dataclasses.asdict(t) for t in tasks]
     with open(args.tasks_json, 'w') as f:
-        json.dump(tasks_dict, f, indent=2)
+        json.dump(tasks_json, f, indent=2)
+        f.write('\n')
+
+    # Generate a suggestion for every second task
+    suggestions = {
+        task.annotation_id(): dataclasses.asdict(gen_random_annotation(task))
+        for task in tasks[::2]
+    }
+    with open(args.suggestions_json, 'w') as f:
+        json.dump(suggestions, f, indent=2)
         f.write('\n')
 
 
