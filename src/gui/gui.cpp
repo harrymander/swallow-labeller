@@ -1395,8 +1395,8 @@ private:
     void draw_apnea_editor(app::ActiveSwallowLabellingTaskView& task_view)
     {
         ImGui::SeparatorText("Swallow apnea");
-        if (const auto& error = task_view.swallow_apnea_label_error()) {
-            ImGui::TextUnformatted(fmt::format(ERR_ICON ICON_TEXT_SPACE "{}", *error).c_str());
+        if (const auto& error = task_view.swallow_apnea_label_error_str()) {
+            ImGui::TextWrapped(ERR_ICON ICON_TEXT_SPACE "%s", error->c_str());
         }
 
         if (task_view.can_edit_swallow_apnea_range() && task_view.can_add_new_non_resp_flow_label())

@@ -87,6 +87,7 @@ configure_file(src/options.h.in ${OPTIONS_INCLUDE_DIR}/options.h)
 add_executable(recap-labeller
     src/app/annotation-store.cpp
     src/app/app.cpp
+    src/app/config.cpp
     src/gui/font.cpp
     src/gui/gui.cpp
     src/gui/widgets/plot-range-dragger.cpp

@@ -2,6 +2,7 @@
 #define RECAP_LABELLER_APP_INCLUDE_HPP
 
 #include "app/annotation-store.hpp"
+#include "app/config.hpp"
 #include "app/id-list.hpp"
 #include "app/view-list.hpp"
 #include "models/annotation.hpp"
@@ -78,6 +79,8 @@ using TimeRangeIDList = IDList<models::TimeRange>;
 using EarClickLabel = TimeRangeIDList::Item;
 using NonRespFlowLabel = TimeRangeIDList::Item;
 
+class App;
+
 class ActiveSwallowLabellingTaskView {
 public:
     [[nodiscard]] const SwallowTaskData& data() const { return m_data; }
@@ -106,7 +109,8 @@ public:
     [[nodiscard]] bool can_add_new_swallow_apnea_range() const;
     [[nodiscard]] bool can_edit_swallow_apnea_range() const;
     [[nodiscard]] bool can_delete_swallow_apnea_range() const;
-    [[nodiscard]] std::optional<std::string_view> swallow_apnea_label_error() const;
+    [[nodiscard]] bool swallow_apnea_label_error() const;
+    [[nodiscard]] std::optional<std::string> swallow_apnea_label_error_str() const;
     [[nodiscard]] const models::TimeRange *swallow_anpea_range() const;
     void add_swallow_apnea_range(models::TimeRange range);
     void set_swallow_apnea_range(models::TimeRange range);
@@ -167,12 +171,14 @@ private:
     [[nodiscard]] bool valid_earclick_annotation() const;
 
     ActiveSwallowLabellingTaskView(
+        const App& app,
         SwallowLabellingTask& task,
         SwallowTaskData data,
         SwallowAnnotationStore& annotation_store,
         const std::optional<SwallowAnnotationStore>& suggested_annotation_store
     );
 
+    const App& m_app;
     SwallowLabellingTask& m_task;
     SwallowTaskData m_data;
     SwallowAnnotationStore& m_annotation_store;
@@ -200,7 +206,8 @@ private:
 
 class App {
 public:
-    App(const std::vector<models::SwallowTaskInfo>& swallow_tasks,
+    App(AppConfig config,
+        const std::vector<models::SwallowTaskInfo>& swallow_tasks,
         SwallowAnnotationStore annotation_store,
         const std::filesystem::path& data_dir,
         bool shuffle_tasks,
@@ -214,6 +221,8 @@ public:
     App& operator=(App&&) = delete;
 
     void stop();
+
+    [[nodiscard]] const AppConfig& config() const { return m_config; }
 
     [[nodiscard]] bool can_stop() const { return m_ready_to_stop; }
 
@@ -302,6 +311,7 @@ private:
     friend class UnsavedTaskCloser;
     template <typename Submit> friend class UnsavedTaskSwitcher;
 
+    AppConfig m_config;
     SwallowLabellingTaskList m_swallow_task_list;
     SwallowAnnotationStore m_annotation_store;
     std::optional<SwallowAnnotationStore> m_suggested_annotation_store;

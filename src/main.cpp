@@ -1,12 +1,13 @@
 #include "app/annotation-store.hpp"
 #include "app/app.hpp"
-#include "fmt/core.h"
+#include "app/config.hpp"
 #include "models/task-info.hpp"
 #include "options.h"
 #include "platform/platform.hpp"
 #include "util/os.hpp"
 
 #include <argparse/argparse.hpp>
+#include <fmt/core.h>
 #include <spdlog/fmt/std.h>
 #include <spdlog/logger.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -158,6 +159,7 @@ struct ProgramOptions {
 
         argparse::ArgumentParser parser(program_name, program_version);
         parser.add_argument("--log").help(LogCliHelp).action(check_path_writable);
+        parser.add_argument("--config", "-c").help("path to config file");
         parser.add_argument("--tasks", "-t")
             .help("path to labelling tasks JSON")
             .action(check_is_file);
@@ -175,9 +177,9 @@ struct ProgramOptions {
         parser.add_argument("--no-app-data-dir")
             .implicit_value(true)
             .default_value(false)
-            .help("by default, if any of --data-dir, --tasks, --annotations are not provided,\n"
-                  "they will be set relative to the user app data dir. If this is passed, then\n"
-                  "all paths must be explicitly provided.");
+            .help("by default, if any of --config, --data-dir, --tasks, --annotations are not\n"
+                  "provided, they will be set relative to the user app data dir. If this is\n"
+                  "passed, then all paths must be explicitly provided.");
         parser.add_argument("--suggestions", "-s")
             .help("path to annotations file to use as suggestions")
             .action(check_is_file);
@@ -210,7 +212,7 @@ struct ProgramOptions {
             }
 
             if (!app_data_dir) {
-                throw std::runtime_error(fmt::format("{} required", argname));
+                throw std::invalid_argument(fmt::format("{} required", argname));
             }
 
             return *app_data_dir / std::filesystem::path(default_filename);
@@ -223,15 +225,27 @@ struct ProgramOptions {
 #endif // RECAP_LABELLER_LOG_TO_APP_DATA_DIR
 
         try {
+            // If --config passed explicitly, check it exists, else get from data dir only if exists
+            auto config_file = parser.present("--config");
+            if (config_file.has_value()) {
+                check_is_file(*config_file);
+            } else if (app_data_dir) {
+                auto default_path = *app_data_dir / "config.json";
+                if (std::filesystem::is_regular_file(default_path)) {
+                    config_file = default_path;
+                }
+            }
+
             return ProgramOptions{
                 .log_file = log_file,
                 .data_dir = data_path("--data-dir", "swallow-data"),
                 .tasks_file = data_path("--tasks", "tasks.json"),
                 .annotations_file = data_path("--annotations", "annotations.json").make_preferred(),
                 .shuffled = !parser.is_used("--not-shuffled"),
-                .suggested_annotations_file = parser.present<std::string>("--suggestions")
+                .suggested_annotations_file = parser.present<std::string>("--suggestions"),
+                .config_file = config_file,
             };
-        } catch (const std::runtime_error& error) {
+        } catch (const std::invalid_argument& error) {
             print_usage_error(error);
             return std::nullopt;
         }
@@ -243,6 +257,7 @@ struct ProgramOptions {
     std::filesystem::path annotations_file;
     bool shuffled;
     std::optional<std::filesystem::path> suggested_annotations_file;
+    std::optional<std::filesystem::path> config_file;
 };
 
 // TODO: this whole structure is a mess, need to encapsulate task management in a class...
@@ -343,6 +358,22 @@ int run_main(int argc, const char *argv[])
         setup_file_logging(*options.log_file);
     }
 
+    app::AppConfig config;
+    if (options.config_file) {
+        try {
+            config = app::load_config(*options.config_file);
+        } catch (const std::invalid_argument& err) {
+            spdlog::critical(
+                "Error parsing config file from {}: {}", *options.config_file, err.what()
+            );
+            return 1;
+        }
+        spdlog::info("Loaded config from {}:", *options.config_file);
+    } else {
+        spdlog::info("No config file, using default settings:");
+    }
+    app::log_config(config, spdlog::level::info);
+
     auto labelling_tasks = load_labelling_tasks(options.tasks_file);
     if (!labelling_tasks.has_value()) {
         return 1;
@@ -368,6 +399,7 @@ int run_main(int argc, const char *argv[])
     }
 
     app::App app(
+        config,
         *labelling_tasks,
         std::move(*annotations_store),
         options.data_dir,

@@ -73,12 +73,14 @@ void SwallowLabellingTask::clear_error_msg()
 }
 
 App::App(
+    AppConfig config,
     const std::vector<models::SwallowTaskInfo>& swallow_tasks,
     SwallowAnnotationStore annotation_store,
     const fs::path& data_dir,
     bool shuffle_tasks,
     std::optional<SwallowAnnotationStore> suggested_store
 ) :
+    m_config(config),
     m_swallow_task_list(
         labelling_tasks(swallow_tasks, data_dir),
         shuffle_tasks,
@@ -352,7 +354,7 @@ void App::load_active_task()
             spdlog::debug("Loaded data from {}", task.data_path());
             task.clear_error_msg();
             m_active_task = make_unique_active_task<ActiveSwallowLabellingTaskView>(
-                task, data, m_annotation_store, m_suggested_annotation_store
+                *this, task, data, m_annotation_store, m_suggested_annotation_store
             );
         } catch (const std::exception& e) {
             spdlog::error("Error loading data file from {}: {}", task.data_path(), e.what());
@@ -365,12 +367,13 @@ void App::load_active_task()
 }
 
 ActiveSwallowLabellingTaskView::ActiveSwallowLabellingTaskView(
+    const App& app,
     SwallowLabellingTask& task,
     SwallowTaskData data,
     SwallowAnnotationStore& annotation_store,
     const std::optional<SwallowAnnotationStore>& suggested_annotation_store
 ) :
-    m_task(task), m_data(std::move(data)), m_annotation_store(annotation_store)
+    m_app(app), m_task(task), m_data(std::move(data)), m_annotation_store(annotation_store)
 {
     const auto& id = task.annotation_id();
     const auto *annotation = m_annotation_store.get_annotation(id);
@@ -565,28 +568,37 @@ bool ActiveSwallowLabellingTaskView::can_add_new_swallow_apnea_range() const
     return apnea_status_is_src_pattern(m_annotation.swallow_apnea_status) && !has_apnea_range();
 }
 
-std::optional<std::string_view> ActiveSwallowLabellingTaskView::swallow_apnea_label_error() const
+bool ActiveSwallowLabellingTaskView::swallow_apnea_label_error() const
 {
-    constexpr double MaximumSnrfTimeSeconds = 0.2;
-    static const std::string SnrfErrorString = fmt::format(
-        "SNRF label too long, must be shorted than {:g} seconds!", MaximumSnrfTimeSeconds
-    );
+    if (can_add_new_swallow_apnea_range()) {
+        return true;
+    }
+
+    const double max_snrf_time = m_app.config().max_snrf_time;
+    if (can_edit_swallow_apnea_range()) {
+        const auto& labels = m_annotation.non_resp_flow_labels.items();
+        return std::any_of(labels.begin(), labels.end(), [max_snrf_time](const auto& label) {
+            return label.item.end - label.item.start > max_snrf_time;
+        });
+    }
+
+    return false;
+}
+
+std::optional<std::string> ActiveSwallowLabellingTaskView::swallow_apnea_label_error_str() const
+{
+    if (!swallow_apnea_label_error()) {
+        return std::nullopt;
+    }
 
     if (can_add_new_swallow_apnea_range()) {
         return "Missing swallow apnea label";
     }
 
-    if (can_edit_swallow_apnea_range()) {
-        const auto& labels = m_annotation.non_resp_flow_labels.items();
-        if (std::any_of(labels.begin(), labels.end(), [](const auto& label) {
-                return label.item.end - label.item.start >= MaximumSnrfTimeSeconds;
-            }))
-        {
-            return SnrfErrorString;
-        }
-    }
-
-    return std::nullopt;
+    return fmt::format(
+        "SNRF label too long, cannot be greater than than {:g} seconds!",
+        m_app.config().max_snrf_time
+    );
 }
 
 bool ActiveSwallowLabellingTaskView::can_add_new_ear_click_range() const
@@ -796,7 +808,7 @@ bool ActiveSwallowLabellingTaskView::valid_earclick_annotation() const
 
 bool ActiveSwallowLabellingTaskView::can_save_annotation() const
 {
-    return !swallow_apnea_label_error().has_value() && valid_earclick_annotation();
+    return !swallow_apnea_label_error() && valid_earclick_annotation();
 }
 
 bool ActiveSwallowLabellingTaskView::save_annotation()
