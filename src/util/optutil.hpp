@@ -35,7 +35,7 @@ inline R map_or(const T *ptr, Map map_func, const R& default_value)
     return ptr == nullptr ? default_value : map_func(*ptr);
 }
 
-template <class T, class F> auto transform(const std::optional<T>& opt, F&& func)
+template <class T, class F> inline auto transform(const std::optional<T>& opt, F&& func)
 {
     return opt.has_value() ? std::make_optional(func(*opt)) : std::nullopt;
 }

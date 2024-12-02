@@ -4,6 +4,7 @@
 #include "models/task-info.hpp"
 #include "options.h"
 #include "platform/platform.hpp"
+#include "util/optutil.hpp"
 #include "util/os.hpp"
 
 #include <argparse/argparse.hpp>
@@ -65,22 +66,19 @@ std::string check_is_dir(const std::string& path_str)
     return path_str;
 }
 
-std::string check_is_file(const std::string& path_str)
+void validate_regular_file_path(const std::filesystem::path& path)
 {
-    std::filesystem::path path(path_str);
     if (!std::filesystem::exists(path)) {
-        throw_invalid_path(path_str, "does not exist");
+        throw_invalid_path(path.string(), "does not exist");
     }
 
     // We won't check for all path types, just check for common ones to give better error messages
     if (std::filesystem::is_directory(path)) {
-        throw_invalid_path(path_str, "is a directory");
+        throw_invalid_path(path.string(), "is a directory");
     }
     if (!std::filesystem::is_regular_file(path)) {
-        throw_invalid_path(path_str, "not a regular file");
+        throw_invalid_path(path.string(), "not a regular file");
     }
-
-    return path_str;
 }
 
 std::string check_path_writable(const std::string& path_str)
@@ -157,12 +155,17 @@ struct ProgramOptions {
             "file to log to";
 #endif
 
+        auto regular_file_action = [](const std::string& val) -> std::string {
+            validate_regular_file_path(std::filesystem::path(val));
+            return val;
+        };
+
         argparse::ArgumentParser parser(program_name, program_version);
         parser.add_argument("--log").help(LogCliHelp).action(check_path_writable);
         parser.add_argument("--config", "-c").help("path to config file");
         parser.add_argument("--tasks", "-t")
             .help("path to labelling tasks JSON")
-            .action(check_is_file);
+            .action(regular_file_action);
         parser.add_argument("--data-dir", "-d")
             .help("directory containing data files")
             .action(check_is_dir);
@@ -182,7 +185,7 @@ struct ProgramOptions {
                   "passed, then all paths must be explicitly provided.");
         parser.add_argument("--suggestions", "-s")
             .help("path to annotations file to use as suggestions")
-            .action(check_is_file);
+            .action(regular_file_action);
 
         auto print_usage_error = [&](const std::exception& exc) {
             std::cerr << "Error: " << exc.what() << '\n';
@@ -218,6 +221,24 @@ struct ProgramOptions {
             return *app_data_dir / std::filesystem::path(default_filename);
         };
 
+        auto optional_data_path = [&](const char *argname, const char *default_filename
+                                  ) -> std::optional<std::filesystem::path> {
+            // If option passed explicitly, check it exists, else get from data dir only if exists
+            auto value = optutil::transform(parser.present(argname), [](const auto& v) {
+                return std::filesystem::path(v);
+            });
+            if (value.has_value()) {
+                validate_regular_file_path(*value);
+            } else if (app_data_dir) {
+                auto default_path = *app_data_dir / default_filename;
+                if (std::filesystem::is_regular_file(default_path)) {
+                    value = default_path;
+                }
+            }
+
+            return value;
+        };
+
 #ifdef RECAP_LABELLER_LOG_TO_APP_DATA_DIR
         auto log_file = data_path("--log", "logs.txt").string();
 #else
@@ -225,17 +246,6 @@ struct ProgramOptions {
 #endif // RECAP_LABELLER_LOG_TO_APP_DATA_DIR
 
         try {
-            // If --config passed explicitly, check it exists, else get from data dir only if exists
-            auto config_file = parser.present("--config");
-            if (config_file.has_value()) {
-                check_is_file(*config_file);
-            } else if (app_data_dir) {
-                auto default_path = *app_data_dir / "config.json";
-                if (std::filesystem::is_regular_file(default_path)) {
-                    config_file = default_path;
-                }
-            }
-
             return ProgramOptions{
                 .log_file = log_file,
                 .data_dir = data_path("--data-dir", "swallow-data"),
@@ -243,7 +253,7 @@ struct ProgramOptions {
                 .annotations_file = data_path("--annotations", "annotations.json").make_preferred(),
                 .shuffled = !parser.is_used("--not-shuffled"),
                 .suggested_annotations_file = parser.present<std::string>("--suggestions"),
-                .config_file = config_file,
+                .config_file = optional_data_path("--config", "config.json"),
             };
         } catch (const std::invalid_argument& error) {
             print_usage_error(error);
