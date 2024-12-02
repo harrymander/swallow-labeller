@@ -8,7 +8,7 @@
 namespace recap::labeller::app {
 
 struct AppConfig {
-    double max_snrf_time = 0.200;
+    double max_snrf_time = 0.249;
 };
 
 inline void log_config(const AppConfig& c, spdlog::level::level_enum level)
