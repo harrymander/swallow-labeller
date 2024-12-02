@@ -135,17 +135,6 @@ const models::SwallowAnnotation *SwallowAnnotationStore::get_annotation(const st
     return m_annotations->contains(id);
 }
 
-bool SwallowAnnotationStore::annotation_saved(
-    const std::string& id, const models::SwallowAnnotation& annotation
-) const
-{
-    const models::SwallowAnnotation *existing = get_annotation(id);
-    if (existing) {
-        return *existing == annotation;
-    }
-    return false;
-}
-
 void SwallowAnnotationStore::add_annotation(
     const std::string& id, models::SwallowAnnotation annotation
 )

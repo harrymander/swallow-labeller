@@ -34,13 +34,6 @@ public:
     [[nodiscard]] bool has_annotation(const std::string& id) const;
 
     /**
-     * Returns true if there is an existing annotation with the same id and it is identical to
-     * annotation, otherwise false.
-     */
-    [[nodiscard]] bool
-    annotation_saved(const std::string& id, const models::SwallowAnnotation& annotation) const;
-
-    /**
      * The following two functions can write to file. If there is an error in writing, will notify
      * any subscribers with error message.
      */

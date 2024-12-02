@@ -167,7 +167,10 @@ private:
     [[nodiscard]] bool valid_earclick_annotation() const;
 
     ActiveSwallowLabellingTaskView(
-        SwallowLabellingTask& task, SwallowTaskData data, SwallowAnnotationStore& annotation_store
+        SwallowLabellingTask& task,
+        SwallowTaskData data,
+        SwallowAnnotationStore& annotation_store,
+        const std::optional<SwallowAnnotationStore>& suggested_annotation_store
     );
 
     SwallowLabellingTask& m_task;
@@ -192,6 +195,7 @@ private:
     };
 
     Annotation m_annotation;
+    std::optional<Annotation> m_suggested_annotation = std::nullopt;
 };
 
 class App {
@@ -199,7 +203,8 @@ public:
     App(const std::vector<models::SwallowTaskInfo>& swallow_tasks,
         SwallowAnnotationStore annotation_store,
         const std::filesystem::path& data_dir,
-        bool shuffle_tasks);
+        bool shuffle_tasks,
+        std::optional<SwallowAnnotationStore> suggested_store);
 
     ~App();
 
@@ -291,6 +296,7 @@ private:
 
     SwallowLabellingTaskList m_swallow_task_list;
     SwallowAnnotationStore m_annotation_store;
+    std::optional<SwallowAnnotationStore> m_suggested_annotation_store;
     std::unique_ptr<ActiveTaskVariant> m_active_task;
     NewActiveTaskObservable m_new_active_task_observable;
     SwallowAnnotationStore::ErrorObservable::Observer m_annotation_store_error_observer;

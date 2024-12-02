@@ -76,7 +76,8 @@ App::App(
     const std::vector<models::SwallowTaskInfo>& swallow_tasks,
     SwallowAnnotationStore annotation_store,
     const fs::path& data_dir,
-    bool shuffle_tasks
+    bool shuffle_tasks,
+    std::optional<SwallowAnnotationStore> suggested_store
 ) :
     m_swallow_task_list(
         labelling_tasks(swallow_tasks, data_dir),
@@ -84,6 +85,7 @@ App::App(
         [](const auto& a, const auto& b) { return a.info() < b.info(); }
     ),
     m_annotation_store(std::move(annotation_store)),
+    m_suggested_annotation_store(std::move(suggested_store)),
     m_annotation_store_error_observer(
         m_annotation_store.subscribe_sync_error([this](const std::string& err) {
             m_critical_error = fmt::format("Error syncing to annotation file: {}", err);
@@ -350,7 +352,7 @@ void App::load_active_task()
             spdlog::debug("Loaded data from {}", task.data_path());
             task.clear_error_msg();
             m_active_task = make_unique_active_task<ActiveSwallowLabellingTaskView>(
-                task, data, m_annotation_store
+                task, data, m_annotation_store, m_suggested_annotation_store
             );
         } catch (const std::exception& e) {
             spdlog::error("Error loading data file from {}: {}", task.data_path(), e.what());
@@ -363,13 +365,25 @@ void App::load_active_task()
 }
 
 ActiveSwallowLabellingTaskView::ActiveSwallowLabellingTaskView(
-    SwallowLabellingTask& task, SwallowTaskData data, SwallowAnnotationStore& annotation_store
+    SwallowLabellingTask& task,
+    SwallowTaskData data,
+    SwallowAnnotationStore& annotation_store,
+    const std::optional<SwallowAnnotationStore>& suggested_annotation_store
 ) :
     m_task(task), m_data(std::move(data)), m_annotation_store(annotation_store)
 {
-    const auto *annotation = m_annotation_store.get_annotation(task.annotation_id());
+    const auto& id = task.annotation_id();
+    const auto *annotation = m_annotation_store.get_annotation(id);
     if (annotation) {
+        spdlog::info("Existing annotation for task ID={}", id);
         m_annotation = Annotation(*annotation);
+    } else if (suggested_annotation_store.has_value()) {
+        const auto *suggested_annotation = suggested_annotation_store->get_annotation(id);
+        if (suggested_annotation) {
+            spdlog::info("Suggested annotation for task ID={}", id);
+            m_annotation = Annotation(*suggested_annotation);
+            m_suggested_annotation = m_annotation;
+        }
     }
 }
 
@@ -811,11 +825,19 @@ void ActiveSwallowLabellingTaskView::delete_annotation()
 
 bool ActiveSwallowLabellingTaskView::annotation_unsaved() const
 {
-    // TODO: need a better way to check if annotation is unsaved...
     if (can_save_annotation()) {
-        return !m_annotation_store.annotation_saved(
-            m_task.annotation_id(), m_annotation.to_model()
-        );
+        const auto *saved_annotation = m_annotation_store.get_annotation(m_task.annotation_id());
+        auto annotation_model = m_annotation.to_model();
+        if (saved_annotation) {
+            return *saved_annotation != annotation_model;
+        }
+
+        if (m_suggested_annotation) {
+            return m_suggested_annotation->to_model() != annotation_model;
+        }
+
+        // No saved or suggested annotation, but we can save, so consider the annotation unsaved
+        return true;
     }
     return false;
 }

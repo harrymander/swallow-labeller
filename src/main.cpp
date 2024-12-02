@@ -4,7 +4,6 @@
 #include "models/task-info.hpp"
 #include "options.h"
 #include "platform/platform.hpp"
-#include "util/optutil.hpp"
 #include "util/os.hpp"
 
 #include <argparse/argparse.hpp>
@@ -49,7 +48,7 @@ void setup_file_logging(const std::filesystem::path& path)
 
 [[noreturn]] void throw_invalid_path(const std::string& path, const std::string& reason)
 {
-    throw std::invalid_argument("Invalid path '" + path + "': " + reason);
+    throw std::invalid_argument(fmt::format("Invalid path '{}': {}", path, reason));
 }
 
 std::string check_is_dir(const std::string& path_str)
@@ -166,14 +165,9 @@ struct ProgramOptions {
             .help("directory containing data files")
             .action(check_is_dir);
         parser.add_argument("--annotations", "-a")
-            .help("path to write annotations to; if exists and --existing-annotations\n"
-                  "not passed, reads existing annotations from this file")
+            .help("path to write annotations to; if exists, "
+                  "reads existing annotations from this file")
             .action(check_path_writable);
-        parser.add_argument("--existing-annotations", "-e")
-            .help("reads existing annotations from this file rather than file passed to\n"
-                  "--annotations; WARNING: this will cause any existing annotations in\n"
-                  "file passed to --annotations to be overwritten!")
-            .action(check_is_file);
         parser.add_argument("--not-shuffled")
             .implicit_value(true)
             .default_value(false)
@@ -184,6 +178,9 @@ struct ProgramOptions {
             .help("by default, if any of --data-dir, --tasks, --annotations are not provided,\n"
                   "they will be set relative to the user app data dir. If this is passed, then\n"
                   "all paths must be explicitly provided.");
+        parser.add_argument("--suggestions", "-s")
+            .help("path to annotations file to use as suggestions")
+            .action(check_is_file);
 
         auto print_usage_error = [&](const std::exception& exc) {
             std::cerr << "Error: " << exc.what() << '\n';
@@ -231,11 +228,8 @@ struct ProgramOptions {
                 .data_dir = data_path("--data-dir", "swallow-data"),
                 .tasks_file = data_path("--tasks", "tasks.json"),
                 .annotations_file = data_path("--annotations", "annotations.json").make_preferred(),
-                .existing_annotations = optutil::transform(
-                    parser.present("--existing-annotations"),
-                    [](const std::string& path) { return std::filesystem::path(path); }
-                ),
                 .shuffled = !parser.is_used("--not-shuffled"),
+                .suggested_annotations_file = parser.present<std::string>("--suggestions")
             };
         } catch (const std::runtime_error& error) {
             print_usage_error(error);
@@ -247,8 +241,8 @@ struct ProgramOptions {
     std::filesystem::path data_dir;
     std::filesystem::path tasks_file;
     std::filesystem::path annotations_file;
-    std::optional<std::filesystem::path> existing_annotations;
     bool shuffled;
+    std::optional<std::filesystem::path> suggested_annotations_file;
 };
 
 // TODO: this whole structure is a mess, need to encapsulate task management in a class...
@@ -296,22 +290,14 @@ load_labelling_tasks(const std::filesystem::path& tasks_path)
     return std::nullopt;
 }
 
-std::optional<SwallowAnnotationStore> make_annotations_store(
-    const std::filesystem::path& annotations_path,
-    const std::optional<std::filesystem::path>& existing_path
-)
+std::optional<SwallowAnnotationStore> make_annotations_store(const std::filesystem::path& path)
 {
     std::unique_ptr<std::istream> stream;
-    if (existing_path.has_value()) {
-        spdlog::info(
-            "Loading existing annotations from {} rather than {}", *existing_path, annotations_path
-        );
-        stream = std::make_unique<std::ifstream>(*existing_path);
-    } else if (std::filesystem::exists(annotations_path)) {
-        spdlog::info("Reading existing annotations from {}", annotations_path);
-        stream = std::make_unique<std::ifstream>(annotations_path);
+    if (std::filesystem::exists(path)) {
+        spdlog::info("Reading existing annotations from {}", path);
+        stream = std::make_unique<std::ifstream>(path);
     } else {
-        spdlog::info("No existing annotations, creating annotations file at {}", annotations_path);
+        spdlog::info("No existing annotations, creating annotations file at {}", path);
     }
 
     if (stream && stream->fail()) {
@@ -320,10 +306,28 @@ std::optional<SwallowAnnotationStore> make_annotations_store(
     }
 
     try {
-        return SwallowAnnotationStore(annotations_path, stream.get());
+        return SwallowAnnotationStore(path, stream.get());
     } catch (const std::runtime_error& e) {
         spdlog::critical("Error parsing annotations file: {}", e.what());
     }
+    return std::nullopt;
+}
+
+std::optional<SwallowAnnotationStore>
+make_suggested_annotations_store(const std::filesystem::path& path)
+{
+    std::ifstream stream(path);
+    if (stream.fail()) {
+        spdlog::critical("Error opening suggested annotations file");
+        return std::nullopt;
+    }
+
+    try {
+        return SwallowAnnotationStore(path, &stream);
+    } catch (const std::runtime_error& e) {
+        spdlog::critical("Error parsing suggested annotations file: {}", e.what());
+    }
+
     return std::nullopt;
 }
 
@@ -343,8 +347,7 @@ int run_main(int argc, const char *argv[])
     if (!labelling_tasks.has_value()) {
         return 1;
     }
-    auto annotations_store =
-        make_annotations_store(options.annotations_file, options.existing_annotations);
+    auto annotations_store = make_annotations_store(options.annotations_file);
     if (!annotations_store.has_value()) {
         return 1;
     }
@@ -356,8 +359,20 @@ int run_main(int argc, const char *argv[])
         return 1;
     }
 
+    std::optional<SwallowAnnotationStore> suggested_store;
+    if (options.suggested_annotations_file) {
+        suggested_store = make_suggested_annotations_store(*options.suggested_annotations_file);
+        if (!suggested_store.has_value()) {
+            return 1;
+        }
+    }
+
     app::App app(
-        *labelling_tasks, std::move(*annotations_store), options.data_dir, options.shuffled
+        *labelling_tasks,
+        std::move(*annotations_store),
+        options.data_dir,
+        options.shuffled,
+        std::move(suggested_store)
     );
     return platform::run(app);
 }
