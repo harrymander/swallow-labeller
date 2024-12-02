@@ -41,6 +41,7 @@
 #define ERR_ICON ICON_FA_TRIANGLE_EXCLAMATION
 #define DEBUG_INFO_ICON ICON_FA_GEAR
 #define ANNOTATED_TASK_ICON ICON_FA_SQUARE_CHECK
+#define SUGGESTED_ANNOTATION_TASK_ICON ICON_FA_STAR_OF_LIFE
 #define HINT_ICON ICON_FA_LIGHTBULB
 #define DELETE_ICON ICON_FA_TRASH_CAN
 #define EXIT_ICON ICON_FA_XMARK
@@ -1038,30 +1039,28 @@ private:
         return false;
     }
 
-    static const char *swallow_task_icon(const app::SwallowLabellingTask& task, bool is_annotated)
+    static std::string swallow_task_info_str(
+        const app::SwallowLabellingTask& task, bool is_annotated, bool has_suggested_annotation
+    )
     {
+        const char *task_icon = "";
         if (task.error_msg().has_value()) {
-            return FILE_ERR_ICON ICON_TEXT_SPACE;
+            task_icon = FILE_ERR_ICON ICON_TEXT_SPACE;
+        } else if (is_annotated) {
+            task_icon = ANNOTATED_TASK_ICON ICON_TEXT_SPACE;
         }
 
-        if (is_annotated) {
-            return ANNOTATED_TASK_ICON ICON_TEXT_SPACE;
-        }
-
-        return "";
-    }
-
-    static std::string
-    swallow_task_info_str(const app::SwallowLabellingTask& task, bool is_annotated)
-    {
         const models::SwallowTaskInfo& info = task.info();
         return fmt::format(
-            "{}Subject #{}, {}\nRepeat #{}, swallow #{}",
-            swallow_task_icon(task, is_annotated),
+            "{}Subject #{}, {}\nRepeat #{}, swallow #{}{}",
+            task_icon,
             info.subject,
             swallow_test_type_string(info.test_type),
             info.repeatnum,
-            info.swallownum
+            info.swallownum,
+            !*task_icon && has_suggested_annotation ?
+                ICON_TEXT_SPACE SUGGESTED_ANNOTATION_TASK_ICON :
+                ""
         );
     }
 
@@ -1096,7 +1095,7 @@ private:
 
         const ImVec2 num_annotated_pos = ImGui::GetCursorPos();
         ImGui::SetCursorPos(
-            {num_annotated_pos.x, num_annotated_pos.y + ImGui::GetTextLineHeightWithSpacing()}
+            {num_annotated_pos.x, num_annotated_pos.y + ImGui::GetTextLineHeightWithSpacing() * 2}
         );
 
         bool scroll_to_selected_task = draw_list_visibility_control();
@@ -1134,6 +1133,7 @@ private:
         }
         m_task_list_last_active_index = active_index;
         std::size_t num_annotated = 0;
+        std::size_t num_suggested_annotations = 0;
 
         std::size_t new_active_index = active_index;
         if (ImGui::BeginListBox("##task_info_list", {-1, -1})) {
@@ -1144,8 +1144,11 @@ private:
             std::size_t i = 0;
             for (const auto& task : tasks.items()) {
                 const bool has_annotation = m_app.task_has_annotation(task);
+                const bool has_suggested_annotation = m_app.task_has_suggested_annotation(task);
                 if (has_annotation) {
                     num_annotated += 1;
+                } else if (has_suggested_annotation) {
+                    num_suggested_annotations += 1;
                 }
 
                 const bool show_task = (m_annotation_list_visibility == AnnotationsVisibility::All)
@@ -1154,7 +1157,8 @@ private:
                     || (m_annotation_list_visibility == AnnotationsVisibility::AnnotatedOnly
                         && has_annotation);
                 if (show_task) {
-                    const std::string str = swallow_task_info_str(task, has_annotation);
+                    const std::string str =
+                        swallow_task_info_str(task, has_annotation, has_suggested_annotation);
                     if (m_task_list_text_filter.PassFilter(str.c_str())) {
                         const bool selected = active_index == i;
                         if (ImGui::Selectable(str.c_str(), selected)) {
@@ -1186,6 +1190,12 @@ private:
             num_annotated,
             num_annotated == 1 ? "" : "s",
             tasks.size()
+        );
+        ImGui::Text(
+            SUGGESTED_ANNOTATION_TASK_ICON ICON_TEXT_SPACE "%zu task%s out of %zu with suggestions",
+            num_suggested_annotations,
+            num_suggested_annotations == 1 ? "" : "s",
+            tasks.size() - num_annotated
         );
 
         if (active_index != new_active_index) {

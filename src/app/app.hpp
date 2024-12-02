@@ -273,6 +273,14 @@ public:
         return m_annotation_store.has_annotation(task.info().get_id());
     }
 
+    [[nodiscard]] bool task_has_suggested_annotation(const SwallowLabellingTask& task) const
+    {
+        if (m_suggested_annotation_store.has_value()) {
+            return m_suggested_annotation_store->has_annotation(task.info().get_id());
+        }
+        return false;
+    }
+
     [[nodiscard]] const std::optional<std::string>& critical_error() const
     {
         return m_critical_error;
