@@ -13,8 +13,9 @@ set(DEMO_DATA_DIR ${DEMO_DIR}/data)
 set(DEMO_ANNOTATIONS_JSON ${DEMO_DIR}/demo-annotations.json)
 set(DEMO_LOG_FILE ${DEMO_DIR}/log.txt)
 
+set(DEMO_OUTPUTS ${DEMO_TASKS_JSON} ${DEMO_SUGGESTIONS_JSON})
 add_custom_command(
-    OUTPUT ${DEMO_TASKS_JSON}
+    OUTPUT ${DEMO_OUTPUTS}
     DEPENDS ${DEMO_GEN_PY}
     COMMAND ${CMAKE_COMMAND} -E rm -rf ${DEMO_DATA_DIR}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${DEMO_DIR} ${DEMO_DATA_DIR}
@@ -26,7 +27,7 @@ add_custom_command(
     COMMENT "Generating demo tasks"
 )
 
-add_custom_target(demo-files DEPENDS ${DEMO_TASKS_JSON})
+add_custom_target(demo-files DEPENDS ${DEMO_OUTPUTS})
 add_custom_target(
     run-demo
     DEPENDS recap-labeller demo-files
