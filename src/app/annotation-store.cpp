@@ -131,20 +131,6 @@ SwallowAnnotationStore::SwallowAnnotationStore(SwallowAnnotationStore&&) noexcep
 SwallowAnnotationStore&
 SwallowAnnotationStore::operator=(SwallowAnnotationStore&&) noexcept = default;
 
-const models::SwallowAnnotation *SwallowAnnotationStore::get_annotation(const std::string& id) const
-{
-    const auto it = m_annotations.find(id);
-    if (it == m_annotations.end()) {
-        return nullptr;
-    }
-    return &it->second.result();
-}
-
-[[nodiscard]] bool SwallowAnnotationStore::has_annotation(const std::string& id) const
-{
-    return m_annotations.contains(id);
-}
-
 void SwallowAnnotationStore::add_annotation(
     const std::string& id, models::SwallowAnnotation annotation
 )

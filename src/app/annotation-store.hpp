@@ -62,10 +62,19 @@ public:
      * Retrieves annotation with annotation_id and returns pointer to it, or nullptr if no
      * annotation with that ID
      */
-    [[nodiscard]] const models::SwallowAnnotation *get_annotation(const std::string& annotation_id
-    ) const;
+    [[nodiscard]] const models::SwallowAnnotation *get_annotation(const std::string& id) const
+    {
+        const auto it = m_annotations.find(id);
+        if (it == m_annotations.end()) {
+            return nullptr;
+        }
+        return &it->second.result();
+    }
 
-    [[nodiscard]] bool has_annotation(const std::string& id) const;
+    [[nodiscard]] bool has_annotation(const std::string& id) const
+    {
+        return m_annotations.contains(id);
+    }
 
     /**
      * The following two functions can write to file. If there is an error in writing, will notify
