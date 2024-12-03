@@ -673,7 +673,11 @@ private:
                 );
             }
         } else if (!m_annotator.editing_apnea && task_view.can_add_new_non_resp_flow_label()) {
-            add_plot_text("Labelling non-respiratory flow", 1);
+            const auto text = fmt::format(
+                "Labelling non-respiratory flow (maximum time = {:g} s)",
+                m_app.config().max_snrf_time
+            );
+            add_plot_text(text.c_str(), 1);
         }
 
         if (task_view.can_add_new_swallow_apnea_range()) {
