@@ -76,7 +76,6 @@ public:
 
 private:
     std::filesystem::path m_path;
-    std::string path_str;
     ErrorObservable m_error_observable;
     std::unique_ptr<SwallowAnnotationStoreMap> m_annotations;
 
