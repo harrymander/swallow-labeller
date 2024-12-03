@@ -175,7 +175,7 @@ private:
         SwallowLabellingTask& task,
         SwallowTaskData data,
         SwallowAnnotationStore& annotation_store,
-        const std::optional<SwallowAnnotationStore>& suggested_annotation_store
+        const SwallowAnnotationResultMap& suggested_annotations
     );
 
     const App& m_app;
@@ -211,7 +211,7 @@ public:
         SwallowAnnotationStore annotation_store,
         const std::filesystem::path& data_dir,
         bool shuffle_tasks,
-        std::optional<SwallowAnnotationStore> suggested_store);
+        std::optional<SwallowAnnotationResultMap> suggested_annotations);
 
     ~App();
 
@@ -284,10 +284,7 @@ public:
 
     [[nodiscard]] bool task_has_suggested_annotation(const SwallowLabellingTask& task) const
     {
-        if (m_suggested_annotation_store.has_value()) {
-            return m_suggested_annotation_store->has_annotation(task.info().get_id());
-        }
-        return false;
+        return m_suggested_annotations.contains(task.info().get_id());
     }
 
     [[nodiscard]] const std::optional<std::string>& critical_error() const
@@ -314,7 +311,7 @@ private:
     AppConfig m_config;
     SwallowLabellingTaskList m_swallow_task_list;
     SwallowAnnotationStore m_annotation_store;
-    std::optional<SwallowAnnotationStore> m_suggested_annotation_store;
+    SwallowAnnotationResultMap m_suggested_annotations;
     std::unique_ptr<ActiveTaskVariant> m_active_task;
     NewActiveTaskObservable m_new_active_task_observable;
     SwallowAnnotationStore::ErrorObservable::Observer m_annotation_store_error_observer;

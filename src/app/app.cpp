@@ -78,7 +78,7 @@ App::App(
     SwallowAnnotationStore annotation_store,
     const fs::path& data_dir,
     bool shuffle_tasks,
-    std::optional<SwallowAnnotationStore> suggested_store
+    std::optional<SwallowAnnotationResultMap> suggested_annotations
 ) :
     m_config(config),
     m_swallow_task_list(
@@ -87,7 +87,9 @@ App::App(
         [](const auto& a, const auto& b) { return a.info() < b.info(); }
     ),
     m_annotation_store(std::move(annotation_store)),
-    m_suggested_annotation_store(std::move(suggested_store)),
+    m_suggested_annotations(
+        suggested_annotations ? std::move(*suggested_annotations) : SwallowAnnotationResultMap{}
+    ),
     m_annotation_store_error_observer(
         m_annotation_store.subscribe_sync_error([this](const std::string& err) {
             m_critical_error = fmt::format("Error syncing to annotation file: {}", err);
@@ -354,7 +356,7 @@ void App::load_active_task()
             spdlog::debug("Loaded data from {}", task.data_path());
             task.clear_error_msg();
             m_active_task = make_unique_active_task<ActiveSwallowLabellingTaskView>(
-                *this, task, data, m_annotation_store, m_suggested_annotation_store
+                *this, task, data, m_annotation_store, m_suggested_annotations
             );
         } catch (const std::exception& e) {
             spdlog::error("Error loading data file from {}: {}", task.data_path(), e.what());
@@ -371,7 +373,7 @@ ActiveSwallowLabellingTaskView::ActiveSwallowLabellingTaskView(
     SwallowLabellingTask& task,
     SwallowTaskData data,
     SwallowAnnotationStore& annotation_store,
-    const std::optional<SwallowAnnotationStore>& suggested_annotation_store
+    const SwallowAnnotationResultMap& suggested_annotations
 ) :
     m_app(app), m_task(task), m_data(std::move(data)), m_annotation_store(annotation_store)
 {
@@ -380,11 +382,11 @@ ActiveSwallowLabellingTaskView::ActiveSwallowLabellingTaskView(
     if (annotation) {
         spdlog::info("Existing annotation for task ID={}", id);
         m_annotation = Annotation(*annotation);
-    } else if (suggested_annotation_store.has_value()) {
-        const auto *suggested_annotation = suggested_annotation_store->get_annotation(id);
-        if (suggested_annotation) {
+    } else {
+        const auto it = suggested_annotations.find(id);
+        if (it != suggested_annotations.end()) {
             spdlog::info("Suggested annotation for task ID={}", id);
-            m_annotation = Annotation(*suggested_annotation);
+            m_annotation = Annotation(it->second.result());
             m_suggested_annotation = m_annotation;
         }
     }

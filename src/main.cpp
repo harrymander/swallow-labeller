@@ -338,8 +338,8 @@ std::optional<SwallowAnnotationStore> make_annotations_store(const std::filesyst
     return std::nullopt;
 }
 
-std::optional<SwallowAnnotationStore>
-make_suggested_annotations_store(const std::filesystem::path& path)
+std::optional<SwallowAnnotationResultMap>
+load_suggested_annotations(const std::filesystem::path& path)
 {
     std::ifstream stream(path);
     if (stream.fail()) {
@@ -348,7 +348,7 @@ make_suggested_annotations_store(const std::filesystem::path& path)
     }
 
     try {
-        return SwallowAnnotationStore(path, &stream);
+        return load_swallow_annotation_result_map_json(stream);
     } catch (const std::runtime_error& e) {
         spdlog::critical("Error parsing suggested annotations file: {}", e.what());
     }
@@ -400,10 +400,10 @@ int run_main(int argc, const char *argv[])
         return 1;
     }
 
-    std::optional<SwallowAnnotationStore> suggested_store;
+    std::optional<SwallowAnnotationResultMap> suggested_annotations;
     if (options.suggested_annotations_file) {
-        suggested_store = make_suggested_annotations_store(*options.suggested_annotations_file);
-        if (!suggested_store.has_value()) {
+        suggested_annotations = load_suggested_annotations(*options.suggested_annotations_file);
+        if (!suggested_annotations.has_value()) {
             return 1;
         }
     }
@@ -414,7 +414,7 @@ int run_main(int argc, const char *argv[])
         std::move(*annotations_store),
         options.data_dir,
         options.shuffled,
-        std::move(suggested_store)
+        std::move(suggested_annotations)
     );
     return platform::run(app);
 }
