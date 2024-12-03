@@ -4,11 +4,45 @@
 #include "models/annotation.hpp"
 #include "util/observable.hpp"
 
+#include <nlohmann/json_fwd.hpp>
+
+#include <chrono>
 #include <filesystem>
+#include <istream>
+#include <map>
 
 namespace recap::labeller {
 
-class SwallowAnnotationStoreMap;
+using UtcTimePoint = std::chrono::time_point<std::chrono::system_clock>;
+
+class SwallowAnnotationResult {
+public:
+    SwallowAnnotationResult() = default;
+    explicit SwallowAnnotationResult(models::SwallowAnnotation result);
+
+    [[nodiscard]] const models::SwallowAnnotation& result() const { return m_result; }
+
+    [[nodiscard]] UtcTimePoint created_time() const { return m_created_time; }
+
+    [[nodiscard]] const std::optional<UtcTimePoint>& last_modified_time() const
+    {
+        return m_last_modified_time;
+    }
+
+    void update_result(models::SwallowAnnotation result);
+
+private:
+    friend void from_json(const nlohmann::json&, SwallowAnnotationResult&);
+
+    models::SwallowAnnotation m_result;
+    UtcTimePoint m_created_time;
+    std::optional<UtcTimePoint> m_last_modified_time = std::nullopt;
+};
+
+using SwallowAnnotationResultMap = std::map<std::string, SwallowAnnotationResult>;
+
+// Throws std::runtime_error on parse error
+SwallowAnnotationResultMap load_swallow_annotation_result_map_json(std::istream& stream);
 
 class SwallowAnnotationStore {
 public:
@@ -77,7 +111,7 @@ public:
 private:
     std::filesystem::path m_path;
     ErrorObservable m_error_observable;
-    std::unique_ptr<SwallowAnnotationStoreMap> m_annotations;
+    SwallowAnnotationResultMap m_annotations;
 
     void sync_to_file_notify() const;
 };

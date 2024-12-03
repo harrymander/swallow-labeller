@@ -1,2 +1,2 @@
-unknownMacro:src/app/annotation-store.cpp:26
+unknownMacro:src/app/annotation-store.cpp:23
 unknownMacro:src/models/annotation-json.cpp:13
