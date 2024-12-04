@@ -202,7 +202,7 @@ def gen_random_annotation(task: SwallowTask) -> Annotation:
             time=random_time_range(0.3, 0.8),
         ),
     )
-    now = datetime.datetime.now(datetime.UTC)
+    now = datetime.datetime.now(datetime.timezone.utc)
     last_modified = None
     if random.randint(0, 3):
         delta = datetime.timedelta(
