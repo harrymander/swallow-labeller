@@ -400,6 +400,7 @@ int run_main(int argc, const char *argv[])
         if (!suggested_annotations.has_value()) {
             return 1;
         }
+        spdlog::info("Loaded {} suggested annotation(s)", suggested_annotations->size());
     }
 
     app::App app(
