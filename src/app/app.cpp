@@ -77,13 +77,12 @@ App::App(
     const std::vector<models::SwallowTaskInfo>& swallow_tasks,
     SwallowAnnotationStore annotation_store,
     const fs::path& data_dir,
-    bool shuffle_tasks,
     std::optional<SwallowAnnotationResultMap> suggested_annotations
 ) :
     m_config(config),
     m_swallow_task_list(
         labelling_tasks(swallow_tasks, data_dir),
-        shuffle_tasks,
+        m_config.default_shuffle_tasks,
         [](const auto& a, const auto& b) { return a.info() < b.info(); }
     ),
     m_annotation_store(std::move(annotation_store)),

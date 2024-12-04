@@ -9,7 +9,7 @@
 
 namespace recap::labeller::app {
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(AppConfig, max_snrf_time);
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(AppConfig, max_snrf_time, default_shuffle_tasks);
 
 namespace {
 

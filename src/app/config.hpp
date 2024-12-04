@@ -9,11 +9,13 @@ namespace recap::labeller::app {
 
 struct AppConfig {
     double max_snrf_time = 0.249;
+    bool default_shuffle_tasks = true;
 };
 
 inline void log_config(const AppConfig& c, spdlog::level::level_enum level)
 {
     spdlog::log(level, "  max_snrf_time = {}", c.max_snrf_time);
+    spdlog::log(level, "  default_shuffle_tasks = {}", c.default_shuffle_tasks);
 }
 
 // Throws std::invalid_argument on error

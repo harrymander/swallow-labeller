@@ -173,10 +173,6 @@ struct ProgramOptions {
             .help("path to write annotations to; if exists, "
                   "reads existing annotations from this file")
             .action(check_path_writable);
-        parser.add_argument("--not-shuffled")
-            .implicit_value(true)
-            .default_value(false)
-            .help("do not shuffle labelling tasks by default");
         parser.add_argument("--no-app-data-dir")
             .implicit_value(true)
             .default_value(false)
@@ -251,7 +247,6 @@ struct ProgramOptions {
                 .data_dir = data_path("--data-dir", "swallow-data"),
                 .tasks_file = data_path("--tasks", "tasks.json"),
                 .annotations_file = data_path("--annotations", "annotations.json").make_preferred(),
-                .shuffled = !parser.is_used("--not-shuffled"),
                 .suggested_annotations_file = parser.present<std::string>("--suggestions"),
                 .config_file = optional_data_path("--config", "config.json"),
             };
@@ -265,7 +260,6 @@ struct ProgramOptions {
     std::filesystem::path data_dir;
     std::filesystem::path tasks_file;
     std::filesystem::path annotations_file;
-    bool shuffled;
     std::optional<std::filesystem::path> suggested_annotations_file;
     std::optional<std::filesystem::path> config_file;
 };
@@ -413,7 +407,6 @@ int run_main(int argc, const char *argv[])
         *labelling_tasks,
         std::move(*annotations_store),
         options.data_dir,
-        options.shuffled,
         std::move(suggested_annotations)
     );
     return platform::run(app);
