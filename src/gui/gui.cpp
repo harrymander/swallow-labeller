@@ -323,7 +323,7 @@ private:
 
 }; // namespace
 
-class Gui::Impl {
+class LabellerGui::Impl {
 private:
     static constexpr double FlowMinSelectionRange = 1.0 / 1000;
     static constexpr double AudioMinSelectionRange = FlowMinSelectionRange;
@@ -1732,28 +1732,28 @@ public:
     [[nodiscard]] bool ready_to_stop() const { return m_app.can_stop(); }
 };
 
-Gui::Gui(app::App& app) : m_pimpl(std::make_unique<Impl>(app)) {}
+LabellerGui::LabellerGui(app::App& app) : m_pimpl(std::make_unique<Impl>(app)) {}
 
-Gui::~Gui() = default;
+LabellerGui::~LabellerGui() = default;
 
-void Gui::draw()
+void LabellerGui::draw()
 {
     m_pimpl->draw();
 }
 
-void Gui::stop()
+void LabellerGui::stop()
 {
     m_pimpl->stop();
+}
+
+bool LabellerGui::ready_to_stop() const
+{
+    return m_pimpl->ready_to_stop();
 }
 
 void Gui::set_scaling_factor(float scaling_factor)
 {
     ImGui::GetStyle().ScaleAllSizes(scaling_factor);
-}
-
-bool Gui::ready_to_stop() const
-{
-    return m_pimpl->ready_to_stop();
 }
 
 }; // namespace recap::labeller::gui

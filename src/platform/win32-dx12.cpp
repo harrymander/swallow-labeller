@@ -7,7 +7,6 @@
 // default ImTextureID is defined as void*. This define is set in the example .vcxproj file and need
 // to be replicated in your app or by adding it to your imconfig.h file.
 
-#include "app/app.hpp"
 #include "gui/gui.hpp"
 #include "platform.hpp"
 
@@ -75,9 +74,8 @@ static recap::labeller::gui::Gui *g_gui;
     L"" VERSION_STR
 
 // Main code
-int recap::labeller::platform::run(recap::labeller::app::App& app)
+int recap::labeller::platform::run(recap::labeller::gui::Gui& gui)
 {
-    recap::labeller::gui::Gui gui(app);
     g_gui = &gui;
 
     // Create application window
