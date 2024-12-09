@@ -52,10 +52,11 @@ UtcTimePoint utc_time_now()
     return std::chrono::system_clock::now();
 }
 
-nlohmann::json::const_reference json_at(const nlohmann::json& json, const char *key)
+template <typename T> void json_get_to(const nlohmann::json& json, const char *key, T& val)
 {
+    const auto& item = json.at(key);
     try {
-        return json.at(key);
+        item.get_to(val);
     } catch (const nlohmann::json::type_error& error) {
         throw std::runtime_error(fmt::format("invalid type for key '{}': {}", key, error.what()));
     }
@@ -74,9 +75,9 @@ void to_json(nlohmann::json& json, const SwallowAnnotationResult& result)
 
 void from_json(const nlohmann::json& json, SwallowAnnotationResult& result)
 {
-    json_at(json, "result").get_to(result.m_result);
-    json_at(json, "created_time").get_to(result.m_created_time);
-    json_at(json, "last_modified_time").get_to(result.m_last_modified_time);
+    json_get_to(json, "result", result.m_result);
+    json_get_to(json, "created_time", result.m_created_time);
+    json_get_to(json, "last_modified_time", result.m_last_modified_time);
 }
 
 SwallowAnnotationResult::SwallowAnnotationResult(models::SwallowAnnotation result) :
