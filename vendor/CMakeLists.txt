@@ -99,7 +99,7 @@ endif()
 fetchcontent_declare(
     cnpy
     GIT_REPOSITORY https://github.com/harrymander/cnpy
-    GIT_TAG 545d8ef08bc424744e5cc2285f34a537ad8e3b1c
+    GIT_TAG 171dc9e20966e78f132d0b1b6f3c72c3f8dfa2fb
 )
 fetchcontent_makeavailable(cnpy)
 
