@@ -1,7 +1,7 @@
 name: Build
 on:
   push:
-    branches: [main]
+    branches: [main, gui-error]
 jobs:
   lint:
     runs-on: ubuntu-24.04
