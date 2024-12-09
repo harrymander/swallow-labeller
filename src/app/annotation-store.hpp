@@ -13,7 +13,8 @@
 
 namespace recap::labeller {
 
-using UtcTimePoint = std::chrono::time_point<std::chrono::system_clock>;
+using UtcClock = std::chrono::system_clock;
+using UtcTimePoint = UtcClock::time_point;
 
 class SwallowAnnotationResult {
 public:

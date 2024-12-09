@@ -47,11 +47,6 @@ namespace recap::labeller {
 
 namespace {
 
-UtcTimePoint utc_time_now()
-{
-    return std::chrono::system_clock::now();
-}
-
 template <typename T> void json_get_to(const nlohmann::json& json, const char *key, T& val)
 {
     const auto& item = json.at(key);
@@ -81,13 +76,13 @@ void from_json(const nlohmann::json& json, SwallowAnnotationResult& result)
 }
 
 SwallowAnnotationResult::SwallowAnnotationResult(models::SwallowAnnotation result) :
-    m_result(std::move(result)), m_created_time(utc_time_now()), m_last_modified_time(std::nullopt)
+    m_result(std::move(result)), m_created_time(UtcClock::now()), m_last_modified_time(std::nullopt)
 {}
 
 void SwallowAnnotationResult::update_result(models::SwallowAnnotation result)
 {
     m_result = std::move(result);
-    m_last_modified_time = utc_time_now();
+    m_last_modified_time = UtcClock::now();
 }
 
 SwallowAnnotationResultMap load_swallow_annotation_result_map_json(std::istream& stream)
