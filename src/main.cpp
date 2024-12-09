@@ -280,37 +280,31 @@ bool all_task_ids_unique(const std::vector<models::SwallowTaskInfo>& tasks)
     return true;
 }
 
-std::optional<std::vector<models::SwallowTaskInfo>>
-load_labelling_tasks(const std::filesystem::path& tasks_path)
+std::vector<models::SwallowTaskInfo> load_labelling_tasks(const std::filesystem::path& tasks_path)
 {
     std::ifstream stream(tasks_path);
     if (!stream) {
-        spdlog::critical("Could not open labelling tasks file {}", tasks_path);
-        return std::nullopt;
+        throw std::runtime_error(fmt::format("Could not open labelling tasks file {}", tasks_path));
     }
 
     try {
         auto tasks = models::load_swallow_task_info_json(stream);
         if (tasks.empty()) {
-            spdlog::critical("Labelling tasks list is empty!");
-            return std::nullopt;
+            throw std::runtime_error(fmt::format("Labelling tasks list is empty!"));
         }
         if (!all_task_ids_unique(tasks)) {
-            spdlog::critical("Got duplicate task IDs");
-            return std::nullopt;
+            throw std::runtime_error(fmt::format("Got duplicate task IDs"));
         }
         spdlog::debug("Loaded {} task info(s)", tasks.size());
         return tasks;
     } catch (const std::invalid_argument& e) {
-        spdlog::critical("Invalid labelling tasks file: {}", e.what());
+        throw std::runtime_error(fmt::format("Invalid labelling tasks file: {}", e.what()));
     } catch (const std::runtime_error& e) {
-        spdlog::critical("Error reading from file: {}", e.what());
+        throw std::runtime_error(fmt::format("Error reading from file: {}", e.what()));
     }
-
-    return std::nullopt;
 }
 
-std::optional<SwallowAnnotationStore> make_annotations_store(const std::filesystem::path& path)
+SwallowAnnotationStore make_annotations_store(const std::filesystem::path& path)
 {
     std::unique_ptr<std::istream> stream;
     if (std::filesystem::exists(path)) {
@@ -321,37 +315,33 @@ std::optional<SwallowAnnotationStore> make_annotations_store(const std::filesyst
     }
 
     if (stream && stream->fail()) {
-        spdlog::critical("Error opening annotations file");
-        return std::nullopt;
+        throw std::runtime_error(fmt::format("Error opening annotations file"));
     }
 
     try {
         return SwallowAnnotationStore(path, stream.get());
     } catch (const std::runtime_error& e) {
-        spdlog::critical("Error parsing annotations file: {}", e.what());
+        throw std::runtime_error(fmt::format("Error parsing annotations file: {}", e.what()));
     }
-    return std::nullopt;
 }
 
-std::optional<SwallowAnnotationResultMap>
-load_suggested_annotations(const std::filesystem::path& path)
+SwallowAnnotationResultMap load_suggested_annotations(const std::filesystem::path& path)
 {
     std::ifstream stream(path);
     if (stream.fail()) {
-        spdlog::critical("Error opening suggested annotations file");
-        return std::nullopt;
+        throw std::runtime_error(fmt::format("Error opening suggested annotations file"));
     }
 
     try {
         return load_swallow_annotation_result_map_json(stream);
     } catch (const std::runtime_error& e) {
-        spdlog::critical("Error parsing suggested annotations file: {}", e.what());
+        throw std::runtime_error(
+            fmt::format("Error parsing suggested annotations file: {}", e.what())
+        );
     }
-
-    return std::nullopt;
 }
 
-int run_main(int argc, const char *argv[])
+int try_run_main(int argc, const char *argv[])
 {
     setup_console_logging();
     auto parse_options = ProgramOptions::from_cli_arguments(PROGRAM_NAME, VERSION_STR, argc, argv);
@@ -368,10 +358,9 @@ int run_main(int argc, const char *argv[])
         try {
             config = app::load_config(*options.config_file);
         } catch (const std::invalid_argument& err) {
-            spdlog::critical(
+            throw std::runtime_error(fmt::format(
                 "Error parsing config file from {}: {}", *options.config_file, err.what()
-            );
-            return 1;
+            ));
         }
         spdlog::info("Loaded config from {}:", *options.config_file);
     } else {
@@ -380,34 +369,24 @@ int run_main(int argc, const char *argv[])
     app::log_config(config, spdlog::level::info);
 
     auto labelling_tasks = load_labelling_tasks(options.tasks_file);
-    if (!labelling_tasks.has_value()) {
-        return 1;
-    }
     auto annotations_store = make_annotations_store(options.annotations_file);
-    if (!annotations_store.has_value()) {
-        return 1;
-    }
     try {
         // Sync to file to check that writing works
-        annotations_store->sync_to_file();
+        annotations_store.sync_to_file();
     } catch (const std::runtime_error& e) {
-        spdlog::critical("Error writing to annotations file: {}", e.what());
-        return 1;
+        throw std::runtime_error(fmt::format("Error writing to annotations file: {}", e.what()));
     }
 
     std::optional<SwallowAnnotationResultMap> suggested_annotations;
     if (options.suggested_annotations_file) {
         suggested_annotations = load_suggested_annotations(*options.suggested_annotations_file);
-        if (!suggested_annotations.has_value()) {
-            return 1;
-        }
         spdlog::info("Loaded {} suggested annotation(s)", suggested_annotations->size());
     }
 
     app::App app(
         config,
-        *labelling_tasks,
-        std::move(*annotations_store),
+        labelling_tasks,
+        std::move(annotations_store),
         options.data_dir,
         std::move(suggested_annotations)
     );
@@ -415,21 +394,41 @@ int run_main(int argc, const char *argv[])
     return platform::run(gui);
 }
 
+void display_or_log_error(const std::string& error)
+{
+    spdlog::critical("{}", error);
+
+    const auto no_error_gui = os::getenv("RECAP_LABELLER_NO_ERROR_GUI");
+    if (no_error_gui.has_value() && !no_error_gui->empty() && *no_error_gui != "0") {
+        return;
+    }
+
+    spdlog::info("Displaying error in GUI");
+    gui::ErrorGui gui(error);
+    platform::run(gui);
+}
+
+int run_main(int argc, const char *argv[])
+{
+    try {
+        return try_run_main(argc, argv);
+    } catch (const std::exception& error) {
+        display_or_log_error(fmt::format("Error: {}", error.what()));
+    }
+#ifdef NDEBUG
+    // Let other exceptions pass through in debug mode
+    catch (...)
+    {
+        display_or_log_error("An unknown error occurred!");
+    }
+#endif
+
+    return 1;
+}
+
 }; // namespace
 
 int main(int argc, const char *argv[])
 {
-#if NDEBUG
-    try {
-        return run_main(argc, argv);
-    } catch (const std::exception& error) {
-        std::cerr << "Error: " << error.what() << '\n';
-        return 1;
-    } catch (...) {
-        std::cerr << "An unknown error occurred!\n";
-        return 1;
-    }
-#else
     return run_main(argc, argv);
-#endif
 }

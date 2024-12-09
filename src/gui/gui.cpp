@@ -54,6 +54,8 @@ constexpr float LabelSummaryHeight = 8; // Same as default ImPlotStyle::DigitalB
 #define SAVE_SHORTCUT_STR "Ctrl+S"
 constexpr ImGuiKeyChord SaveShortcutKeyChord = ImGuiMod_Ctrl | ImGuiKey_S;
 
+constexpr ImU32 ErrorTitleColor = 0xCC2929FF;
+
 namespace recap::labeller::gui {
 
 namespace {
@@ -480,9 +482,8 @@ private:
 
     void draw_critical_error(const std::string& error)
     {
-        constexpr ImU32 TitleColor = 0xCC2929FF;
         constexpr ImVec2 CentrePos = {0.5F, 0.5F};
-        widgets::ScopedImColor color_scope(ImGuiCol_TitleBgActive, TitleColor);
+        widgets::ScopedImColor color_scope(ImGuiCol_TitleBgActive, ErrorTitleColor);
 
         static const char *modal_title = ERR_ICON ICON_TEXT_SPACE "Critical error##crit_err_modal";
 
@@ -1749,6 +1750,37 @@ void LabellerGui::stop()
 bool LabellerGui::ready_to_stop() const
 {
     return m_pimpl->ready_to_stop();
+}
+
+ErrorGui::ErrorGui(std::string error) : m_error(std::move(error))
+{
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImPlot::CreateContext();
+    ImGui::GetIO().ConfigFlags = ImGuiConfigFlags_NoMouse | ImGuiConfigFlags_NoKeyboard;
+    setup_fonts();
+}
+
+ErrorGui::~ErrorGui()
+{
+    ImPlot::CreateContext();
+    ImGui::CreateContext();
+}
+
+void ErrorGui::draw()
+{
+    constexpr ImGuiWindowFlags WindowFlags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove;
+    constexpr ImVec2 CentrePos = {0.5F, 0.5F};
+    widgets::ScopedImColor color_scope({
+        {ImGuiCol_TitleBg, ErrorTitleColor},
+        {ImGuiCol_TitleBgActive, ErrorTitleColor},
+    });
+    ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), 0, CentrePos);
+    ImGui::SetNextWindowSize({0, 0});
+    if (ImGui::Begin(ERR_ICON ICON_TEXT_SPACE "RECAP labeller error", nullptr, WindowFlags)) {
+        ImGui::TextUnformatted(m_error.c_str());
+    }
+    ImGui::End();
 }
 
 void Gui::set_scaling_factor(float scaling_factor)

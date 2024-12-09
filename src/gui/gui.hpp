@@ -4,6 +4,7 @@
 #include "app/app.hpp"
 
 #include <memory>
+#include <string>
 
 namespace recap::labeller::gui {
 
@@ -41,6 +42,27 @@ public:
 private:
     class Impl;
     std::unique_ptr<Impl> m_pimpl;
+};
+
+class ErrorGui final : public Gui {
+public:
+    explicit ErrorGui(std::string error);
+    ~ErrorGui() override;
+
+    ErrorGui(const ErrorGui&) = delete;
+    ErrorGui& operator=(const ErrorGui&) = delete;
+    ErrorGui(ErrorGui&&) = delete;
+    ErrorGui& operator=(ErrorGui&&) = delete;
+
+    void draw() override;
+
+    void stop() override { m_stopped = true; }
+
+    [[nodiscard]] bool ready_to_stop() const override { return m_stopped; }
+
+private:
+    bool m_stopped = false;
+    std::string m_error;
 };
 
 }; // namespace recap::labeller::gui
