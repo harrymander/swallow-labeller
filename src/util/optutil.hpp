@@ -20,7 +20,7 @@ template <class T> inline bool has_value_and_equal(const std::optional<T>& opt, 
  * contained value.
  */
 template <class T, class Map, class R>
-inline R map_or(const std::optional<T>& opt, Map map_func, const R& default_value)
+inline R map_or(const std::optional<T>& opt, Map map_func, R&& default_value)
 {
     return opt.has_value() ? map_func(*opt) : default_value;
 }
@@ -30,7 +30,7 @@ inline R map_or(const std::optional<T>& opt, Map map_func, const R& default_valu
  * dereferenced ptr.
  */
 template <class T, class Map, class R>
-inline R map_or(const T *ptr, Map map_func, const R& default_value)
+inline R map_or(const T *ptr, Map map_func, R&& default_value)
 {
     return ptr == nullptr ? default_value : map_func(*ptr);
 }
