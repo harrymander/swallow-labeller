@@ -4,7 +4,6 @@
 #include "models/task-info.hpp"
 #include "options.h"
 #include "platform/platform.hpp"
-#include "util/optutil.hpp"
 #include "util/os.hpp"
 
 #include <argparse/argparse.hpp>
