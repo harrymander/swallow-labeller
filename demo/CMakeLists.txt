@@ -7,6 +7,12 @@ find_package(Python3 COMPONENTS Interpreter REQUIRED)
 set(DEMO_GEN_PY ${CMAKE_CURRENT_SOURCE_DIR}/gen-demo.py)
 
 set(DEMO_DIR ${CMAKE_CURRENT_BINARY_DIR}/demofiles)
+set_property(
+    DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    APPEND
+    PROPERTY ADDITIONAL_CLEAN_FILES demofiles
+)
+
 set(DEMO_TASKS_JSON ${DEMO_DIR}/tasks.json)
 set(DEMO_SUGGESTIONS_JSON ${DEMO_DIR}/suggested-annotations.json)
 set(DEMO_DATA_DIR ${DEMO_DIR}/data)
