@@ -162,7 +162,9 @@ struct ProgramOptions {
 
         argparse::ArgumentParser parser(program_name, program_version);
         parser.add_argument("--log").help(LogCliHelp).action(check_path_writable);
-        parser.add_argument("--config", "-c").help("path to config file");
+        parser.add_argument("--config", "-c")
+            .help("path to config file; pass empty string to use default settings, ignoring\n"
+                  "the config file that may be located in the user app data dir.");
         parser.add_argument("--tasks", "-t")
             .help("path to labelling tasks JSON")
             .action(regular_file_action);
@@ -217,22 +219,24 @@ struct ProgramOptions {
             return *app_data_dir / std::filesystem::path(default_filename);
         };
 
-        auto optional_data_path = [&](const char *argname, const char *default_filename
-                                  ) -> std::optional<std::filesystem::path> {
-            // If option passed explicitly, check it exists, else get from data dir only if exists
-            auto value = optutil::transform(parser.present(argname), [](const auto& v) {
-                return std::filesystem::path(v);
-            });
-            if (value.has_value()) {
-                validate_regular_file_path(*value);
+        auto config_file = [&]() -> std::optional<std::filesystem::path> {
+            // Config file: if not provided, use config.json in app data dir if exists, else if
+            // empty act as if no config file is present
+            auto config_opt = parser.present("--config");
+            if (config_opt.has_value()) {
+                if (!config_opt->empty()) {
+                    auto config_file = std::filesystem::path(*config_opt);
+                    validate_regular_file_path(config_file);
+                    return config_file;
+                }
             } else if (app_data_dir) {
-                auto default_path = *app_data_dir / default_filename;
+                auto default_path = *app_data_dir / "config.json";
                 if (std::filesystem::is_regular_file(default_path)) {
-                    value = default_path;
+                    return default_path;
                 }
             }
 
-            return value;
+            return std::nullopt;
         };
 
 #ifdef RECAP_LABELLER_LOG_TO_APP_DATA_DIR
@@ -248,7 +252,7 @@ struct ProgramOptions {
                 .tasks_file = data_path("--tasks", "tasks.json"),
                 .annotations_file = data_path("--annotations", "annotations.json").make_preferred(),
                 .suggested_annotations_file = parser.present<std::string>("--suggestions"),
-                .config_file = optional_data_path("--config", "config.json"),
+                .config_file = config_file(),
             };
         } catch (const std::invalid_argument& error) {
             print_usage_error(error);
