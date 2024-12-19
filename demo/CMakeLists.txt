@@ -12,6 +12,11 @@ set_property(
     APPEND
     PROPERTY ADDITIONAL_CLEAN_FILES demofiles
 )
+add_custom_target(
+    clean-demo
+    COMMAND ${CMAKE_COMMAND} -E remove_directory ${DEMO_DIR}
+    COMMENT "Deleting ${DEMO_DIR}..."
+)
 
 set(DEMO_TASKS_JSON ${DEMO_DIR}/tasks.json)
 set(DEMO_SUGGESTIONS_JSON ${DEMO_DIR}/suggested-annotations.json)
