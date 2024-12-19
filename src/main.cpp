@@ -9,6 +9,7 @@
 
 #include <argparse/argparse.hpp>
 #include <fmt/core.h>
+#include <fmt/ranges.h>
 #include <spdlog/fmt/std.h>
 #include <spdlog/logger.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -354,19 +355,6 @@ load_suggested_annotations(const std::filesystem::path& path)
     return std::nullopt;
 }
 
-void log_argv(int argc, const char *argv[])
-{
-    if (!spdlog::should_log(spdlog::level::debug)) {
-        return;
-    }
-
-    std::string args;
-    for (int i = 0; i < argc; i++) {
-        args.append(fmt::format("\n  ({}) {}", i, argv[i]));
-    }
-    spdlog::debug("Command line arguments:{}", args);
-}
-
 int run_main(int argc, const char *argv[])
 {
     setup_console_logging();
@@ -378,7 +366,7 @@ int run_main(int argc, const char *argv[])
     if (options.log_file) {
         setup_file_logging(*options.log_file);
     }
-    log_argv(argc, argv);
+    spdlog::debug("Command line arguments:\n  {}", fmt::join(argv, argv + argc, "\n  "));
 
     app::AppConfig config;
     if (options.config_file) {
