@@ -4,38 +4,30 @@
 #include <algorithm>
 #include <cctype>
 #include <string>
+#include <string_view>
 
 namespace recap::labeller::strutil {
 
-// trim from start (in place)
-inline void ltrim(std::string& s)
+/**
+ * Return a view over `s` with leading and trailing whitespace removed.
+ */
+constexpr std::string_view trimmed(std::string_view s)
 {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
-                return !std::isspace(ch);
-            }));
+    constexpr auto not_space = [](auto c) { return !std::isspace(static_cast<int>(c)); };
+    const auto start = std::find_if(s.begin(), s.end(), not_space);
+    if (start == s.end()) {
+        return {};
+    }
+
+    return {start, std::find_if(s.rbegin(), s.rend(), not_space).base()};
 }
 
-// trim from end (in place)
-inline void rtrim(std::string& s)
-{
-    s.erase(
-        std::find_if(
-            s.rbegin(), s.rend(), [](unsigned char ch) { return !std::isspace(ch); }
-        ).base(),
-        s.end()
-    );
-}
-
+/**
+ * Remove leading and trailing whitespace from `s`
+ */
 inline void trim(std::string& s)
 {
-    ltrim(s);
-    rtrim(s);
-}
-
-inline std::string trimmed(std::string s)
-{
-    trim(s);
-    return s;
+    s = trimmed(s);
 }
 
 }; // namespace recap::labeller::strutil

@@ -276,6 +276,12 @@ public:
         return m_new_active_task_observable.subscribe(func);
     }
 
+    [[nodiscard]] const models::SwallowAnnotation *task_annotation(const SwallowLabellingTask& task
+    ) const
+    {
+        return m_annotation_store.get_annotation(task.info().get_id());
+    }
+
     [[nodiscard]] bool task_has_annotation(const SwallowLabellingTask& task) const
     {
         return m_annotation_store.has_annotation(task.info().get_id());

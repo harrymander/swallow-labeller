@@ -10,7 +10,7 @@
 
 namespace recap::labeller::models {
 
-enum class SwallowTestType {
+enum class SwallowTestType : unsigned char {
     TidalBreathing,
     Cued,
 };

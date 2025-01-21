@@ -6,11 +6,17 @@
 #include "app/id-list.hpp"
 #include "gui/font.hpp"
 #include "gui/widgets/color-scheme-selector.hpp"
+#include "gui/widgets/enum-checkboxes.hpp"
+#include "gui/widgets/enum-combo.hpp"
+#include "gui/widgets/enum-utils.hpp"
+#include "gui/widgets/integer-range-input.hpp"
 #include "gui/widgets/plot-range-dragger.hpp"
 #include "gui/widgets/plot-range-selector.hpp"
 #include "gui/widgets/plot-range.hpp"
 #include "gui/widgets/radio-button-enum.hpp"
 #include "gui/widgets/util.hpp"
+#include "models/annotation.hpp"
+#include "models/task-info.hpp"
 #include "models/time-range.hpp"
 #include "util/optutil.hpp"
 #include "util/os.hpp"
@@ -48,6 +54,8 @@
 #define SHUFFLE_ICON ICON_FA_SHUFFLE
 #define UNSHUFFLE_ICON ICON_FA_SORT
 #define SKIP_TASK_ICON ICON_FA_FORWARD
+#define FILTER_ICON ICON_FA_FILTER
+#define FILTER_CANCEL_ICON ICON_FA_FILTER_CIRCLE_XMARK
 #define ICON_TEXT_SPACE "  "
 constexpr float LabelSummaryHeight = 8; // Same as default ImPlotStyle::DigitalBitHeight
 
@@ -321,18 +329,177 @@ private:
     widgets::PlotRangeSelector m_delta_selector;
 };
 
+class TaskFilter {
+public:
+    TaskFilter()
+    {
+        m_swallow_test_types.fill(true);
+        m_src_patterns.fill(true);
+    }
+
+    void draw(const char *id)
+    {
+        widgets::ScopedImID scoped_id(id);
+
+        draw_test_type_filter();
+        draw_range_input("Subject #", m_subject);
+        draw_range_input("Repeat #", m_repeatnum);
+        draw_range_input("Swallow #", m_swallownum);
+        draw_annotated_visibility_filter();
+
+        if (m_annotation_visibility) {
+            ImGui::SeparatorText("Filter annotations");
+            draw_annotation_filter();
+        }
+    }
+
+#define REJECT(s)                                                                                  \
+    do {                                                                                           \
+        if (s) {                                                                                   \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (0)
+
+    [[nodiscard]] bool
+    passes(const app::SwallowLabellingTask& task, const models::SwallowAnnotation *annotation) const
+    {
+        using widgets::TriState;
+
+        // NOLINTBEGIN(cppcoreguidelines-avoid-do-while)
+        REJECT(
+            m_annotation_visibility.is_set()
+            && m_annotation_visibility.is_false() != (annotation == nullptr)
+        );
+
+        const auto& info = task.info();
+        REJECT(!m_swallow_test_types[info.test_type]);
+        REJECT(reject_integer_range(m_subject, info.subject));
+        REJECT(reject_integer_range(m_repeatnum, info.repeatnum));
+        REJECT(reject_integer_range(m_swallownum, info.swallownum));
+
+        if (m_annotation_visibility) {
+            REJECT(!annotation_passes(*annotation));
+        }
+
+        return true;
+        // NOLINTEND(cppcoreguidelines-avoid-do-while)
+    }
+
+#undef REJECT
+
+private:
+    [[nodiscard]] bool annotation_passes(const models::SwallowAnnotation& annotation) const
+    {
+        using widgets::TriState;
+
+        return VariantVisitor{
+            [this](const models::SwallowApneaAnnotation& apnea) {
+                return apnea_annotation_passes(apnea);
+            },
+            [this](auto) { return m_no_swallow && m_ambiguous.is_unset(); },
+        }(annotation.swallow_apnea);
+    }
+
+    [[nodiscard]] bool apnea_annotation_passes(const models::SwallowApneaAnnotation& apnea) const
+    {
+        using widgets::TriState;
+
+        if (m_ambiguous.is_set() && apnea.is_ambiguous != m_ambiguous.is_true()) {
+            return false;
+        }
+
+        return m_src_patterns[apnea.pattern];
+    }
+
+    static bool reject_integer_range(const widgets::IntegerRangeInput& input, unsigned int val)
+    {
+        return !(input.empty() || input.error() || input.contains(val));
+    }
+
+    static void draw_range_input(const char *label, widgets::IntegerRangeInput& range_input)
+    {
+        range_input.draw(label);
+        if (range_input.error()) {
+            ImGui::SameLine();
+            ImGui::TextUnformatted(ICON_FA_TRIANGLE_EXCLAMATION);
+            ImGui::SetItemTooltip("Invalid range!");
+        }
+    }
+
+    void draw_test_type_filter()
+    {
+        static constexpr widgets::EnumLabels<models::SwallowTestType> Labels = {
+            "Tidal",
+            "Cued",
+        };
+        ImGui::TextUnformatted("Swallow type");
+        ImGui::SameLine();
+        widgets::enum_checkboxes("##swallow-test-type", Labels, m_swallow_test_types);
+    }
+
+    void draw_annotated_visibility_filter()
+    {
+        widgets::tristate_combo(
+            "Annotation",
+            m_annotation_visibility,
+            "Un-annotated",
+            "Annotated" ICON_TEXT_SPACE ANNOTATED_TASK_ICON
+        );
+    }
+
+    void draw_annotation_filter()
+    {
+        widgets::tristate_combo("Ambiguity", m_ambiguous, "Un-ambiguous", "Ambiguous");
+
+        if (m_ambiguous.is_unset()) {
+            ImGui::Checkbox("No swallow", &m_no_swallow);
+        } else {
+            bool disabled = false;
+            ImGui::BeginDisabled();
+            ImGui::Checkbox("No swallow", &disabled);
+            ImGui::EndDisabled();
+        }
+
+        draw_src_pattern_filter();
+    }
+
+    void draw_src_pattern_filter()
+    {
+        static constexpr auto SrcLabels = []() {
+            using enum models::SrcPattern;
+            widgets::EnumLabels<models::SrcPattern> SrcLabels{};
+            SrcLabels[ExEx] = "ex/ex";
+            SrcLabels[ExIn] = "ex/in";
+            SrcLabels[InEx] = "in/ex";
+            SrcLabels[InIn] = "in/in";
+            return SrcLabels;
+        }();
+        widgets::enum_checkboxes("##src-pattern", SrcLabels, m_src_patterns);
+    }
+
+    enum class AnnotationVisibility : char {
+        All = 0,
+        Annotated,
+        Unannotated,
+    };
+
+    widgets::TriState m_annotation_visibility;
+    widgets::EnumCheckboxValues<models::SwallowTestType> m_swallow_test_types = {};
+    widgets::IntegerRangeInput m_subject;
+    widgets::IntegerRangeInput m_repeatnum;
+    widgets::IntegerRangeInput m_swallownum;
+
+    widgets::TriState m_ambiguous;
+    bool m_no_swallow = true;
+    widgets::EnumCheckboxValues<models::SrcPattern> m_src_patterns = {};
+};
+
 }; // namespace
 
 class Gui::Impl {
 private:
     static constexpr double FlowMinSelectionRange = 1.0 / 1000;
     static constexpr double AudioMinSelectionRange = FlowMinSelectionRange;
-
-    enum class AnnotationsVisibility {
-        All,
-        AnnotatedOnly,
-        UnannotatedOnly,
-    };
 
     struct TimeRangeAnnotator {
         widgets::PlotRangeSelector range_selector;
@@ -389,8 +556,7 @@ private:
     bool m_show_debug_info = true;
 #endif
 
-    AnnotationsVisibility m_annotation_list_visibility = AnnotationsVisibility::All;
-    ImGuiTextFilter m_task_list_text_filter;
+    std::optional<TaskFilter> m_task_filter = std::nullopt;
     std::size_t m_task_list_last_active_index = std::numeric_limits<std::size_t>::max();
 
     widgets::PlotRangeDragger m_plot_summary_dragger;
@@ -1011,38 +1177,6 @@ private:
         }
     }
 
-    bool draw_list_visibility_control()
-    {
-        if (m_annotation_list_visibility == AnnotationsVisibility::All) {
-            if (ImGui::SmallButton("Annotated only")) {
-                m_annotation_list_visibility = AnnotationsVisibility::AnnotatedOnly;
-                return true;
-            }
-            ImGui::SameLine();
-            if (ImGui::SmallButton("Unannotated only")) {
-                m_annotation_list_visibility = AnnotationsVisibility::UnannotatedOnly;
-                return true;
-            }
-        } else {
-            if (ImGui::SmallButton("All")) {
-                m_annotation_list_visibility = AnnotationsVisibility::All;
-                return true;
-            }
-            ImGui::SameLine();
-            if (m_annotation_list_visibility == AnnotationsVisibility::AnnotatedOnly) {
-                if (ImGui::SmallButton("Unannotated only")) {
-                    m_annotation_list_visibility = AnnotationsVisibility::UnannotatedOnly;
-                    return true;
-                }
-            } else if (ImGui::SmallButton("Annotated only")) {
-                m_annotation_list_visibility = AnnotationsVisibility::AnnotatedOnly;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     static std::string swallow_task_info_str(
         const app::SwallowLabellingTask& task, bool is_annotated, bool has_suggested_annotation
     )
@@ -1068,6 +1202,24 @@ private:
         );
     }
 
+    void draw_task_filter()
+    {
+        if (m_task_filter.has_value()) {
+            if (ImGui::Button(FILTER_CANCEL_ICON ICON_TEXT_SPACE "Clear filter")) {
+                m_task_filter.reset();
+            }
+        } else if (ImGui::Button(FILTER_ICON ICON_TEXT_SPACE "Filter tasks...")) {
+            m_task_filter = TaskFilter();
+        }
+
+        if (m_task_filter.has_value()) {
+            m_task_filter->draw("##task-filter");
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+        }
+    }
+
     void draw_task_history_controls()
     {
         ImGui::BeginDisabled(!m_app.can_go_to_previous_task());
@@ -1091,8 +1243,10 @@ private:
 
     void draw_task_list()
     {
-        m_task_list_text_filter.Draw("##task_info_list_filter");
-        ImGui::SameLine();
+        draw_task_filter();
+        if (!m_task_filter.has_value()) {
+            ImGui::SameLine();
+        }
         draw_task_history_controls();
 
         const auto& tasks = m_app.tasks();
@@ -1103,8 +1257,7 @@ private:
             num_annotated_pos.y + ImGui::GetTextLineHeightWithSpacing(),
         });
 
-        bool scroll_to_selected_task = draw_list_visibility_control();
-
+        bool scroll_to_selected_task = false;
         ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32_BLACK_TRANS);
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32_BLACK_TRANS);
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, IM_COL32_BLACK_TRANS);
@@ -1147,35 +1300,29 @@ private:
 
             std::size_t i = 0;
             for (const auto& task : tasks.items()) {
-                const bool has_annotation = m_app.task_has_annotation(task);
+                const auto *annotation = m_app.task_annotation(task);
+                const bool has_annotation = annotation != nullptr;
                 if (has_annotation) {
                     num_annotated += 1;
                 }
 
-                const bool show_task = (m_annotation_list_visibility == AnnotationsVisibility::All)
-                    || (m_annotation_list_visibility == AnnotationsVisibility::UnannotatedOnly
-                        && !has_annotation)
-                    || (m_annotation_list_visibility == AnnotationsVisibility::AnnotatedOnly
-                        && has_annotation);
-                if (show_task) {
+                if (!m_task_filter.has_value() || m_task_filter->passes(task, annotation)) {
                     const bool has_suggested_annotation = m_app.task_has_suggested_annotation(task);
-                    const std::string str =
+                    const bool selected = active_index == i;
+                    const auto str =
                         swallow_task_info_str(task, has_annotation, has_suggested_annotation);
-                    if (m_task_list_text_filter.PassFilter(str.c_str())) {
-                        const bool selected = active_index == i;
-                        if (ImGui::Selectable(str.c_str(), selected)) {
-                            new_active_index = i;
-                        }
-                        if (selected && scroll_to_selected_task && !ImGui::IsItemVisible()) {
-                            ImGui::ScrollToItem();
-                        }
-                        const auto& err = task.error_msg();
-                        if (err.has_value()) {
-                            ImGui::SetItemTooltip(ERR_ICON ICON_TEXT_SPACE "%s", err->c_str());
-                        } else if (!has_annotation && has_suggested_annotation) {
-                            ImGui::SetItemTooltip(SUGGESTED_ANNOTATION_TASK_ICON ICON_TEXT_SPACE
-                                                  "Task has suggested annotations");
-                        }
+                    if (ImGui::Selectable(str.c_str(), selected)) {
+                        new_active_index = i;
+                    }
+                    if (selected && scroll_to_selected_task && !ImGui::IsItemVisible()) {
+                        ImGui::ScrollToItem();
+                    }
+                    const auto& err = task.error_msg();
+                    if (err.has_value()) {
+                        ImGui::SetItemTooltip(ERR_ICON ICON_TEXT_SPACE "%s", err->c_str());
+                    } else if (!has_annotation && has_suggested_annotation) {
+                        ImGui::SetItemTooltip(SUGGESTED_ANNOTATION_TASK_ICON ICON_TEXT_SPACE
+                                              "Task has suggested annotations");
                     }
                 }
 

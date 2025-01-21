@@ -10,7 +10,7 @@
 
 namespace recap::labeller::models {
 
-enum class SrcPattern {
+enum class SrcPattern : unsigned char {
     ExEx,
     ExIn,
     InEx,
@@ -26,13 +26,13 @@ struct SwallowApneaAnnotation {
     bool operator==(const SwallowApneaAnnotation&) const = default;
 };
 
-enum class SwallowApneaError {
+enum class SwallowApneaError : unsigned char {
     FlowError,
     NoSwallow,
     ApneaCutoff,
 };
 
-enum class EarClickError {
+enum class EarClickError : unsigned char {
     AudioError,
     NoEarClick,
 };
