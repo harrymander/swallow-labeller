@@ -1205,7 +1205,7 @@ private:
     void draw_task_filter()
     {
         if (m_task_filter.has_value()) {
-            if (ImGui::Button(FILTER_CANCEL_ICON ICON_TEXT_SPACE "Clear filter")) {
+            if (ImGui::Button(FILTER_CANCEL_ICON ICON_TEXT_SPACE "Show all tasks")) {
                 m_task_filter.reset();
             }
         } else if (ImGui::Button(FILTER_ICON ICON_TEXT_SPACE "Filter tasks...")) {
