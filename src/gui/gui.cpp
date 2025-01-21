@@ -56,6 +56,7 @@
 #define SKIP_TASK_ICON ICON_FA_FORWARD
 #define FILTER_ICON ICON_FA_FILTER
 #define FILTER_CANCEL_ICON ICON_FA_FILTER_CIRCLE_XMARK
+#define FILTER_RESET_ICON ICON_FA_ROTATE_LEFT
 #define ICON_TEXT_SPACE "  "
 constexpr float LabelSummaryHeight = 8; // Same as default ImPlotStyle::DigitalBitHeight
 
@@ -556,7 +557,8 @@ private:
     bool m_show_debug_info = true;
 #endif
 
-    std::optional<TaskFilter> m_task_filter = std::nullopt;
+    bool m_enable_task_filter = false;
+    TaskFilter m_task_filter;
     std::size_t m_task_list_last_active_index = std::numeric_limits<std::size_t>::max();
 
     widgets::PlotRangeDragger m_plot_summary_dragger;
@@ -1204,16 +1206,20 @@ private:
 
     void draw_task_filter()
     {
-        if (m_task_filter.has_value()) {
+        if (m_enable_task_filter) {
             if (ImGui::Button(FILTER_CANCEL_ICON ICON_TEXT_SPACE "Show all tasks")) {
-                m_task_filter.reset();
+                m_enable_task_filter = false;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button(FILTER_RESET_ICON ICON_TEXT_SPACE "Reset filter")) {
+                m_task_filter = TaskFilter();
             }
         } else if (ImGui::Button(FILTER_ICON ICON_TEXT_SPACE "Filter tasks...")) {
-            m_task_filter = TaskFilter();
+            m_enable_task_filter = true;
         }
 
-        if (m_task_filter.has_value()) {
-            m_task_filter->draw("##task-filter");
+        if (m_enable_task_filter) {
+            m_task_filter.draw("##task-filter");
             ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
@@ -1244,7 +1250,7 @@ private:
     void draw_task_list()
     {
         draw_task_filter();
-        if (!m_task_filter.has_value()) {
+        if (!m_enable_task_filter) {
             ImGui::SameLine();
         }
         draw_task_history_controls();
@@ -1306,7 +1312,7 @@ private:
                     num_annotated += 1;
                 }
 
-                if (!m_task_filter.has_value() || m_task_filter->passes(task, annotation)) {
+                if (!m_enable_task_filter || m_task_filter.passes(task, annotation)) {
                     const bool has_suggested_annotation = m_app.task_has_suggested_annotation(task);
                     const bool selected = active_index == i;
                     const auto str =
