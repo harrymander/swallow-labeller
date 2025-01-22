@@ -22,15 +22,21 @@ if(NOT Python3_FOUND)
     message(WARNING "Python3 not found, disabling lint and format targets")
 else()
     set(VENV_DIR ${CMAKE_CURRENT_BINARY_DIR}/clang-format-venv)
-    set(CLANG_FORMAT_EXE ${VENV_DIR}/bin/clang-format)
     set(CLANG_FORMAT_VERSION 18.1.3)
+    if(WIN32)
+        set(VENV_PYTHON ${VENV_DIR}/Scripts/python.exe)
+        set(CLANG_FORMAT_EXE ${VENV_DIR}/Scripts/clang-format.exe)
+    else()
+        set(VENV_PYTHON ${VENV_DIR}/bin/python3)
+        set(CLANG_FORMAT_EXE ${VENV_DIR}/bin/clang-format)
+    endif()
     add_custom_command(
         OUTPUT ${CLANG_FORMAT_EXE}
         COMMENT "Installing clang-format into Python venv"
         COMMAND ${CMAKE_COMMAND} -E rm -rf ${VENV_DIR}
         COMMAND ${Python3_EXECUTABLE} -m venv ${VENV_DIR}
         COMMAND
-            ${VENV_DIR}/bin/python3 -m pip install
+            ${VENV_PYTHON} -m pip install
             clang-format==${CLANG_FORMAT_VERSION}
     )
     add_custom_target(download-clang-format DEPENDS ${CLANG_FORMAT_EXE})
