@@ -1,5 +1,5 @@
-#ifndef RECAP_LABELLER_GUI_WIDGETS_RADIO_BUTTON_ENUM_HPP_INCLUDE
-#define RECAP_LABELLER_GUI_WIDGETS_RADIO_BUTTON_ENUM_HPP_INCLUDE
+#ifndef INCLUDE_RECAP_LABELLER_GUI_WIDGETSENUM_RADIO_BUTTON_HPP
+#define INCLUDE_RECAP_LABELLER_GUI_WIDGETSENUM_RADIO_BUTTON_HPP
 
 #include "gui/widgets/util.hpp"
 
@@ -37,7 +37,7 @@ template <class T> struct RadioButtonField;
 
 template <class T, class ConstIt>
 inline bool
-radio_button_enums(const char *id, T& value, ConstIt begin, ConstIt end, bool horizontal = false)
+enum_radio_buttons(const char *id, T& value, ConstIt begin, ConstIt end, bool horizontal = false)
 {
     ScopedImID scoped_id(id);
     bool changed = false;
@@ -83,11 +83,11 @@ template <class T> struct RadioButtonField {
 
 template <class T, class Container>
 inline bool
-radio_button_enums(const char *id, T& value, const Container& options, bool horizontal = false)
+enum_radio_buttons(const char *id, T& value, const Container& options, bool horizontal = false)
 {
-    return radio_button_enums(id, value, options.begin(), options.end(), horizontal);
+    return enum_radio_buttons(id, value, options.begin(), options.end(), horizontal);
 }
 
 }; // namespace recap::labeller::gui::widgets
 
-#endif // RECAP_LABELLER_GUI_WIDGETS_RADIO_BUTTON_ENUM_HPP_INCLUDE
+#endif // INCLUDE_RECAP_LABELLER_GUI_WIDGETSENUM_RADIO_BUTTON_HPP

@@ -7,12 +7,12 @@
 #include "gui/font.hpp"
 #include "gui/widgets/color-scheme-selector.hpp"
 #include "gui/widgets/enum-checkboxes.hpp"
+#include "gui/widgets/enum-radio-button.hpp"
 #include "gui/widgets/enum-utils.hpp"
 #include "gui/widgets/integer-range-input.hpp"
 #include "gui/widgets/plot-range-dragger.hpp"
 #include "gui/widgets/plot-range-selector.hpp"
 #include "gui/widgets/plot-range.hpp"
-#include "gui/widgets/radio-button-enum.hpp"
 #include "gui/widgets/tristate.hpp"
 #include "gui/widgets/util.hpp"
 #include "models/annotation.hpp"
@@ -1626,7 +1626,7 @@ private:
             Option("No ear click [w]", NoEarClick, ImGuiKey_W),
             Option("Audio error", AudioError),
         };
-        return widgets::radio_button_enums("##earclick_annotation_status", status, Options);
+        return widgets::enum_radio_buttons("##earclick_annotation_status", status, Options);
     }
 
     static void draw_apnea_annotation_selection(app::ActiveSwallowLabellingTaskView& task_view)
@@ -1676,7 +1676,7 @@ private:
             Option("Apnea cut-off", ApneaCutoff),
             Option("FlowError", FlowError),
         };
-        if (widgets::radio_button_enums("##other_options", status, OtherOptions)) {
+        if (widgets::enum_radio_buttons("##other_options", status, OtherOptions)) {
             status_changed = true;
         }
 
