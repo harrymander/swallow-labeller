@@ -364,8 +364,6 @@ public:
     [[nodiscard]] bool
     passes(const app::SwallowLabellingTask& task, const models::SwallowAnnotation *annotation) const
     {
-        using widgets::TriState;
-
         // NOLINTBEGIN(cppcoreguidelines-avoid-do-while)
         REJECT(
             m_annotation_visibility.is_set()
@@ -391,8 +389,6 @@ public:
 private:
     [[nodiscard]] bool annotation_passes(const models::SwallowAnnotation& annotation) const
     {
-        using widgets::TriState;
-
         return VariantVisitor{
             [this](const models::SwallowApneaAnnotation& apnea) {
                 return apnea_annotation_passes(apnea);
@@ -403,8 +399,6 @@ private:
 
     [[nodiscard]] bool apnea_annotation_passes(const models::SwallowApneaAnnotation& apnea) const
     {
-        using widgets::TriState;
-
         if (m_ambiguous.is_set() && apnea.is_ambiguous != m_ambiguous.is_true()) {
             return false;
         }
