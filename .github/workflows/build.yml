@@ -43,21 +43,24 @@ jobs:
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
       - name: Configure
         run: |
-          cmake --preset windows-static \
+          cmake --preset windows-static-ninja \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
             -DBUILD_DEMO=off \
-            -DRECAP_LABELLER_LOG_TO_APP_DATA_DIR=on
+            -DRECAP_LABELLER_LOG_TO_APP_DATA_DIR=on \
+            -DENABLE_LINTING=off
         env:
             VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
       - name: Build
-        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
+        run: cmake --build build --parallel
 
       - name: Run tests
         env:
           GTEST_COLOR: "yes"
-        run: ctest --test-dir build --build-config ${{ env.BUILD_TYPE }} --output-on-failure
+        run: ctest --test-dir build --output-on-failure
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: recap-labeller
-          path: build/${{ env.BUILD_TYPE }}/recap-labeller*.exe
+          path: build/recap-labeller*.exe
+          if-no-files-found: error
