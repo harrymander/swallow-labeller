@@ -462,12 +462,12 @@ private:
     {
         static constexpr auto SrcLabels = []() {
             using enum models::SrcPattern;
-            widgets::EnumLabels<models::SrcPattern> SrcLabels{};
-            SrcLabels[ExEx] = "ex/ex";
-            SrcLabels[ExIn] = "ex/in";
-            SrcLabels[InEx] = "in/ex";
-            SrcLabels[InIn] = "in/in";
-            return SrcLabels;
+            widgets::EnumLabels<models::SrcPattern> labels{};
+            labels[ExEx] = "ex/ex";
+            labels[ExIn] = "ex/in";
+            labels[InEx] = "in/ex";
+            labels[InIn] = "in/in";
+            return labels;
         }();
         widgets::enum_checkboxes("##src-pattern", SrcLabels, m_src_patterns);
     }
