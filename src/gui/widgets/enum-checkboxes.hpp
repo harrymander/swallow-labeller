@@ -3,8 +3,8 @@
 
 #include "gui/widgets/enum-utils.hpp"
 #include "gui/widgets/util.hpp"
-#include "imgui.h"
 
+#include <imgui.h>
 #include <magic_enum.hpp>
 #include <magic_enum_containers.hpp>
 
