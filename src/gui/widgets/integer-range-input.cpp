@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <charconv>
+#include <limits>
 #include <string_view>
 #include <system_error>
 #include <tuple>
@@ -17,10 +18,6 @@ namespace {
 
 bool parse_int(std::string_view s, unsigned int& val)
 {
-    s = strutil::trimmed(s);
-    if (s.empty()) {
-        return false;
-    }
     const char *const last = s.data() + s.size();
     const auto res = std::from_chars(s.data(), last, val);
     return res.ec == std::errc() && res.ptr == last;
@@ -31,6 +28,8 @@ bool parse_int(std::string_view s, unsigned int& val)
 bool IntegerRangeInput::parse_pair(std::string_view str, Pair& pair)
 {
     const auto dash_pos = str.find('-');
+
+    // No dash: expect just a single number
     if (dash_pos == std::string_view::npos) {
         if (!parse_int(str, pair.first)) {
             return false;
@@ -38,20 +37,32 @@ bool IntegerRangeInput::parse_pair(std::string_view str, Pair& pair)
         pair.second = pair.first;
     }
 
-    if (!(parse_int(str.substr(0, dash_pos), pair.first)
-          && parse_int(str.substr(dash_pos + 1), pair.second)))
-    {
+    // "-second": rejected since it could be confused for a negative number
+    const auto first = strutil::trimmed(str.substr(0, dash_pos));
+    if (first.empty()) {
         return false;
     }
 
-    std::tie(pair.first, pair.second) = std::minmax(pair.first, pair.second);
+    const auto second = strutil::trimmed(str.substr(dash_pos + 1));
+    if (second.empty()) { // "first-": admit all numbers >= first
+        if (!parse_int(first, pair.first)) {
+            return false;
+        }
+        pair.second = std::numeric_limits<unsigned int>::max();
+    } else { // "first-second": admit all numbers in [first, second]
+        if (!(parse_int(first, pair.first) && parse_int(second, pair.second))) {
+            return false;
+        }
+        std::tie(pair.first, pair.second) = std::minmax(pair.first, pair.second);
+    }
+
     return true;
 }
 
 void IntegerRangeInput::draw(const char *id)
 {
     const bool updated = ImGui::InputText(id, &m_input);
-    ImGui::SetItemTooltip("Input numbers or ranges separated by commas, e.g. \"1,3-12\"");
+    ImGui::SetItemTooltip("Input numbers or ranges separated by commas, e.g. \"1, 3-12, 15-\"");
     if (updated) {
         update();
     }
@@ -82,7 +93,7 @@ void IntegerRangeInput::update()
     std::size_t start = 0;
     while (true) {
         const std::size_t end = m_input.find(',', start);
-        const auto substr = strutil::trimmed(std::string_view(m_input).substr(start, end - start));
+        const auto substr = strutil::trimmed(m_input.substr(start, end - start));
         if (substr.empty()) {
             // Allow a single trailing comma, otherwise error
             if (end == std::string::npos) {
