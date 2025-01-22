@@ -3,7 +3,6 @@
     "configurePresets": [
         {
             "name": "windows-static",
-            "generator": "Visual Studio 17 2022",
             "binaryDir": "${sourceDir}/build",
             "toolchainFile": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
             "cacheVariables": {
@@ -11,9 +10,60 @@
                 "BUILD_SHARED_LIBS": "OFF",
                 "ZLIB_USE_STATIC_LIBS": "ON",
                 "FETCH_VENDORED": "OFF",
-                "BUILD_TESTS": "ON",
-                "ENABLE_LINTING": "OFF"
+                "BUILD_TESTS": "ON"
+            },
+            "condition": {
+              "type": "equals",
+              "lhs": "${hostSystemName}",
+              "rhs": "Windows"
             }
+        },
+        {
+            "name": "windows-static-msbuild",
+            "inherits": ["windows-static"],
+            "generator": "Visual Studio 17 2022"
+        },
+        {
+            "name": "windows-static-ninja",
+            "inherits": ["windows-static"],
+            "generator": "Ninja"
+        },
+        {
+            "name": "windows-static-ninja-multi",
+            "inherits": ["windows-static"],
+            "generator": "Ninja Multi-Config"
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "ninja-multi-Release",
+            "configurePreset": "windows-static-ninja-multi",
+            "configuration": "Release"
+        },
+        {
+            "name": "ninja-multi-RelWithDebInfo",
+            "configurePreset": "windows-static-ninja-multi",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "ninja-multi-Debug",
+            "configurePreset": "windows-static-ninja-multi",
+            "configuration": "Debug"
+        },
+        {
+            "name": "msbuild-Release",
+            "configurePreset": "windows-static-msbuild",
+            "configuration": "Release"
+        },
+        {
+            "name": "msbuild-RelWithDebInfo",
+            "configurePreset": "windows-static-msbuild",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "msbuild-Debug",
+            "configurePreset": "windows-static-msbuild",
+            "configuration": "Debug"
         }
     ]
 }
