@@ -57,6 +57,9 @@
 #define FILTER_ICON ICON_FA_FILTER
 #define FILTER_CANCEL_ICON ICON_FA_FILTER_CIRCLE_XMARK
 #define FILTER_RESET_ICON ICON_FA_ROTATE_LEFT
+#define SCROLL_TO_TOP_ICON ICON_FA_ARROWS_UP_TO_LINE
+#define SCROLL_TO_BOTTOM_ICON ICON_FA_ARROWS_DOWN_TO_LINE
+#define SCROLL_TO_TASK_ICON ICON_FA_ARROWS_TO_DOT
 #define ICON_TEXT_SPACE "  "
 constexpr float LabelSummaryHeight = 8; // Same as default ImPlotStyle::DigitalBitHeight
 
@@ -416,7 +419,7 @@ private:
         range_input.draw(label);
         if (range_input.error()) {
             ImGui::SameLine();
-            ImGui::TextUnformatted(ICON_FA_TRIANGLE_EXCLAMATION);
+            ImGui::TextUnformatted(ERR_ICON);
             ImGui::SetItemTooltip("Invalid range!");
         }
     }
@@ -1273,13 +1276,13 @@ private:
             }
             ImGui::SetItemTooltip("Shuffle tasks");
         }
-        const bool scroll_to_top = ImGui::SmallButton(ICON_FA_ARROWS_UP_TO_LINE);
+        const bool scroll_to_top = ImGui::SmallButton(SCROLL_TO_TOP_ICON);
         ImGui::SetItemTooltip("Scroll to top");
-        if (ImGui::SmallButton(ICON_FA_ARROWS_TO_DOT)) {
+        if (ImGui::SmallButton(SCROLL_TO_TASK_ICON)) {
             scroll_to_selected_task = true;
         }
         ImGui::SetItemTooltip("Scroll to active task");
-        const bool scroll_to_bottom = ImGui::SmallButton(ICON_FA_ARROWS_DOWN_TO_LINE);
+        const bool scroll_to_bottom = ImGui::SmallButton(SCROLL_TO_BOTTOM_ICON);
         ImGui::SetItemTooltip("Scroll to bottom");
         ImGui::EndGroup();
         ImGui::SameLine();
@@ -1364,7 +1367,7 @@ private:
         using enum AnnotationSubmitAction;
         AnnotationSubmitAction action = None;
 
-        static const char *del_str = ICON_TEXT_SPACE ICON_FA_TRASH_CAN ICON_TEXT_SPACE;
+        static const char *del_str = ICON_TEXT_SPACE DELETE_ICON ICON_TEXT_SPACE;
         const float del_button_width =
             ImGui::CalcTextSize(del_str).x + ImGui::GetStyle().ItemInnerSpacing.x * 4;
         float button_height = del_button_width;
