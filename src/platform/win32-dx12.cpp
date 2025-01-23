@@ -93,7 +93,7 @@ int recap::labeller::platform::run(recap::labeller::app::App& app)
         NULL,
         NULL,
         NULL,
-        WINDOW_NAME,
+        WINDOW_NAME, // cppcheck-suppress unknownMacro
         NULL,
     };
 

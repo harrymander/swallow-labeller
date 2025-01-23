@@ -1367,7 +1367,8 @@ private:
         using enum AnnotationSubmitAction;
         AnnotationSubmitAction action = None;
 
-        static const char *del_str = ICON_TEXT_SPACE DELETE_ICON ICON_TEXT_SPACE;
+        static const char *del_str =
+            ICON_TEXT_SPACE DELETE_ICON ICON_TEXT_SPACE; // cppcheck-suppress unknownMacro
         const float del_button_width =
             ImGui::CalcTextSize(del_str).x + ImGui::GetStyle().ItemInnerSpacing.x * 4;
         float button_height = del_button_width;

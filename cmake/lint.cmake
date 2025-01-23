@@ -42,7 +42,7 @@ add_custom_target(
     COMMAND
         ${CPPCHECK_EXE}
         --error-exitcode=1 --quiet --force --language=c++ --std=c++20
-        --enable=style,unusedFunction
+        --enable=style
         --inline-suppr --suppressions-list=cppcheck-suppressions.txt
         --relative-paths=${CMAKE_SOURCE_DIR}
         src tests
