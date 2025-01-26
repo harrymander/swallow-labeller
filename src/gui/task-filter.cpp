@@ -19,6 +19,8 @@
 
 #include <algorithm>
 #include <array>
+#include <optional>
+#include <regex>
 #include <utility>
 
 namespace recap::labeller::gui {
@@ -224,9 +226,22 @@ class AnnotationNoteFilter : public TaskFilter::Filter {
 public:
     void draw() override
     {
-        ImGui::SetNextItemWidth(-1);
+        if (draw_regex_button()) {
+            update_input();
+        }
+
+        ImGui::SameLine();
+        const bool regex_error = m_use_regex && !m_regex.has_value();
+        ImGui::SetNextItemWidth(
+            regex_error ? -ImGui::GetFontSize() - ImGui::GetStyle().ItemSpacing.x : -1
+        );
         if (ImGui::InputText("##notes-text-input", &m_input)) {
-            m_input = strutil::trimmed(m_input);
+            update_input();
+        }
+        if (regex_error) {
+            ImGui::SameLine();
+            ImGui::TextUnformatted(ICON_FA_TRIANGLE_EXCLAMATION);
+            ImGui::SetItemTooltip("Invalid regex");
         }
     }
 
@@ -240,6 +255,10 @@ public:
         }
 
         const auto& note = annotation->note;
+        if (m_use_regex) {
+            return m_regex.has_value() && std::regex_search(note.value_or(""), *m_regex);
+        }
+
         if (note.has_value()) {
             return note->find(m_input) != std::string::npos;
         }
@@ -247,7 +266,43 @@ public:
     }
 
 private:
+    bool draw_regex_button()
+    {
+        const ImU32 color =
+            m_use_regex ? ImGui::GetColorU32(ImGuiCol_Button) : IM_COL32(0, 0, 0, 0);
+        widgets::ScopedImColor button_color = {
+            {ImGuiCol_Button, color},
+            {ImGuiCol_ButtonActive, color},
+            {ImGuiCol_ButtonHovered, color},
+        };
+        const bool clicked = ImGui::Button(".*");
+        if (clicked) {
+            m_use_regex = !m_use_regex;
+        }
+        ImGui::SetItemTooltip("Use regular expression");
+        return clicked;
+    }
+
+    void update_input()
+    {
+        if (m_use_regex) {
+            if (m_input.empty()) {
+                m_regex = std::regex(".*");
+            } else {
+                try {
+                    m_regex = std::regex(m_input);
+                } catch (const std::regex_error&) {
+                    m_regex = std::nullopt;
+                }
+            }
+        } else {
+            m_input = strutil::trimmed(m_input);
+        }
+    }
+
     std::string m_input;
+    std::optional<std::regex> m_regex = std::nullopt;
+    bool m_use_regex = false;
 };
 
 template <typename Filter> std::unique_ptr<TaskFilter::Filter> FilterFactory()
