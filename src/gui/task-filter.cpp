@@ -155,7 +155,7 @@ public:
 
         ImGui::BeginGroup();
         ImGui::Checkbox("No swallow", &m_no_swallow);
-        widgets::enum_checkboxes("##src-pattern-checkboxes", SrcLabels, m_src, false);
+        widgets::enum_checkboxes("##src-pattern-checkboxes", SrcLabels, m_src);
         ImGui::EndGroup();
     }
 
