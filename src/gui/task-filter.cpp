@@ -1,5 +1,6 @@
 #include "task-filter.hpp"
 
+#include "gui/widgets/enum-checkboxes.hpp"
 #include "gui/widgets/enum-combo.hpp"
 #include "gui/widgets/enum-utils.hpp"
 #include "gui/widgets/integer-range-input.hpp"
@@ -57,15 +58,15 @@ class SwallowTypeFilter : public TaskFilter::Filter {
 public:
     void draw() override
     {
-        constexpr auto Values = []() {
+        constexpr auto Labels = []() {
             using enum models::SwallowTestType;
-            widgets::EnumLabels<models::SwallowTestType> values;
-            values[TidalBreathing] = "Tidal";
-            values[Cued] = "Cued";
-            return values;
+            widgets::EnumLabels<models::SwallowTestType> labels;
+            labels[TidalBreathing] = "Tidal";
+            labels[Cued] = "Cued";
+            return labels;
         }();
         ImGui::SetNextItemWidth(ImGui::GetFontSize() * 5);
-        widgets::enum_combo("##swallow-test-type", Values, m_value);
+        widgets::enum_combo("##swallow-test-type", Labels, m_value);
     }
 
     bool passes(
@@ -136,17 +137,58 @@ struct HasEarClicksFilter : BooleanFilter {
     }
 };
 
+struct SwallowPatternFilter : TaskFilter::Filter {
+public:
+    SwallowPatternFilter() { m_src.fill(true); }
+
+    void draw() override
+    {
+        constexpr auto SrcLabels = []() {
+            using enum models::SrcPattern;
+            widgets::EnumLabels<models::SrcPattern> labels;
+            labels[ExEx] = "ex-ex";
+            labels[InEx] = "in-ex";
+            labels[ExIn] = "ex-in";
+            labels[InIn] = "in-in";
+            return labels;
+        }();
+
+        ImGui::Checkbox("No swallow", &m_no_swallow);
+        widgets::enum_checkboxes("##src-pattern-checkboxes", SrcLabels, m_src);
+    }
+
+    bool passes(
+        [[maybe_unused]] const app::SwallowLabellingTask& task,
+        const models::SwallowAnnotation *annotation
+    ) const override
+    {
+        if (annotation == nullptr) {
+            return false;
+        }
+
+        return VariantVisitor{
+            [this](const models::SwallowApneaAnnotation& apnea) { return m_src[apnea.pattern]; },
+            [this](auto) { return m_no_swallow; },
+        }(annotation->swallow_apnea);
+    }
+
+private:
+    bool m_no_swallow = true;
+    widgets::EnumCheckboxValues<models::SrcPattern> m_src{};
+};
+
 template <typename Filter> std::unique_ptr<TaskFilter::Filter> FilterFactory()
 {
     return std::make_unique<Filter>();
 }
 
 using FilterFactoryFunction = std::unique_ptr<TaskFilter::Filter> (*)();
-constexpr std::array<std::pair<const char *, FilterFactoryFunction>, 7> Filters = {{
+constexpr std::array<std::pair<const char *, FilterFactoryFunction>, 8> Filters = {{
     {"Subject#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::subject>>},
     {"Repeat#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::repeatnum>>},
     {"Swallow#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::swallownum>>},
     {"Swallow type", FilterFactory<SwallowTypeFilter>},
+    {"SRC pattern", FilterFactory<SwallowPatternFilter>},
     {"Has annotation", FilterFactory<HasAnnotationFilter>},
     {"Is ambiguous", FilterFactory<AmbiguityFilter>},
     {"Has ear clicks", FilterFactory<HasEarClicksFilter>},
