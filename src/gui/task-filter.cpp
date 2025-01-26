@@ -128,6 +128,21 @@ constexpr std::array<std::pair<const char *, FilterFactory>, 6> Filters = {{
     {"Has ear clicks", filter_factory<HasEarClicksFilter>},
 }};
 
+bool bool_combo(const char *label, bool& value, const char *true_text, const char *false_text)
+{
+    const bool old_value = value;
+    if (ImGui::BeginCombo(label, value ? true_text : false_text)) {
+        if (ImGui::Selectable(true_text, value)) {
+            value = true;
+        }
+        if (ImGui::Selectable(false_text, !value)) {
+            value = false;
+        }
+        ImGui::EndCombo();
+    }
+    return old_value != value;
+}
+
 }; // namespace
 
 void TaskFilter::draw(const char *id)
@@ -159,6 +174,10 @@ void TaskFilter::draw_filters()
 
 void TaskFilter::draw_new_filter_control()
 {
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 3.5F);
+    bool_combo("##and_or_combo", m_and, "AND", "OR");
+
+    ImGui::SameLine();
     if (ImGui::BeginCombo("##new_filter_combo", Filters[m_new_filter_index].first)) {
         for (std::size_t i = 0; i < Filters.size(); i++) {
             bool selected = i == m_new_filter_index;
@@ -186,7 +205,7 @@ bool TaskFilter::passes(
     if (m_and) {
         return std::all_of(m_filters.begin(), m_filters.end(), pred);
     }
-    return std::any_of(m_filters.begin(), m_filters.end(), pred);
+    return m_filters.empty() || std::any_of(m_filters.begin(), m_filters.end(), pred);
 }
 
 }; // namespace recap::labeller::gui
