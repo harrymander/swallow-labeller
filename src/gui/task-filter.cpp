@@ -55,32 +55,24 @@ class BooleanFilter : public TaskFilter::Filter {
 public:
     void draw() final { ImGui::Checkbox("##boolean_filter", &m_value); }
 
-    bool passes(const app::SwallowLabellingTask& task, const models::SwallowAnnotation *annotation)
-        const final
-    {
-        return bool_passes(task, annotation) == m_value;
-    }
-
-    virtual bool bool_passes(
-        const app::SwallowLabellingTask& task, const models::SwallowAnnotation *annotation
-    ) const = 0;
+    [[nodiscard]] bool bool_passes(bool value) const { return value == m_value; }
 
 private:
     bool m_value = true;
 };
 
 struct HasAnnotationFilter : public BooleanFilter {
-    bool bool_passes(
+    bool passes(
         [[maybe_unused]] const app::SwallowLabellingTask& task,
         const models::SwallowAnnotation *annotation
     ) const override
     {
-        return annotation != nullptr;
+        return bool_passes(annotation != nullptr);
     }
 };
 
 struct AmbiguityFilter : public BooleanFilter {
-    bool bool_passes(
+    bool passes(
         [[maybe_unused]] const app::SwallowLabellingTask& task,
         const models::SwallowAnnotation *annotation
     ) const override
@@ -89,15 +81,16 @@ struct AmbiguityFilter : public BooleanFilter {
             return false;
         }
 
-        return VariantVisitor{
+        const bool is_ambiguous = VariantVisitor{
             [](const models::SwallowApneaAnnotation& apnea) { return apnea.is_ambiguous; },
             [](auto) { return false; },
         }(annotation->swallow_apnea);
+        return bool_passes(is_ambiguous);
     }
 };
 
 struct HasEarClicksFilter : BooleanFilter {
-    bool bool_passes(
+    bool passes(
         [[maybe_unused]] const app::SwallowLabellingTask& task,
         const models::SwallowAnnotation *annotation
     ) const override
@@ -106,10 +99,11 @@ struct HasEarClicksFilter : BooleanFilter {
             return false;
         }
 
-        return VariantVisitor{
+        const bool has_ear_clicks = VariantVisitor{
             [](const std::vector<models::TimeRange>& clicks) { return !clicks.empty(); },
             [](auto) { return false; },
         }(annotation->ear_clicks);
+        return bool_passes(has_ear_clicks);
     }
 };
 
