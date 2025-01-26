@@ -159,14 +159,6 @@ void TaskFilter::draw_filters()
 
 void TaskFilter::draw_new_filter_control()
 {
-    if (ImGui::Button("Add")) {
-        const auto& new_filter = Filters[m_new_filter_index];
-        m_filters.emplace_back(new_filter.first, new_filter.second());
-        m_new_filter_index = 0;
-        spdlog::debug("Added '{}' filter", new_filter.first);
-    }
-
-    ImGui::SameLine();
     if (ImGui::BeginCombo("##new_filter_combo", Filters[m_new_filter_index].first)) {
         for (std::size_t i = 0; i < Filters.size(); i++) {
             bool selected = i == m_new_filter_index;
@@ -175,6 +167,14 @@ void TaskFilter::draw_new_filter_control()
             }
         }
         ImGui::EndCombo();
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button("Add")) {
+        const auto& new_filter = Filters[m_new_filter_index];
+        m_filters.emplace_back(new_filter.first, new_filter.second());
+        m_new_filter_index = 0;
+        spdlog::debug("Added '{}' filter", new_filter.first);
     }
 }
 
