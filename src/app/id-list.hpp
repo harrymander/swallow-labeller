@@ -39,14 +39,14 @@ public:
         return id;
     }
 
-    [[nodiscard]] const T *get_item(Item::ID id) const { return get_item<const T>(*this, id); }
+    [[nodiscard]] const T *get_item(Item::ID id) const { return get_item(*this, id); }
 
-    [[nodiscard]] T *get_item(Item::ID id) { return get_item<T>(*this, id); }
+    [[nodiscard]] T *get_item(Item::ID id) { return get_item(*this, id); }
 
     void remove_item(Item::ID id)
     {
         const auto it = find_item(*this, id);
-        if (it != m_items.end() && it->id == id) {
+        if (it != m_items.end()) {
             m_items.erase(it);
         }
     }
@@ -57,21 +57,22 @@ private:
 
     template <typename Self> static auto find_item(Self&& self, Item::ID id)
     {
-        return std::lower_bound(
+        auto it = std::lower_bound(
             self.m_items.begin(),
             self.m_items.end(),
             id,
             [](const Item& item, Item::ID id) { return item.id < id; }
         );
+        if (it != self.m_items.end() && it->id == id) {
+            return it;
+        }
+        return self.m_items.end();
     }
 
-    template <typename T_ = T, typename Self> static T_ *get_item(Self&& self, Item::ID id)
+    template <typename Self> static auto *get_item(Self&& self, Item::ID id)
     {
         auto it = find_item(self, id);
-        if (it == self.m_items.end() || it->id != id) {
-            return nullptr;
-        }
-        return &(it->item);
+        return it == self.m_items.end() ? nullptr : &(it->item);
     }
 };
 
