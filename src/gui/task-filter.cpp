@@ -8,10 +8,12 @@
 #include "models/annotation.hpp"
 #include "models/task-info.hpp"
 #include "models/time-range.hpp"
+#include "util/strutil.hpp"
 #include "util/variant-visitor.hpp"
 
 #include <IconsFontAwesome6.h>
 #include <imgui.h>
+#include <imgui_stdlib.h>
 #include <magic_enum.hpp>
 #include <spdlog/spdlog.h>
 
@@ -123,7 +125,7 @@ struct AmbiguityFilter : public BooleanFilter {
     }
 };
 
-struct HasEarClicksFilter : BooleanFilter {
+struct HasEarClicksFilter : public BooleanFilter {
     bool passes(
         [[maybe_unused]] const app::SwallowLabellingTask& task,
         const models::SwallowAnnotation *annotation
@@ -141,7 +143,7 @@ struct HasEarClicksFilter : BooleanFilter {
     }
 };
 
-struct SwallowPatternFilter : TaskFilter::Filter {
+class SwallowPatternFilter : public TaskFilter::Filter {
 public:
     SwallowPatternFilter() { m_src.fill(true); }
 
@@ -218,13 +220,43 @@ private:
     std::string m_preview = "All";
 };
 
+class AnnotationNoteFilter : public TaskFilter::Filter {
+public:
+    void draw() override
+    {
+        ImGui::SetNextItemWidth(-1);
+        if (ImGui::InputText("##notes-text-input", &m_input)) {
+            m_input = strutil::trimmed(m_input);
+        }
+    }
+
+    bool passes(
+        [[maybe_unused]] const app::SwallowLabellingTask& task,
+        const models::SwallowAnnotation *annotation
+    ) const override
+    {
+        if (annotation == nullptr) {
+            return false;
+        }
+
+        const auto& note = annotation->note;
+        if (note.has_value()) {
+            return note->find(m_input) != std::string::npos;
+        }
+        return m_input.empty();
+    }
+
+private:
+    std::string m_input;
+};
+
 template <typename Filter> std::unique_ptr<TaskFilter::Filter> FilterFactory()
 {
     return std::make_unique<Filter>();
 }
 
 using FilterFactoryFunction = std::unique_ptr<TaskFilter::Filter> (*)();
-constexpr std::array<std::pair<const char *, FilterFactoryFunction>, 8> Filters = {{
+constexpr std::array<std::pair<const char *, FilterFactoryFunction>, 9> Filters = {{
     {"Subject#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::subject>>},
     {"Repeat#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::repeatnum>>},
     {"Swallow#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::swallownum>>},
@@ -233,6 +265,7 @@ constexpr std::array<std::pair<const char *, FilterFactoryFunction>, 8> Filters 
     {"Has annotation", FilterFactory<HasAnnotationFilter>},
     {"Is ambiguous", FilterFactory<AmbiguityFilter>},
     {"Has ear clicks", FilterFactory<HasEarClicksFilter>},
+    {"Note", FilterFactory<AnnotationNoteFilter>},
 }};
 
 bool bool_combo(const char *label, bool& value, const char *true_text, const char *false_text)
