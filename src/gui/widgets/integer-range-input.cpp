@@ -10,7 +10,7 @@
 #include <limits>
 #include <string_view>
 #include <system_error>
-#include <tuple>
+#include <utility>
 
 namespace recap::labeller::gui::widgets {
 
@@ -53,7 +53,9 @@ bool IntegerRangeInput::parse_pair(std::string_view str, Pair& pair)
         if (!(parse_int(first, pair.first) && parse_int(second, pair.second))) {
             return false;
         }
-        std::tie(pair.first, pair.second) = std::minmax(pair.first, pair.second);
+        if (pair.second < pair.first) {
+            std::swap(pair.first, pair.second);
+        }
     }
 
     return true;
