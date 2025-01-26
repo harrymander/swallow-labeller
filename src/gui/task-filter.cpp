@@ -188,9 +188,7 @@ private:
 
     std::string preview_string() const
     {
-        if (m_no_swallow
-            && std::all_of(m_src.begin(), m_src.end(), [](const auto& v) { return v; }))
-        {
+        if (m_no_swallow && std::ranges::all_of(m_src, [](auto v) { return v; })) {
             return "All";
         }
 
@@ -310,9 +308,9 @@ bool TaskFilter::passes(
 {
     const auto pred = [&](const auto& p) { return p.second->passes(task, annotation); };
     if (m_and) {
-        return std::all_of(m_filters.begin(), m_filters.end(), pred);
+        return std::ranges::all_of(m_filters, pred);
     }
-    return m_filters.empty() || std::any_of(m_filters.begin(), m_filters.end(), pred);
+    return m_filters.empty() || std::ranges::any_of(m_filters, pred);
 }
 
 }; // namespace recap::labeller::gui
