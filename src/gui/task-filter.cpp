@@ -113,19 +113,19 @@ struct HasEarClicksFilter : BooleanFilter {
     }
 };
 
-template <typename Filter> std::unique_ptr<TaskFilter::Filter> filter_factory()
+template <typename Filter> std::unique_ptr<TaskFilter::Filter> FilterFactory()
 {
     return std::make_unique<Filter>();
 }
 
-using FilterFactory = std::unique_ptr<TaskFilter::Filter> (*)();
-constexpr std::array<std::pair<const char *, FilterFactory>, 6> Filters = {{
-    {"Subject#", filter_factory<TaskIntegerFilter<&models::SwallowTaskInfo::subject>>},
-    {"Repeat#", filter_factory<TaskIntegerFilter<&models::SwallowTaskInfo::repeatnum>>},
-    {"Swallow#", filter_factory<TaskIntegerFilter<&models::SwallowTaskInfo::swallownum>>},
-    {"Has annotation", filter_factory<HasAnnotationFilter>},
-    {"Is ambiguous", filter_factory<AmbiguityFilter>},
-    {"Has ear clicks", filter_factory<HasEarClicksFilter>},
+using FilterFactoryFunction = std::unique_ptr<TaskFilter::Filter> (*)();
+constexpr std::array<std::pair<const char *, FilterFactoryFunction>, 6> Filters = {{
+    {"Subject#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::subject>>},
+    {"Repeat#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::repeatnum>>},
+    {"Swallow#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::swallownum>>},
+    {"Has annotation", FilterFactory<HasAnnotationFilter>},
+    {"Is ambiguous", FilterFactory<AmbiguityFilter>},
+    {"Has ear clicks", FilterFactory<HasEarClicksFilter>},
 }};
 
 bool bool_combo(const char *label, bool& value, const char *true_text, const char *false_text)
