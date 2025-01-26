@@ -12,6 +12,7 @@
 
 #include <IconsFontAwesome6.h>
 #include <imgui.h>
+#include <magic_enum.hpp>
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
@@ -143,20 +144,20 @@ public:
 
     void draw() override
     {
-        constexpr auto SrcLabels = []() {
-            using enum models::SrcPattern;
-            widgets::EnumLabels<models::SrcPattern> labels;
-            labels[ExEx] = "ex-ex";
-            labels[InEx] = "in-ex";
-            labels[ExIn] = "ex-in";
-            labels[InIn] = "in-in";
-            return labels;
-        }();
-
-        ImGui::BeginGroup();
-        ImGui::Checkbox("No swallow", &m_no_swallow);
-        widgets::enum_checkboxes("##src-pattern-checkboxes", SrcLabels, m_src);
-        ImGui::EndGroup();
+        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 9);
+        bool updated = false;
+        if (ImGui::BeginCombo("##src-pattern-combo", m_preview.c_str())) {
+            if (ImGui::Checkbox("No swallow", &m_no_swallow)) {
+                updated = true;
+            }
+            if (widgets::enum_checkboxes("##src-pattern-checkboxes", SrcLabels, m_src)) {
+                updated = true;
+            }
+            ImGui::EndCombo();
+        }
+        if (updated) {
+            m_preview = preview_string();
+        }
     }
 
     bool passes(
@@ -175,8 +176,45 @@ public:
     }
 
 private:
+    static constexpr auto SrcLabels = []() {
+        using enum models::SrcPattern;
+        widgets::EnumLabels<models::SrcPattern> labels;
+        labels[ExEx] = "ex-ex";
+        labels[InEx] = "in-ex";
+        labels[ExIn] = "ex-in";
+        labels[InIn] = "in-in";
+        return labels;
+    }();
+
+    std::string preview_string() const
+    {
+        if (m_no_swallow
+            && std::all_of(m_src.begin(), m_src.end(), [](const auto& v) { return v; }))
+        {
+            return "All";
+        }
+
+        std::string preview = m_no_swallow ? "NS" : "";
+        for (std::size_t i = 0; i < m_src.size(); i++) {
+            const auto e = magic_enum::enum_value<models::SrcPattern>(i);
+            if (m_src[e]) {
+                if (!preview.empty()) {
+                    preview += ", ";
+                }
+                preview += SrcLabels[e];
+            }
+        }
+
+        if (preview.empty()) {
+            preview = "(none)";
+        }
+
+        return preview;
+    }
+
     bool m_no_swallow = true;
     widgets::EnumCheckboxValues<models::SrcPattern> m_src{};
+    std::string m_preview = "All";
 };
 
 template <typename Filter> std::unique_ptr<TaskFilter::Filter> FilterFactory()
