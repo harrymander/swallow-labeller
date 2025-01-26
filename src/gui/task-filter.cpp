@@ -338,6 +338,19 @@ bool bool_combo(const char *label, bool& value, const char *true_text, const cha
     return old_value != value;
 }
 
+bool draw_delete_button()
+{
+    constexpr ImU32 Transparent = IM_COL32(0, 0, 0, 0);
+    widgets::ScopedImColor color_scope = {
+        {ImGuiCol_Button, Transparent},
+        {ImGuiCol_ButtonActive, Transparent},
+        {ImGuiCol_ButtonHovered, Transparent},
+    };
+    const bool clicked = ImGui::Button(ICON_FA_TRASH_CAN);
+    ImGui::SetItemTooltip("Remove filter");
+    return clicked;
+}
+
 }; // namespace
 
 void TaskFilter::draw(const char *id)
@@ -352,9 +365,7 @@ void TaskFilter::draw_filters()
     auto it = m_filters.begin();
     while (it != m_filters.end()) {
         widgets::ScopedImID filter_id(&(it->second));
-        const bool to_delete = ImGui::Button(ICON_FA_TRASH_CAN);
-        ImGui::SetItemTooltip("Remove filter");
-        if (to_delete) {
+        if (draw_delete_button()) {
             spdlog::debug("Deleted '{}' filter", it->first);
             it = m_filters.erase(it);
         } else {
