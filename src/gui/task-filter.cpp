@@ -142,7 +142,9 @@ void TaskFilter::draw_filters()
     auto it = m_filters.begin();
     while (it != m_filters.end()) {
         widgets::ScopedImID filter_id(&(it->second));
-        if (ImGui::Button(ICON_FA_TRASH_CAN)) {
+        const bool to_delete = ImGui::Button(ICON_FA_TRASH_CAN);
+        ImGui::SetItemTooltip("Remove filter");
+        if (to_delete) {
             spdlog::debug("Deleted '{}' filter", it->first);
             it = m_filters.erase(it);
         } else {
