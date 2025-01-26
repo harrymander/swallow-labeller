@@ -61,8 +61,11 @@ bool IntegerRangeInput::parse_pair(std::string_view str, Pair& pair)
     return true;
 }
 
-void IntegerRangeInput::draw(const char *id)
+void IntegerRangeInput::draw(const char *id, float width)
 {
+    if (width != 0) {
+        ImGui::SetNextItemWidth(width);
+    }
     const bool updated = ImGui::InputText(id, &m_input);
     ImGui::SetItemTooltip("Input numbers or ranges separated by commas, e.g. \"1, 3-12, 15-\"");
     if (updated) {

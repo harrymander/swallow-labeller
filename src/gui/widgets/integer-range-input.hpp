@@ -10,7 +10,7 @@ namespace recap::labeller::gui::widgets {
 
 class IntegerRangeInput {
 public:
-    void draw(const char *id);
+    void draw(const char *id, float width = 0);
 
     [[nodiscard]] bool contains(unsigned int val) const;
 

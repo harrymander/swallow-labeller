@@ -23,7 +23,7 @@ class IntegerFilter : public TaskFilter::Filter {
 public:
     void draw() final
     {
-        m_input.draw("##input");
+        m_input.draw("##input", ImGui::GetFontSize() * 6);
         if (m_input.error()) {
             ImGui::SameLine();
             ImGui::TextUnformatted(ICON_FA_TRIANGLE_EXCLAMATION);
