@@ -378,7 +378,10 @@ void TaskFilter::draw_new_filter_control()
 
     ImGui::SetNextItemWidth(-AddButtonWidth);
     ImGui::SameLine();
-    if (ImGui::BeginCombo("##new_filter_combo", Filters[m_new_filter_index].first)) {
+    if (ImGui::BeginCombo(
+            "##new_filter_combo", Filters[m_new_filter_index].first, ImGuiComboFlags_HeightLarge
+        ))
+    {
         for (std::size_t i = 0; i < Filters.size(); i++) {
             bool selected = i == m_new_filter_index;
             if (ImGui::Selectable(Filters[i].first, selected)) {
