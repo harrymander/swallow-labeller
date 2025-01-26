@@ -177,6 +177,7 @@ void TaskFilter::draw_new_filter_control()
     ImGui::SetNextItemWidth(ImGui::GetFontSize() * 3.5F);
     bool_combo("##and_or_combo", m_and, "AND", "OR");
 
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
     ImGui::SameLine();
     if (ImGui::BeginCombo("##new_filter_combo", Filters[m_new_filter_index].first)) {
         for (std::size_t i = 0; i < Filters.size(); i++) {
