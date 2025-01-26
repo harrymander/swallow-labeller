@@ -27,8 +27,11 @@ class IntegerFilter : public TaskFilter::Filter {
 public:
     void draw() final
     {
-        m_input.draw("##input", ImGui::GetFontSize() * 6);
-        if (m_input.error()) {
+        const bool error = m_input.error();
+        m_input.draw(
+            "##input", error ? -ImGui::GetFontSize() - ImGui::GetStyle().ItemSpacing.x : -1
+        );
+        if (error) {
             ImGui::SameLine();
             ImGui::TextUnformatted(ICON_FA_TRIANGLE_EXCLAMATION);
             ImGui::SetItemTooltip("Invalid input");
@@ -66,7 +69,7 @@ public:
             labels[Cued] = "Cued";
             return labels;
         }();
-        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 5);
+        ImGui::SetNextItemWidth(-1);
         widgets::enum_combo("##swallow-test-type", Labels, m_value);
     }
 
@@ -144,7 +147,7 @@ public:
 
     void draw() override
     {
-        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 9);
+        ImGui::SetNextItemWidth(-1);
         bool updated = false;
         if (ImGui::BeginCombo("##src-pattern-combo", m_preview.c_str())) {
             if (ImGui::Checkbox("No swallow", &m_no_swallow)) {
@@ -278,10 +281,14 @@ void TaskFilter::draw_filters()
 
 void TaskFilter::draw_new_filter_control()
 {
+    static const char *AddButtonText = ICON_FA_PLUS " Add";
+    static float AddButtonWidth =
+        ImGui::CalcTextSize(AddButtonText).x + 2 * ImGui::GetStyle().ItemSpacing.x;
+
     ImGui::SetNextItemWidth(ImGui::GetFontSize() * 3.5F);
     bool_combo("##and_or_combo", m_and, "AND", "OR");
 
-    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
+    ImGui::SetNextItemWidth(-AddButtonWidth);
     ImGui::SameLine();
     if (ImGui::BeginCombo("##new_filter_combo", Filters[m_new_filter_index].first)) {
         for (std::size_t i = 0; i < Filters.size(); i++) {
@@ -294,7 +301,7 @@ void TaskFilter::draw_new_filter_control()
     }
 
     ImGui::SameLine();
-    if (ImGui::Button("Add")) {
+    if (ImGui::Button(AddButtonText)) {
         const auto& new_filter = Filters[m_new_filter_index];
         m_filters.emplace_back(new_filter.first, new_filter.second());
         m_new_filter_index = 0;
