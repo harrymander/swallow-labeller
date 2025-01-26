@@ -1,5 +1,7 @@
 #include "task-filter.hpp"
 
+#include "gui/widgets/enum-combo.hpp"
+#include "gui/widgets/enum-utils.hpp"
 #include "gui/widgets/integer-range-input.hpp"
 #include "gui/widgets/util.hpp"
 #include "models/annotation.hpp"
@@ -49,6 +51,33 @@ struct TaskIntegerFilter : public IntegerFilter {
     {
         return integer_passes(task.info().*IntMember);
     }
+};
+
+class SwallowTypeFilter : public TaskFilter::Filter {
+public:
+    void draw() override
+    {
+        constexpr auto Values = []() {
+            using enum models::SwallowTestType;
+            widgets::EnumLabels<models::SwallowTestType> values;
+            values[TidalBreathing] = "Tidal";
+            values[Cued] = "Cued";
+            return values;
+        }();
+        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 5);
+        widgets::enum_combo("##swallow-test-type", Values, m_value);
+    }
+
+    bool passes(
+        const app::SwallowLabellingTask& task,
+        [[maybe_unused]] const models::SwallowAnnotation *annotation
+    ) const override
+    {
+        return m_value == task.info().test_type;
+    }
+
+private:
+    models::SwallowTestType m_value = models::SwallowTestType::TidalBreathing;
 };
 
 class BooleanFilter : public TaskFilter::Filter {
@@ -113,10 +142,11 @@ template <typename Filter> std::unique_ptr<TaskFilter::Filter> FilterFactory()
 }
 
 using FilterFactoryFunction = std::unique_ptr<TaskFilter::Filter> (*)();
-constexpr std::array<std::pair<const char *, FilterFactoryFunction>, 6> Filters = {{
+constexpr std::array<std::pair<const char *, FilterFactoryFunction>, 7> Filters = {{
     {"Subject#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::subject>>},
     {"Repeat#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::repeatnum>>},
     {"Swallow#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::swallownum>>},
+    {"Swallow type", FilterFactory<SwallowTypeFilter>},
     {"Has annotation", FilterFactory<HasAnnotationFilter>},
     {"Is ambiguous", FilterFactory<AmbiguityFilter>},
     {"Has ear clicks", FilterFactory<HasEarClicksFilter>},
