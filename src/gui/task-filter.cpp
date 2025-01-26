@@ -153,8 +153,10 @@ public:
             return labels;
         }();
 
+        ImGui::BeginGroup();
         ImGui::Checkbox("No swallow", &m_no_swallow);
-        widgets::enum_checkboxes("##src-pattern-checkboxes", SrcLabels, m_src);
+        widgets::enum_checkboxes("##src-pattern-checkboxes", SrcLabels, m_src, false);
+        ImGui::EndGroup();
     }
 
     bool passes(
