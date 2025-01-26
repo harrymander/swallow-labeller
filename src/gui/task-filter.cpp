@@ -21,6 +21,7 @@
 #include <array>
 #include <optional>
 #include <regex>
+#include <string_view>
 #include <utility>
 
 namespace recap::labeller::gui {
@@ -222,7 +223,7 @@ private:
     std::string m_preview = "All";
 };
 
-class AnnotationNoteFilter : public TaskFilter::Filter {
+class TextFilter : public TaskFilter::Filter {
 public:
     void draw() override
     {
@@ -235,7 +236,7 @@ public:
         ImGui::SetNextItemWidth(
             regex_error ? -ImGui::GetFontSize() - ImGui::GetStyle().ItemSpacing.x : -1
         );
-        if (ImGui::InputText("##notes-text-input", &m_input)) {
+        if (ImGui::InputText("##text-filter-input", &m_search)) {
             update_input();
         }
         if (regex_error) {
@@ -245,24 +246,12 @@ public:
         }
     }
 
-    bool passes(
-        [[maybe_unused]] const app::SwallowLabellingTask& task,
-        const models::SwallowAnnotation *annotation
-    ) const override
+    [[nodiscard]] bool string_passes(std::string_view s) const
     {
-        if (annotation == nullptr) {
-            return false;
-        }
-
-        const auto& note = annotation->note;
         if (m_use_regex) {
-            return m_regex.has_value() && std::regex_search(note.value_or(""), *m_regex);
+            return m_regex.has_value() && std::regex_search(s.begin(), s.end(), *m_regex);
         }
-
-        if (note.has_value()) {
-            return note->find(m_input) != std::string::npos;
-        }
-        return m_input.empty();
+        return s.find(m_search) != std::string_view::npos;
     }
 
 private:
@@ -286,23 +275,47 @@ private:
     void update_input()
     {
         if (m_use_regex) {
-            if (m_input.empty()) {
+            if (m_search.empty()) {
                 m_regex = std::regex(".*");
             } else {
                 try {
-                    m_regex = std::regex(m_input);
+                    m_regex = std::regex(m_search);
                 } catch (const std::regex_error&) {
                     m_regex = std::nullopt;
                 }
             }
         } else {
-            m_input = strutil::trimmed(m_input);
+            m_search = strutil::trimmed(m_search);
         }
     }
 
-    std::string m_input;
+    std::string m_search;
     std::optional<std::regex> m_regex = std::nullopt;
     bool m_use_regex = false;
+};
+
+struct AnnotationNoteFilter : public TextFilter {
+    bool passes(
+        [[maybe_unused]] const app::SwallowLabellingTask& task,
+        const models::SwallowAnnotation *annotation
+    ) const override
+    {
+        if (annotation == nullptr) {
+            return false;
+        }
+        const auto& note = annotation->note;
+        return string_passes(note.has_value() ? *note : std::string_view{});
+    }
+};
+
+struct DatapathFilter : public TextFilter {
+    bool passes(
+        const app::SwallowLabellingTask& task,
+        [[maybe_unused]] const models::SwallowAnnotation *annotation
+    ) const override
+    {
+        return string_passes(task.data_path());
+    }
 };
 
 template <typename Filter> std::unique_ptr<TaskFilter::Filter> FilterFactory()
@@ -311,11 +324,12 @@ template <typename Filter> std::unique_ptr<TaskFilter::Filter> FilterFactory()
 }
 
 using FilterFactoryFunction = std::unique_ptr<TaskFilter::Filter> (*)();
-constexpr std::array<std::pair<const char *, FilterFactoryFunction>, 9> Filters = {{
+constexpr std::array<std::pair<const char *, FilterFactoryFunction>, 10> Filters = {{
     {"Subject#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::subject>>},
     {"Repeat#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::repeatnum>>},
     {"Swallow#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::swallownum>>},
     {"Swallow type", FilterFactory<SwallowTypeFilter>},
+    {"File path", FilterFactory<DatapathFilter>},
     {"SRC pattern", FilterFactory<SwallowPatternFilter>},
     {"Has annotation", FilterFactory<HasAnnotationFilter>},
     {"Is ambiguous", FilterFactory<AmbiguityFilter>},
