@@ -31,10 +31,14 @@ public:
     };
 
 private:
+    using FilterList = std::list<std::pair<const char *, std::unique_ptr<Filter>>>;
+
     void draw_filters();
+    void draw_filter(const TaskFilter::FilterList::iterator& it);
     void draw_new_filter_control();
 
-    std::list<std::pair<const char *, std::unique_ptr<Filter>>> m_filters;
+    FilterList m_filters;
+    std::optional<FilterList::const_iterator> m_changing_filter = std::nullopt;
     std::size_t m_new_filter_index = 0;
     bool m_and = true;
 };

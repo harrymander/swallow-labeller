@@ -534,6 +534,23 @@ bool draw_delete_button()
     return clicked;
 }
 
+const std::pair<const char *, FilterFactoryFunction> *draw_filter_change_combo(const char *current)
+{
+    const std::pair<const char *, FilterFactoryFunction> *changed_filter = nullptr;
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6);
+    if (ImGui::BeginCombo("##filter_change_combo", current)) {
+        for (const auto& filter : Filters) {
+            if (ImGui::Selectable(filter.first)) { // cppcheck-suppress useStlAlgorithm
+                changed_filter = &filter;
+                break;
+            }
+        }
+        ImGui::EndCombo();
+    }
+
+    return changed_filter;
+}
+
 }; // namespace
 
 void TaskFilter::draw(const char *id)
@@ -543,6 +560,30 @@ void TaskFilter::draw(const char *id)
     draw_new_filter_control();
 }
 
+void TaskFilter::draw_filter(const TaskFilter::FilterList::iterator& it)
+{
+    ImGui::SameLine();
+    if (m_changing_filter && *m_changing_filter == it) {
+        const auto *new_filter = draw_filter_change_combo(it->first);
+        if (new_filter) {
+            if (new_filter->first != it->first) {
+                spdlog::debug("Changing filter '{}' -> '{}'", it->first, new_filter->first);
+                it->first = new_filter->first;
+                it->second = new_filter->second();
+            }
+            m_changing_filter.reset();
+        }
+    } else {
+        ImGui::TextUnformatted(it->first);
+        if (ImGui::IsItemClicked()) {
+            m_changing_filter = it;
+        }
+    }
+
+    ImGui::SameLine();
+    it->second->draw();
+}
+
 void TaskFilter::draw_filters()
 {
     auto it = m_filters.begin();
@@ -550,12 +591,12 @@ void TaskFilter::draw_filters()
         widgets::ScopedImID filter_id(&(it->second));
         if (draw_delete_button()) {
             spdlog::debug("Deleted '{}' filter", it->first);
+            if (m_changing_filter && *m_changing_filter == it) {
+                m_changing_filter.reset();
+            }
             it = m_filters.erase(it);
         } else {
-            ImGui::SameLine();
-            ImGui::TextUnformatted(it->first);
-            ImGui::SameLine();
-            it->second->draw();
+            draw_filter(it);
             it++;
         }
     }
@@ -590,6 +631,7 @@ void TaskFilter::draw_new_filter_control()
         const auto& new_filter = Filters[m_new_filter_index];
         m_filters.emplace_back(new_filter.first, new_filter.second());
         m_new_filter_index = 0;
+        m_changing_filter.reset();
         spdlog::debug("Added '{}' filter", new_filter.first);
     }
 }
