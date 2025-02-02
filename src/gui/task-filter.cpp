@@ -23,7 +23,6 @@
 #include <optional>
 #include <regex>
 #include <string_view>
-#include <utility>
 
 namespace recap::labeller::gui {
 
@@ -31,6 +30,8 @@ namespace {
 
 class IntegerFilter : public TaskFilter::Filter {
 public:
+    using TaskFilter::Filter::Filter;
+
     void draw() final
     {
         const bool error = m_input.error();
@@ -55,6 +56,8 @@ private:
 
 template <unsigned int models::SwallowTaskInfo::*IntMember>
 struct TaskIntegerFilter : public IntegerFilter {
+    using IntegerFilter::IntegerFilter;
+
     bool passes(
         const app::SwallowLabellingTask& task,
         [[maybe_unused]] const models::SwallowAnnotation *annotation
@@ -66,6 +69,8 @@ struct TaskIntegerFilter : public IntegerFilter {
 
 class SwallowTypeFilter : public TaskFilter::Filter {
 public:
+    using TaskFilter::Filter::Filter;
+
     void draw() override
     {
         constexpr auto Labels = []() {
@@ -93,6 +98,8 @@ private:
 
 class BooleanFilter : public TaskFilter::Filter {
 public:
+    using TaskFilter::Filter::Filter;
+
     void draw() final { ImGui::Checkbox("##boolean_filter", &m_value); }
 
     [[nodiscard]] bool bool_passes(bool value) const { return value == m_value; }
@@ -102,6 +109,8 @@ private:
 };
 
 struct HasAnnotationFilter : public BooleanFilter {
+    using BooleanFilter::BooleanFilter;
+
     bool passes(
         [[maybe_unused]] const app::SwallowLabellingTask& task,
         const models::SwallowAnnotation *annotation
@@ -112,6 +121,8 @@ struct HasAnnotationFilter : public BooleanFilter {
 };
 
 struct AmbiguityFilter : public BooleanFilter {
+    using BooleanFilter::BooleanFilter;
+
     bool passes(
         [[maybe_unused]] const app::SwallowLabellingTask& task,
         const models::SwallowAnnotation *annotation
@@ -130,6 +141,8 @@ struct AmbiguityFilter : public BooleanFilter {
 };
 
 struct HasEarClicksFilter : public BooleanFilter {
+    using BooleanFilter::BooleanFilter;
+
     bool passes(
         [[maybe_unused]] const app::SwallowLabellingTask& task,
         const models::SwallowAnnotation *annotation
@@ -149,7 +162,9 @@ struct HasEarClicksFilter : public BooleanFilter {
 
 class SwallowPatternFilter : public TaskFilter::Filter {
 public:
-    SwallowPatternFilter() { m_src.fill(true); }
+    using TaskFilter::Filter::Filter;
+
+    explicit SwallowPatternFilter(const char *name) : TaskFilter::Filter(name) { m_src.fill(true); }
 
     void draw() override
     {
@@ -226,6 +241,8 @@ private:
 
 class TextFilter : public TaskFilter::Filter {
 public:
+    using TaskFilter::Filter::Filter;
+
     void draw() override
     {
         if (draw_regex_button()) {
@@ -296,6 +313,8 @@ private:
 };
 
 struct AnnotationNoteFilter : public TextFilter {
+    using TextFilter::TextFilter;
+
     bool passes(
         [[maybe_unused]] const app::SwallowLabellingTask& task,
         const models::SwallowAnnotation *annotation
@@ -310,6 +329,8 @@ struct AnnotationNoteFilter : public TextFilter {
 };
 
 struct DatapathFilter : public TextFilter {
+    using TextFilter::TextFilter;
+
     bool passes(
         const app::SwallowLabellingTask& task,
         [[maybe_unused]] const models::SwallowAnnotation *annotation
@@ -378,6 +399,8 @@ private:
 
 class DoubleRangeFilter : public TaskFilter::Filter {
 public:
+    using TaskFilter::Filter::Filter;
+
     void draw() override
     {
         const bool regex_error = !m_comparator.has_value() && !m_input.empty();
@@ -466,6 +489,8 @@ private:
 };
 
 struct SnrfTimeFilter : public DoubleRangeFilter {
+    using DoubleRangeFilter::DoubleRangeFilter;
+
     bool passes(
         [[maybe_unused]] const app::SwallowLabellingTask& task,
         const models::SwallowAnnotation *annotation
@@ -486,13 +511,27 @@ struct SnrfTimeFilter : public DoubleRangeFilter {
     }
 };
 
-template <typename Filter> std::unique_ptr<TaskFilter::Filter> FilterFactory()
+template <typename Filter> std::unique_ptr<TaskFilter::Filter> FilterFactory(const char *name)
 {
-    return std::make_unique<Filter>();
+    return std::make_unique<Filter>(name);
 }
 
-using FilterFactoryFunction = std::unique_ptr<TaskFilter::Filter> (*)();
-constexpr std::array<std::pair<const char *, FilterFactoryFunction>, 11> Filters = {{
+class FilterChoice {
+public:
+    using Factory = std::unique_ptr<TaskFilter::Filter> (*)(const char *);
+
+    constexpr FilterChoice(const char *name, Factory factory) : m_name(name), m_factory(factory) {}
+
+    [[nodiscard]] constexpr const char *name() const { return m_name; }
+
+    [[nodiscard]] std::unique_ptr<TaskFilter::Filter> create() const { return m_factory(m_name); }
+
+private:
+    const char *m_name;
+    Factory m_factory;
+};
+
+constexpr std::array<FilterChoice, 11> FilterChoices = {{
     {"Subject#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::subject>>},
     {"Repeat#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::repeatnum>>},
     {"Swallow#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::swallownum>>},
@@ -534,21 +573,43 @@ bool draw_delete_button()
     return clicked;
 }
 
-const std::pair<const char *, FilterFactoryFunction> *draw_filter_change_combo(const char *current)
+const FilterChoice *draw_filter_change_combo(const char *current)
 {
-    const std::pair<const char *, FilterFactoryFunction> *changed_filter = nullptr;
+    const FilterChoice *new_filter = nullptr;
     ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6);
     if (ImGui::BeginCombo("##filter_change_combo", current)) {
-        for (const auto& filter : Filters) {
-            if (ImGui::Selectable(filter.first)) { // cppcheck-suppress useStlAlgorithm
-                changed_filter = &filter;
+        for (const auto& filter : FilterChoices) {
+            if (ImGui::Selectable(filter.name())) { // cppcheck-suppress useStlAlgorithm
+                new_filter = &filter;
                 break;
             }
         }
         ImGui::EndCombo();
     }
 
-    return changed_filter;
+    return new_filter;
+}
+
+bool draw_filter(std::unique_ptr<TaskFilter::Filter>& filter, bool changing)
+{
+    ImGui::SameLine();
+    if (changing) {
+        const auto *new_filter = draw_filter_change_combo(filter->name());
+        if (new_filter) {
+            if (new_filter->name() != filter->name()) {
+                spdlog::debug("Changing filter '{}' -> '{}'", new_filter->name(), filter->name());
+                filter = new_filter->create();
+            }
+            changing = false;
+        }
+    } else {
+        ImGui::TextUnformatted(filter->name());
+        changing = ImGui::IsItemClicked();
+    }
+
+    ImGui::SameLine();
+    filter->draw();
+    return changing;
 }
 
 }; // namespace
@@ -560,43 +621,25 @@ void TaskFilter::draw(const char *id)
     draw_new_filter_control();
 }
 
-void TaskFilter::draw_filter(const TaskFilter::FilterList::iterator& it)
-{
-    ImGui::SameLine();
-    if (m_changing_filter && *m_changing_filter == it) {
-        const auto *new_filter = draw_filter_change_combo(it->first);
-        if (new_filter) {
-            if (new_filter->first != it->first) {
-                spdlog::debug("Changing filter '{}' -> '{}'", it->first, new_filter->first);
-                it->first = new_filter->first;
-                it->second = new_filter->second();
-            }
-            m_changing_filter.reset();
-        }
-    } else {
-        ImGui::TextUnformatted(it->first);
-        if (ImGui::IsItemClicked()) {
-            m_changing_filter = it;
-        }
-    }
-
-    ImGui::SameLine();
-    it->second->draw();
-}
-
 void TaskFilter::draw_filters()
 {
     auto it = m_filters.begin();
     while (it != m_filters.end()) {
-        widgets::ScopedImID filter_id(&(it->second));
+        auto& filter = *it;
+        widgets::ScopedImID filter_id(filter.get());
         if (draw_delete_button()) {
-            spdlog::debug("Deleted '{}' filter", it->first);
-            if (m_changing_filter && *m_changing_filter == it) {
-                m_changing_filter.reset();
+            spdlog::debug("Deleted '{}' filter", filter->name());
+            if (m_changing_filter_it && *m_changing_filter_it == it) {
+                m_changing_filter_it.reset();
             }
             it = m_filters.erase(it);
         } else {
-            draw_filter(it);
+            const bool changing = m_changing_filter_it && *m_changing_filter_it == it;
+            if (draw_filter(filter, changing)) {
+                m_changing_filter_it = it;
+            } else if (changing) {
+                m_changing_filter_it.reset();
+            }
             it++;
         }
     }
@@ -614,12 +657,14 @@ void TaskFilter::draw_new_filter_control()
     ImGui::SetNextItemWidth(-AddButtonWidth);
     ImGui::SameLine();
     if (ImGui::BeginCombo(
-            "##new_filter_combo", Filters[m_new_filter_index].first, ImGuiComboFlags_HeightLarge
+            "##new_filter_combo",
+            FilterChoices[m_new_filter_index].name(),
+            ImGuiComboFlags_HeightLarge
         ))
     {
-        for (std::size_t i = 0; i < Filters.size(); i++) {
+        for (std::size_t i = 0; i < FilterChoices.size(); i++) {
             bool selected = i == m_new_filter_index;
-            if (ImGui::Selectable(Filters[i].first, selected)) {
+            if (ImGui::Selectable(FilterChoices[i].name(), selected)) {
                 m_new_filter_index = i;
             }
         }
@@ -628,11 +673,11 @@ void TaskFilter::draw_new_filter_control()
 
     ImGui::SameLine();
     if (ImGui::Button(AddButtonText)) {
-        const auto& new_filter = Filters[m_new_filter_index];
-        m_filters.emplace_back(new_filter.first, new_filter.second());
+        const auto& new_filter = FilterChoices[m_new_filter_index];
+        m_filters.emplace_back(new_filter.create());
         m_new_filter_index = 0;
-        m_changing_filter.reset();
-        spdlog::debug("Added '{}' filter", new_filter.first);
+        m_changing_filter_it.reset();
+        spdlog::debug("Added '{}' filter", new_filter.name());
     }
 }
 
@@ -640,7 +685,7 @@ bool TaskFilter::passes(
     const app::SwallowLabellingTask& task, const models::SwallowAnnotation *annotation
 ) const
 {
-    const auto pred = [&](const auto& p) { return p.second->passes(task, annotation); };
+    const auto pred = [&](const auto& filter) { return filter->passes(task, annotation); };
     if (m_and) {
         return std::ranges::all_of(m_filters, pred);
     }

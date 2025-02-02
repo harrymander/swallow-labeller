@@ -7,7 +7,6 @@
 #include <cstddef>
 #include <list>
 #include <memory>
-#include <utility>
 
 namespace recap::labeller::gui {
 
@@ -21,6 +20,8 @@ public:
 
     class Filter {
     public:
+        explicit Filter(const char *name) : m_name(name) {}
+
         virtual ~Filter() = default;
 
         virtual void draw() = 0;
@@ -28,17 +29,21 @@ public:
         [[nodiscard]] virtual bool passes(
             const app::SwallowLabellingTask& task, const models::SwallowAnnotation *annotation
         ) const = 0;
+
+        const char *name() const { return m_name; }
+
+    private:
+        const char *m_name;
     };
 
 private:
-    using FilterList = std::list<std::pair<const char *, std::unique_ptr<Filter>>>;
+    using FilterList = std::list<std::unique_ptr<Filter>>;
 
     void draw_filters();
-    void draw_filter(const TaskFilter::FilterList::iterator& it);
     void draw_new_filter_control();
 
     FilterList m_filters;
-    std::optional<FilterList::const_iterator> m_changing_filter = std::nullopt;
+    std::optional<FilterList::const_iterator> m_changing_filter_it = std::nullopt;
     std::size_t m_new_filter_index = 0;
     bool m_and = true;
 };
