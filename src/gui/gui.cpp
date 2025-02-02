@@ -465,27 +465,28 @@ private:
 
     void draw_critical_error(const std::string& error)
     {
+        constexpr ImGuiWindowFlags WindowsFlags = ImGuiWindowFlags_NoCollapse
+            | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDocking
+            | ImGuiWindowFlags_NoMove;
         constexpr ImU32 TitleColor = 0xCC2929FF;
         constexpr ImVec2 CentrePos = {0.5F, 0.5F};
-        widgets::ScopedImColor color_scope(ImGuiCol_TitleBgActive, TitleColor);
 
-        static const char *modal_title = ERR_ICON ICON_TEXT_SPACE "Critical error##crit_err_modal";
-
-        if (!m_critical_error_modal_open) {
-            m_critical_error_modal_open = true;
-            ImGui::OpenPopup(modal_title);
-            ImGui::SetNextWindowPos(
-                ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, CentrePos
-            );
-        }
-
-        if (ImGui::BeginPopupModal(modal_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::Text("%s\n(Please email Harry!)", error.c_str());
+        widgets::ScopedImColor color_scope = {
+            {ImGuiCol_TitleBg, TitleColor},
+            {ImGuiCol_TitleBgActive, TitleColor},
+        };
+        ImGui::SetNextWindowFocus();
+        ImGui::SetNextWindowPos(
+            ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, CentrePos
+        );
+        if (ImGui::Begin(ERR_ICON ICON_TEXT_SPACE "Critical error", nullptr, WindowsFlags)) {
+            ImGui::TextUnformatted(error.c_str());
+            ImGui::Spacing();
             if (widgets::ButtonRed(EXIT_ICON ICON_TEXT_SPACE "Quit")) {
                 stop();
             }
-            ImGui::EndPopup();
         }
+        ImGui::End();
     }
 
     void setup_dockspace()
@@ -1692,29 +1693,29 @@ public:
         }
 
         setup_dockspace();
+        m_first_draw = false;
 
         const auto& critical_error = m_app.critical_error();
         if (critical_error.has_value()) {
             draw_critical_error(*critical_error);
+        } else {
+            if (m_app.unsaved_task_switch_blocked()) {
+                draw_unsaved_task_prompt();
+            }
+            draw_window(TaskListWindowId, [this]() { draw_task_list(); });
+            draw_window(MainWindowId, [this]() { draw_main_window(); });
+
+            auto *task_view = m_app.active_task_labelling_view();
+            if (task_view != nullptr) {
+                draw_window(LabelInfoWindowId, [this, task_view]() {
+                    draw_label_editor(*task_view);
+                });
+            }
+
+            show_window(m_show_imgui_demo_window, ImGui::ShowDemoWindow);
+            show_window(m_show_imgui_metrics, ImGui::ShowMetricsWindow);
+            show_window(m_show_implot_demo_window, ImPlot::ShowDemoWindow);
         }
-
-        if (m_app.unsaved_task_switch_blocked()) {
-            draw_unsaved_task_prompt();
-        }
-
-        draw_window(TaskListWindowId, [this]() { draw_task_list(); });
-        draw_window(MainWindowId, [this]() { draw_main_window(); });
-
-        auto *task_view = m_app.active_task_labelling_view();
-        if (task_view != nullptr) {
-            draw_window(LabelInfoWindowId, [this, task_view]() { draw_label_editor(*task_view); });
-        }
-
-        show_window(m_show_imgui_demo_window, ImGui::ShowDemoWindow);
-        show_window(m_show_imgui_metrics, ImGui::ShowMetricsWindow);
-        show_window(m_show_implot_demo_window, ImPlot::ShowDemoWindow);
-
-        m_first_draw = false;
     }
 
     void stop() { m_app.stop(); }
