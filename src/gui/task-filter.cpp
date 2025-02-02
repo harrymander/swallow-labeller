@@ -19,7 +19,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cassert>
 #include <charconv>
 #include <optional>
 #include <regex>
@@ -381,7 +380,7 @@ class DoubleRangeFilter : public TaskFilter::Filter {
 public:
     void draw() override
     {
-        const bool regex_error = !m_comparator.has_value();
+        const bool regex_error = !m_comparator.has_value() && !m_input.empty();
         ImGui::SetNextItemWidth(
             regex_error ? -ImGui::GetFontSize() - ImGui::GetStyle().ItemSpacing.x : -1
         );
@@ -393,69 +392,73 @@ public:
         }
 
         if (updated) {
-            update_comparator();
+            m_input = strutil::trimmed(m_input);
+            if (m_input.empty()) {
+                m_comparator.reset();
+            } else {
+                m_comparator = parse_comparator(m_input);
+            }
         }
     }
 
     [[nodiscard]] bool double_passes(double val) const
     {
-        return m_comparator ? (*m_comparator)(val) : false;
+        return m_comparator ? (*m_comparator)(val) : m_input.empty();
     }
 
 private:
-    static DoubleComparator::Op parse_op(std::ssub_match s)
+    static bool remove_start(std::string_view& s, std::string_view prefix)
+    {
+        if (s.starts_with(prefix)) {
+            s.remove_prefix(prefix.size());
+            return true;
+        }
+
+        return false;
+    }
+
+    static DoubleComparator::Op parse_op(std::string_view& s)
     {
         using enum DoubleComparator::Op;
 
-        if (!s.matched) {
-            return Equal;
-        }
-        if (s == "<") {
-            return Less;
-        }
-        if (s == "<=") {
+        if (remove_start(s, "<=")) {
             return LessEqual;
         }
-        if (s == ">") {
-            return Greater;
+        if (remove_start(s, "<")) {
+            return Less;
         }
-        if (s == ">=") {
+        if (remove_start(s, ">=")) {
             return GreaterEqual;
         }
-        if (s == "!=") {
+        if (remove_start(s, ">")) {
+            return Greater;
+        }
+        if (remove_start(s, "!=")) {
             return NotEqual;
         }
+
+        // For equality, op may be =, ==, or nothing. Just remove the '=' chars and let parse_double
+        // catch any other invalid characters
+        remove_start(s, "=");
+        remove_start(s, "=");
         return Equal;
     }
 
-    static double parse_double(
-        const std::string& s,
-        std::smatch::difference_type position,
-        std::smatch::difference_type len
-    )
+    static bool parse_double(std::string_view s, double& val)
     {
-        double val;
-        const char *start = s.data() + position;
-        const char *end = start + len;
-        [[maybe_unused]] auto res = std::from_chars(start, end, val, std::chars_format::fixed);
-
-        // Match should already be validated as a float by regex
-        assert(res.ec == std::errc{} && res.ptr == end);
-        return val;
+        const char *end = s.data() + s.size();
+        const auto res = std::from_chars(s.data(), end, val, std::chars_format::fixed);
+        return res.ec == std::errc{} && res.ptr == end;
     }
 
-    void update_comparator()
+    static std::optional<DoubleComparator> parse_comparator(std::string_view s)
     {
-        static const std::regex Re(R"(\s*([<>=]=?|!=)?\s*(\d+(?:\.\d*)?|\.\d+)\s*)");
-        std::smatch matches;
-        if (!std::regex_match(m_input, matches, Re)) {
-            m_comparator.reset();
-            return;
+        auto op = parse_op(s);
+        double val;
+        if (parse_double(strutil::trimmed(s), val)) {
+            return DoubleComparator(op, val);
         }
-
-        auto op = parse_op(matches[1]);
-        double val = parse_double(m_input, matches.position(2), matches.length(2));
-        m_comparator = DoubleComparator(op, val);
+        return std::nullopt;
     }
 
     std::string m_input;
