@@ -1017,6 +1017,11 @@ private:
                 m_show_implot_demo_window = true;
             }
             ImGui::MenuItem("Show debug info", nullptr, &m_show_debug_info);
+#ifndef NDEBUG
+            if (ImGui::MenuItem("Show critical error")) {
+                m_app.set_critical_error("Critical error set from debug tools");
+            }
+#endif
             ImGui::EndMenu();
         }
     }

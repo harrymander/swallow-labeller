@@ -318,6 +318,10 @@ public:
 
     void save_annotations_to_path(const std::filesystem::path& path) const;
 
+#ifndef NDEBUG
+    void set_critical_error(std::string s) { m_critical_error.emplace(std::move(s)); }
+#endif // ifndef NDEBUG
+
 private:
     class UnsavedTaskHandler;
     friend class UnsavedTaskCloser;
