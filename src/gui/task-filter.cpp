@@ -408,6 +408,8 @@ public:
             regex_error ? -ImGui::GetFontSize() - ImGui::GetStyle().ItemSpacing.x : -1
         );
         const bool updated = ImGui::InputText("##float-range-filter-input", &m_input);
+        ImGui::SetItemTooltip("<, <=, >, >=, !=, or = followed by a number");
+
         if (regex_error) {
             ImGui::SameLine();
             ImGui::TextUnformatted(ICON_FA_TRIANGLE_EXCLAMATION);
