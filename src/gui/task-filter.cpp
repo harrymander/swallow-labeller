@@ -19,6 +19,8 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
+#include <charconv>
 #include <optional>
 #include <regex>
 #include <string_view>
@@ -318,13 +320,176 @@ struct DatapathFilter : public TextFilter {
     }
 };
 
+class DoubleComparator {
+public:
+    enum class Op {
+        Less,
+        LessEqual,
+        Greater,
+        GreaterEqual,
+        NotEqual,
+        Equal,
+    };
+
+    DoubleComparator(Op op, double val) : m_compare_func(get_compare_func(op)), m_val(val) {}
+
+    bool operator()(double val) const { return m_compare_func(val, m_val); }
+
+private:
+    using CompareFunc = bool (*)(double, double);
+
+    static constexpr double Atol = 1e-3;
+
+    static bool less(double a, double b) { return a < b; }
+
+    static bool equal(double a, double b) { return std::abs(a - b) < Atol; }
+
+    static bool not_equal(double a, double b) { return !equal(a, b); }
+
+    static bool less_equal(double a, double b) { return less(a, b) || equal(a, b); }
+
+    static bool greater(double a, double b) { return a > b; }
+
+    static bool greater_equal(double a, double b) { return greater(a, b) || equal(a, b); }
+
+    static CompareFunc get_compare_func(Op op)
+    {
+        using enum Op;
+
+        switch (op) {
+        case Less:
+            return less;
+        case LessEqual:
+            return less_equal;
+        case Greater:
+            return greater;
+        case GreaterEqual:
+            return greater_equal;
+        case NotEqual:
+            return not_equal;
+        case Equal:
+            break;
+        }
+        return equal;
+    }
+
+    CompareFunc m_compare_func;
+    double m_val;
+};
+
+class DoubleRangeFilter : public TaskFilter::Filter {
+public:
+    void draw() override
+    {
+        const bool regex_error = !m_comparator.has_value();
+        ImGui::SetNextItemWidth(
+            regex_error ? -ImGui::GetFontSize() - ImGui::GetStyle().ItemSpacing.x : -1
+        );
+        const bool updated = ImGui::InputText("##float-range-filter-input", &m_input);
+        if (regex_error) {
+            ImGui::SameLine();
+            ImGui::TextUnformatted(ICON_FA_TRIANGLE_EXCLAMATION);
+            ImGui::SetItemTooltip("Invalid input");
+        }
+
+        if (updated) {
+            update_comparator();
+        }
+    }
+
+    [[nodiscard]] bool double_passes(double val) const
+    {
+        return m_comparator ? (*m_comparator)(val) : false;
+    }
+
+private:
+    static DoubleComparator::Op parse_op(std::ssub_match s)
+    {
+        using enum DoubleComparator::Op;
+
+        if (!s.matched) {
+            return Equal;
+        }
+        if (s == "<") {
+            return Less;
+        }
+        if (s == "<=") {
+            return LessEqual;
+        }
+        if (s == ">") {
+            return Greater;
+        }
+        if (s == ">=") {
+            return GreaterEqual;
+        }
+        if (s == "!=") {
+            return NotEqual;
+        }
+        return Equal;
+    }
+
+    static double parse_double(
+        const std::string& s,
+        std::smatch::difference_type position,
+        std::smatch::difference_type len
+    )
+    {
+        double val;
+        const char *start = s.data() + position;
+        const char *end = start + len;
+        [[maybe_unused]] auto res = std::from_chars(start, end, val, std::chars_format::fixed);
+
+        // Match should already be validated as a float by regex
+        assert(res.ec == std::errc{} && res.ptr == end);
+        return val;
+    }
+
+    void update_comparator()
+    {
+        static const std::regex Re(R"(\s*([<>=]=?|!=)?\s*(\d+(?:\.\d*)?|\.\d+)\s*)");
+        std::smatch matches;
+        if (!std::regex_match(m_input, matches, Re)) {
+            m_comparator.reset();
+            return;
+        }
+
+        auto op = parse_op(matches[1]);
+        double val = parse_double(m_input, matches.position(2), matches.length(2));
+        m_comparator = DoubleComparator(op, val);
+    }
+
+    std::string m_input;
+    std::optional<DoubleComparator> m_comparator = std::nullopt;
+};
+
+struct SnrfTimeFilter : public DoubleRangeFilter {
+    bool passes(
+        [[maybe_unused]] const app::SwallowLabellingTask& task,
+        const models::SwallowAnnotation *annotation
+    ) const override
+    {
+        if (!annotation) {
+            return false;
+        }
+
+        return VariantVisitor{
+            [](auto) { return false; },
+            [this](const models::SwallowApneaAnnotation apnea) {
+                return std::ranges::any_of(apnea.non_respiratory_flow, [this](const auto& time) {
+                    return double_passes(std::abs(time.end - time.start));
+                });
+            },
+        }(annotation->swallow_apnea);
+    }
+};
+
 template <typename Filter> std::unique_ptr<TaskFilter::Filter> FilterFactory()
 {
     return std::make_unique<Filter>();
 }
 
 using FilterFactoryFunction = std::unique_ptr<TaskFilter::Filter> (*)();
-constexpr std::array<std::pair<const char *, FilterFactoryFunction>, 10> Filters = {{
+constexpr std::array<std::pair<const char *, FilterFactoryFunction>, 11> Filters = {{
     {"Subject#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::subject>>},
     {"Repeat#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::repeatnum>>},
     {"Swallow#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::swallownum>>},
@@ -335,6 +500,7 @@ constexpr std::array<std::pair<const char *, FilterFactoryFunction>, 10> Filters
     {"Is ambiguous", FilterFactory<AmbiguityFilter>},
     {"Has ear clicks", FilterFactory<HasEarClicksFilter>},
     {"Note", FilterFactory<AnnotationNoteFilter>},
+    {"SNRF duration", FilterFactory<SnrfTimeFilter>},
 }};
 
 bool bool_combo(const char *label, bool& value, const char *true_text, const char *false_text)
