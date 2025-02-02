@@ -472,7 +472,7 @@ private:
     static bool parse_double(std::string_view s, double& val)
     {
         const char *end = s.data() + s.size();
-        const auto res = std::from_chars(s.data(), end, val, std::chars_format::fixed);
+        const auto res = std::from_chars(s.data(), end, val);
         return res.ec == std::errc{} && res.ptr == end;
     }
 
