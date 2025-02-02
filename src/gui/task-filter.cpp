@@ -397,7 +397,7 @@ private:
     double m_val;
 };
 
-class DoubleRangeFilter : public TaskFilter::Filter {
+class TimeRangeFilter : public TaskFilter::Filter {
 public:
     using TaskFilter::Filter::Filter;
 
@@ -408,7 +408,7 @@ public:
             regex_error ? -ImGui::GetFontSize() - ImGui::GetStyle().ItemSpacing.x : -1
         );
         const bool updated = ImGui::InputText("##float-range-filter-input", &m_input);
-        ImGui::SetItemTooltip("<, <=, >, >=, !=, or = followed by a number");
+        ImGui::SetItemTooltip("<, <=, >, >=, !=, or = followed by a non-negative number");
 
         if (regex_error) {
             ImGui::SameLine();
@@ -426,9 +426,14 @@ public:
         }
     }
 
-    [[nodiscard]] bool double_passes(double val) const
+    template <typename Range> [[nodiscard]] bool time_ranges_pass(const Range& times) const
     {
-        return m_comparator ? (*m_comparator)(val) : m_input.empty();
+        if (!m_comparator) {
+            return m_input.empty();
+        }
+        return std::ranges::any_of(times, [this](const models::TimeRange& range) {
+            return (*m_comparator)(std::abs(range.end - range.start));
+        });
     }
 
 private:
@@ -469,18 +474,23 @@ private:
         return Equal;
     }
 
-    static bool parse_double(std::string_view s, double& val)
+    static double parse_double(std::string_view s)
     {
+        if (s.empty() || s[0] == '-') {
+            return -1;
+        }
+
+        double val;
         const char *end = s.data() + s.size();
         const auto res = std::from_chars(s.data(), end, val);
-        return res.ec == std::errc{} && res.ptr == end;
+        return res.ec == std::errc{} && res.ptr == end ? val : -1;
     }
 
     static std::optional<DoubleComparator> parse_comparator(std::string_view s)
     {
         auto op = parse_op(s);
-        double val;
-        if (parse_double(strutil::trimmed(s), val)) {
+        double val = parse_double(strutil::trimmed(s));
+        if (val >= 0) {
             return DoubleComparator(op, val);
         }
         return std::nullopt;
@@ -490,8 +500,8 @@ private:
     std::optional<DoubleComparator> m_comparator = std::nullopt;
 };
 
-struct SnrfTimeFilter : public DoubleRangeFilter {
-    using DoubleRangeFilter::DoubleRangeFilter;
+struct SnrfTimeFilter : public TimeRangeFilter {
+    using TimeRangeFilter::TimeRangeFilter;
 
     bool passes(
         [[maybe_unused]] const app::SwallowLabellingTask& task,
@@ -503,13 +513,30 @@ struct SnrfTimeFilter : public DoubleRangeFilter {
         }
 
         return VariantVisitor{
-            [](auto) { return false; },
-            [this](const models::SwallowApneaAnnotation apnea) {
-                return std::ranges::any_of(apnea.non_respiratory_flow, [this](const auto& time) {
-                    return double_passes(std::abs(time.end - time.start));
-                });
+            [this](const models::SwallowApneaAnnotation& apnea) {
+                return time_ranges_pass(apnea.non_respiratory_flow);
             },
+            [](auto) { return false; },
         }(annotation->swallow_apnea);
+    }
+};
+
+struct EarclickTimeFilter : public TimeRangeFilter {
+    using TimeRangeFilter::TimeRangeFilter;
+
+    bool passes(
+        [[maybe_unused]] const app::SwallowLabellingTask& task,
+        const models::SwallowAnnotation *annotation
+    ) const override
+    {
+        if (!annotation) {
+            return false;
+        }
+
+        return VariantVisitor{
+            [this](const std::vector<models::TimeRange>& times) { return time_ranges_pass(times); },
+            [](auto) { return false; },
+        }(annotation->ear_clicks);
     }
 };
 
@@ -533,7 +560,7 @@ private:
     Factory m_factory;
 };
 
-constexpr std::array<FilterChoice, 11> FilterChoices = {{
+constexpr std::array<FilterChoice, 12> FilterChoices = {{
     {"Subject#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::subject>>},
     {"Repeat#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::repeatnum>>},
     {"Swallow#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::swallownum>>},
@@ -545,6 +572,7 @@ constexpr std::array<FilterChoice, 11> FilterChoices = {{
     {"Has ear clicks", FilterFactory<HasEarClicksFilter>},
     {"Note", FilterFactory<AnnotationNoteFilter>},
     {"SNRF duration", FilterFactory<SnrfTimeFilter>},
+    {"Ear click duration", FilterFactory<EarclickTimeFilter>},
 }};
 
 bool bool_combo(const char *label, bool& value, const char *true_text, const char *false_text)
