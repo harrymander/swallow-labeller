@@ -277,7 +277,7 @@ void App::reload_active_task()
 
 void App::save_active_task()
 {
-    auto *task_view = std::get_if<ActiveSwallowLabellingTaskView>(m_active_task.get());
+    auto *task_view = active_task_labelling_view();
     if (task_view) {
         spdlog::debug("Saving annotation for active task");
         if (task_view->save_annotation() && m_auto_advance_on_save
@@ -307,7 +307,7 @@ std::unique_ptr<App::ActiveTaskVariant> App::make_unique_active_task(Args&&...ar
 
 bool App::active_task_unsaved() const
 {
-    const auto *task_view = std::get_if<ActiveSwallowLabellingTaskView>(m_active_task.get());
+    const auto *task_view = active_task_labelling_view();
     if (task_view) {
         return task_view->annotation_unsaved();
     }

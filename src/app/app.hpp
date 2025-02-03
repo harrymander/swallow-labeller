@@ -268,7 +268,17 @@ public:
         std::variant<ActiveSwallowLabellingTaskView, ActiveSwallowLabellingTaskErrorView>;
     using NewActiveTaskObservable = Observable<const ActiveTaskVariant&>;
 
-    ActiveTaskVariant& active_task_view() { return *m_active_task; }
+    ActiveTaskVariant& active_task_variant() { return *m_active_task; }
+
+    ActiveSwallowLabellingTaskView *active_task_labelling_view()
+    {
+        return std::get_if<ActiveSwallowLabellingTaskView>(m_active_task.get());
+    }
+
+    const ActiveSwallowLabellingTaskView *active_task_labelling_view() const
+    {
+        return std::get_if<ActiveSwallowLabellingTaskView>(m_active_task.get());
+    }
 
     NewActiveTaskObservable::Observer
     subscribe_new_active_task(NewActiveTaskObservable::Function&& func)

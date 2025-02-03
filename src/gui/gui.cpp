@@ -604,7 +604,7 @@ private:
                     m_app.reload_active_task();
                 }
             },
-        }(m_app.active_task_view());
+        }(m_app.active_task_variant());
     }
 
     void draw_plots(app::ActiveSwallowLabellingTaskView& task_view)
@@ -921,8 +921,7 @@ private:
         }
         widgets::draw_plot_range(m_plot_summary_range, SummaryColor);
 
-        const auto *task_view =
-            std::get_if<app::ActiveSwallowLabellingTaskView>(&m_app.active_task_view());
+        const auto *task_view = m_app.active_task_labelling_view();
         if (task_view) {
             draw_flow_label_regions(*task_view, LabelSummaryHeight, true);
             draw_earclick_label_regions(*task_view, LabelSummaryHeight, true);
@@ -1590,8 +1589,7 @@ private:
         // TODO: [FIXME(?)] the below is a bit of a hack, since currently we can't save an
         // annotation that is in an invalid state. Ideally, would be able to save invalid
         // annotations to a intermediary store so they can be restored.
-        const auto *task_view =
-            std::get_if<app::ActiveSwallowLabellingTaskView>(&m_app.active_task_view());
+        const auto *task_view = m_app.active_task_labelling_view();
         const bool can_save = task_view ? task_view->can_save_annotation() : false;
 
         ImGui::Text("There are unsaved annotation changes!");
@@ -1676,7 +1674,7 @@ public:
 
         setup_fonts();
 
-        on_new_active_task(m_app.active_task_view());
+        on_new_active_task(m_app.active_task_variant());
     }
 
     ~Impl()
@@ -1714,8 +1712,7 @@ public:
         draw_window(TaskListWindowId, [this]() { draw_task_list(); });
         draw_window(MainWindowId, [this]() { draw_main_window(); });
 
-        auto *task_view =
-            std::get_if<app::ActiveSwallowLabellingTaskView>(&m_app.active_task_view());
+        auto *task_view = m_app.active_task_labelling_view();
         if (task_view != nullptr) {
             draw_window(LabelInfoWindowId, [this, task_view]() { draw_label_editor(*task_view); });
         }
@@ -1755,5 +1752,4 @@ bool Gui::ready_to_stop() const
 {
     return m_pimpl->ready_to_stop();
 }
-
 }; // namespace recap::labeller::gui
