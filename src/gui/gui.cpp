@@ -1711,11 +1711,11 @@ public:
                     draw_label_editor(*task_view);
                 });
             }
-
-            show_window(m_show_imgui_demo_window, ImGui::ShowDemoWindow);
-            show_window(m_show_imgui_metrics, ImGui::ShowMetricsWindow);
-            show_window(m_show_implot_demo_window, ImPlot::ShowDemoWindow);
         }
+
+        show_window(m_show_imgui_demo_window, ImGui::ShowDemoWindow);
+        show_window(m_show_imgui_metrics, ImGui::ShowMetricsWindow);
+        show_window(m_show_implot_demo_window, ImPlot::ShowDemoWindow);
     }
 
     void stop() { m_app.stop(); }
