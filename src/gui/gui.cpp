@@ -475,7 +475,6 @@ private:
             {ImGuiCol_TitleBg, TitleColor},
             {ImGuiCol_TitleBgActive, TitleColor},
         };
-        ImGui::SetNextWindowFocus();
         ImGui::SetNextWindowPos(
             ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, CentrePos
         );
