@@ -1020,6 +1020,7 @@ private:
             ImGui::MenuItem("Show debug info", nullptr, &m_show_debug_info);
 #ifndef NDEBUG
             if (ImGui::MenuItem("Show critical error")) {
+                spdlog::error("Set critical error from debug tools menu");
                 m_app.set_critical_error("Critical error set from debug tools");
             }
 #endif
