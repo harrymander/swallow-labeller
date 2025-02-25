@@ -1,5 +1,6 @@
 #include "task-filter.hpp"
 
+#include "gui/widgets/combo-forced.hpp"
 #include "gui/widgets/enum-checkboxes.hpp"
 #include "gui/widgets/enum-combo.hpp"
 #include "gui/widgets/enum-utils.hpp"
@@ -603,11 +604,11 @@ bool draw_delete_button()
     return clicked;
 }
 
-const FilterChoice *draw_filter_change_combo(const char *current)
+const FilterChoice *draw_filter_change_combo(const char *current, bool& open, bool appearing)
 {
     const FilterChoice *new_filter = nullptr;
     ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6);
-    if (ImGui::BeginCombo("##filter_change_combo", current)) {
+    if (widgets::BeginComboForced("##filter_change_combo", current, appearing)) {
         for (const auto& filter : FilterChoices) {
             if (ImGui::Selectable(filter.name())) { // cppcheck-suppress useStlAlgorithm
                 new_filter = &filter;
@@ -615,22 +616,24 @@ const FilterChoice *draw_filter_change_combo(const char *current)
             }
         }
         ImGui::EndCombo();
+    } else {
+        open = false;
     }
 
     return new_filter;
 }
 
-bool draw_filter(std::unique_ptr<TaskFilter::Filter>& filter, bool changing)
+bool draw_filter(std::unique_ptr<TaskFilter::Filter>& filter, bool changing, bool appearing)
 {
     ImGui::SameLine();
     if (changing) {
-        const auto *new_filter = draw_filter_change_combo(filter->name());
+        const auto *new_filter = draw_filter_change_combo(filter->name(), changing, appearing);
         if (new_filter) {
+            changing = false;
             if (new_filter->name() != filter->name()) {
                 spdlog::debug("Changing filter '{}' -> '{}'", new_filter->name(), filter->name());
                 filter = new_filter->create();
             }
-            changing = false;
         }
     } else {
         ImGui::TextUnformatted(filter->name());
@@ -659,16 +662,16 @@ void TaskFilter::draw_filters()
         widgets::ScopedImID filter_id(filter.get());
         if (draw_delete_button()) {
             spdlog::debug("Deleted '{}' filter", filter->name());
-            if (m_changing_filter_it && *m_changing_filter_it == it) {
-                m_changing_filter_it.reset();
+            if (m_changing_filter_it == it) {
+                reset_changing_filter();
             }
             it = m_filters.erase(it);
         } else {
-            const bool changing = m_changing_filter_it && *m_changing_filter_it == it;
-            if (draw_filter(filter, changing)) {
-                m_changing_filter_it = it;
+            bool changing = m_changing_filter_it == it;
+            if (draw_filter(filter, changing, m_changing_filter_appearing)) {
+                set_changing_filter(it);
             } else if (changing) {
-                m_changing_filter_it.reset();
+                reset_changing_filter();
             }
             it++;
         }
@@ -706,8 +709,24 @@ void TaskFilter::draw_new_filter_control()
         const auto& new_filter = FilterChoices[m_new_filter_index];
         m_filters.emplace_back(new_filter.create());
         m_new_filter_index = 0;
-        m_changing_filter_it.reset();
+        reset_changing_filter();
         spdlog::debug("Added '{}' filter", new_filter.name());
+    }
+}
+
+void TaskFilter::reset_changing_filter()
+{
+    m_changing_filter_it.reset();
+    m_changing_filter_appearing = true;
+}
+
+void TaskFilter::set_changing_filter(TaskFilter::FilterList::const_iterator it)
+{
+    if (it != m_changing_filter_it) {
+        m_changing_filter_it = it;
+        m_changing_filter_appearing = true;
+    } else {
+        m_changing_filter_appearing = false;
     }
 }
 

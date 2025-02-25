@@ -42,8 +42,12 @@ private:
     void draw_filters();
     void draw_new_filter_control();
 
+    void reset_changing_filter();
+    void set_changing_filter(FilterList::const_iterator it);
+
     FilterList m_filters;
     std::optional<FilterList::const_iterator> m_changing_filter_it = std::nullopt;
+    bool m_changing_filter_appearing = false;
     std::size_t m_new_filter_index = 0;
     bool m_and = true;
 };
