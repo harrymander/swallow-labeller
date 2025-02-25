@@ -608,7 +608,10 @@ const FilterChoice *draw_filter_change_combo(const char *current, bool& open, bo
 {
     const FilterChoice *new_filter = nullptr;
     ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6);
-    if (widgets::BeginComboForced("##filter_change_combo", current, appearing)) {
+    if (widgets::BeginComboForced(
+            "##filter_change_combo", current, appearing, ImGuiComboFlags_HeightLarge
+        ))
+    {
         for (const auto& filter : FilterChoices) {
             if (ImGui::Selectable(filter.name())) { // cppcheck-suppress useStlAlgorithm
                 new_filter = &filter;
