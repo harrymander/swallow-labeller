@@ -1254,10 +1254,12 @@ private:
 
         const auto& tasks = m_app.tasks();
 
-        const ImVec2 num_annotated_pos = ImGui::GetCursorPos();
+        const ImVec2 task_counts_pos = ImGui::GetCursorPos();
+        const float task_counts_height =
+            ImGui::GetTextLineHeightWithSpacing() * (m_enable_task_filter ? 2 : 1);
         ImGui::SetCursorPos({
-            num_annotated_pos.x,
-            num_annotated_pos.y + ImGui::GetTextLineHeightWithSpacing(),
+            task_counts_pos.x,
+            task_counts_pos.y + task_counts_height,
         });
 
         bool scroll_to_selected_task = false;
@@ -1294,6 +1296,7 @@ private:
         }
         m_task_list_last_active_index = active_index;
         std::size_t num_annotated = 0;
+        std::size_t num_filtered = 0;
 
         std::size_t new_active_index = active_index;
         if (ImGui::BeginListBox("##task_info_list", {-1, -1})) {
@@ -1310,6 +1313,7 @@ private:
                 }
 
                 if (!m_enable_task_filter || m_task_filter.passes(task, annotation)) {
+                    num_filtered += 1;
                     const bool has_suggested_annotation = m_app.task_has_suggested_annotation(task);
                     const bool selected = active_index == i;
                     const auto str =
@@ -1338,7 +1342,15 @@ private:
             ImGui::EndListBox();
         }
 
-        ImGui::SetCursorPos(num_annotated_pos);
+        ImGui::SetCursorPos(task_counts_pos);
+        if (m_enable_task_filter) {
+            ImGui::Text(
+                FILTER_ICON ICON_TEXT_SPACE "Showing %zu task%s out of %zu",
+                num_filtered,
+                num_filtered == 1 ? "" : "s",
+                tasks.size()
+            );
+        }
         ImGui::Text(
             ANNOTATED_TASK_ICON ICON_TEXT_SPACE "Annotated: %zu task%s out of %zu",
             num_annotated,
