@@ -8,7 +8,7 @@
 namespace recap::labeller::app {
 
 #define RECAP_LABELLER_APP_CONFIG_FIELDS(_)                                                        \
-    _(double, max_snrf_time, 0.249)                                                                \
+    _(double, max_snrf_time, 0.246)                                                                \
     _(bool, default_shuffle_tasks, true)
 
 struct AppConfig {
