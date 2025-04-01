@@ -205,8 +205,8 @@ struct ProgramOptions {
             }
         }
 
-        auto data_path = [&](const char *argname,
-                             const char *default_filename) -> std::filesystem::path {
+        auto get_data_path = [&](const char *argname,
+                                 const char *default_filename) -> std::filesystem::path {
             auto path_str = parser.present(argname);
             if (path_str) {
                 return {*path_str};
@@ -219,7 +219,7 @@ struct ProgramOptions {
             return *app_data_dir / std::filesystem::path(default_filename);
         };
 
-        auto config_file = [&]() -> std::optional<std::filesystem::path> {
+        auto get_config_file_path = [&]() -> std::optional<std::filesystem::path> {
             // Config file: if not provided, use config.json in app data dir if exists, else if
             // empty act as if no config file is present
             auto config_opt = parser.present("--config");
@@ -248,11 +248,12 @@ struct ProgramOptions {
         try {
             return ProgramOptions{
                 .log_file = log_file,
-                .data_dir = data_path("--data-dir", "swallow-data"),
-                .tasks_file = data_path("--tasks", "tasks.json"),
-                .annotations_file = data_path("--annotations", "annotations.json").make_preferred(),
+                .data_dir = get_data_path("--data-dir", "swallow-data"),
+                .tasks_file = get_data_path("--tasks", "tasks.json"),
+                .annotations_file =
+                    get_data_path("--annotations", "annotations.json").make_preferred(),
                 .suggested_annotations_file = parser.present<std::string>("--suggestions"),
-                .config_file = config_file(),
+                .config_file = get_config_file_path(),
             };
         } catch (const std::invalid_argument& error) {
             print_usage_error(error);
