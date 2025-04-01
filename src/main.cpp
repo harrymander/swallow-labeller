@@ -240,7 +240,7 @@ struct ProgramOptions {
         };
 
 #ifdef RECAP_LABELLER_LOG_TO_APP_DATA_DIR
-        auto log_file = data_path("--log", "logs.txt").string();
+        auto log_file = get_data_path("--log", "logs.txt").string();
 #else
         auto log_file = parser.present("--log");
 #endif // RECAP_LABELLER_LOG_TO_APP_DATA_DIR
