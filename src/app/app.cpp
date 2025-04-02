@@ -302,8 +302,7 @@ void App::save_annotations_to_path(const std::filesystem::path& path) const
 template <typename T, typename... Args>
 std::unique_ptr<App::ActiveTaskVariant> App::make_unique_active_task(Args&&...args)
 {
-    auto *const ptr = new ActiveTaskVariant(T(std::forward<Args>(args)...));
-    return std::unique_ptr<ActiveTaskVariant>(ptr);
+    return std::make_unique<ActiveTaskVariant>(T{std::forward<Args>(args)...});
 }
 
 bool App::active_task_unsaved() const
