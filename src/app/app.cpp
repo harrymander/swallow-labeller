@@ -819,7 +819,7 @@ bool ActiveSwallowLabellingTaskView::save_annotation()
         return false;
     }
 
-    (void) m_annotation_store.add_annotation(m_task.annotation_id(), m_annotation.to_model());
+    m_annotation_store.add_annotation(m_task.annotation_id(), m_annotation.to_model());
     spdlog::info("Saved annotation for task with ID={}", m_task.annotation_id());
     return true;
 }

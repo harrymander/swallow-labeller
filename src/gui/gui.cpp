@@ -245,7 +245,7 @@ private:
     {
         constexpr ImU32 Color = IM_COL32(120, 120, 120, 50);
 
-        (void) m_delta_selector.update("##delta_selector", 0, ImGuiMouseButton_Right);
+        m_delta_selector.update("##delta_selector", 0, ImGuiMouseButton_Right);
         const widgets::PlotRange *range = m_delta_selector.range();
         if (!range) {
             return;
@@ -1075,12 +1075,12 @@ private:
     {
         constexpr ImColor SummaryColor = {.5F, .5F, .5F, .6F};
 
-        (void) m_plot_summary_selector.update("##plot_summary_selector");
+        m_plot_summary_selector.update("##plot_summary_selector");
         const widgets::PlotRange *new_range = m_plot_summary_selector.range();
         if (new_range) {
             m_plot_summary_range = *new_range;
         } else {
-            (void) m_plot_summary_dragger.update("##plot_summary_dragger", m_plot_summary_range);
+            m_plot_summary_dragger.update("##plot_summary_dragger", m_plot_summary_range);
         }
         widgets::draw_plot_range(m_plot_summary_range, SummaryColor);
 
@@ -1126,7 +1126,7 @@ private:
             if (m_open_annotations_path_future.wait_for(std::chrono::seconds(0))
                 == std::future_status::ready)
             {
-                (void) m_open_annotations_path_future.get();
+                m_open_annotations_path_future.get();
             }
         }
         bool can_open = !m_open_annotations_path_future.valid();

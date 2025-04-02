@@ -45,7 +45,7 @@ public:
      * cursor...?
      */
     template <class Id>
-    [[nodiscard]] std::optional<PlotRange> update(
+    std::optional<PlotRange> update(
         const Id& id,
         Flags flags = Flag::Default,
         ImGuiMouseButton mouse_button = DefaultMouseButton,
