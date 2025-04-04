@@ -563,18 +563,18 @@ private:
 };
 
 constexpr std::array<FilterChoice, 12> FilterChoices = {{
-    {"Subject#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::subject>>},
-    {"Repeat#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::repeatnum>>},
-    {"Swallow#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::swallownum>>},
-    {"Swallow type", FilterFactory<SwallowTypeFilter>},
-    {"File path", FilterFactory<DatapathFilter>},
-    {"SRC pattern", FilterFactory<SwallowPatternFilter>},
     {"Has annotation", FilterFactory<HasAnnotationFilter>},
     {"Is ambiguous", FilterFactory<AmbiguityFilter>},
     {"Has ear clicks", FilterFactory<HasEarClicksFilter>},
-    {"Note", FilterFactory<AnnotationNoteFilter>},
+    {"Swallow type", FilterFactory<SwallowTypeFilter>},
+    {"Subject#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::subject>>},
+    {"Repeat#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::repeatnum>>},
+    {"Swallow#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::swallownum>>},
+    {"SRC pattern", FilterFactory<SwallowPatternFilter>},
     {"SNRF duration", FilterFactory<SnrfTimeFilter>},
     {"Ear click duration", FilterFactory<EarclickTimeFilter>},
+    {"Note", FilterFactory<AnnotationNoteFilter>},
+    {"File path", FilterFactory<DatapathFilter>},
 }};
 
 bool bool_combo(const char *label, bool& value, const char *true_text, const char *false_text)
