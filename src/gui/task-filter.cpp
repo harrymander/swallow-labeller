@@ -1,5 +1,6 @@
 #include "task-filter.hpp"
 
+#include "gui/icons.h"
 #include "gui/widgets/combo-forced.hpp"
 #include "gui/widgets/enum-checkboxes.hpp"
 #include "gui/widgets/enum-combo.hpp"
@@ -41,7 +42,7 @@ public:
         );
         if (error) {
             ImGui::SameLine();
-            ImGui::TextUnformatted(ICON_FA_TRIANGLE_EXCLAMATION);
+            ImGui::TextUnformatted(ERR_ICON);
             ImGui::SetItemTooltip("Invalid input");
         }
     }
@@ -260,7 +261,7 @@ public:
         }
         if (regex_error) {
             ImGui::SameLine();
-            ImGui::TextUnformatted(ICON_FA_TRIANGLE_EXCLAMATION);
+            ImGui::TextUnformatted(ERR_ICON);
             ImGui::SetItemTooltip("Invalid regex");
         }
     }
@@ -413,7 +414,7 @@ public:
 
         if (regex_error) {
             ImGui::SameLine();
-            ImGui::TextUnformatted(ICON_FA_TRIANGLE_EXCLAMATION);
+            ImGui::TextUnformatted(ERR_ICON);
             ImGui::SetItemTooltip("Invalid input");
         }
 
@@ -599,7 +600,7 @@ bool draw_delete_button()
         {ImGuiCol_ButtonActive, Transparent},
         {ImGuiCol_ButtonHovered, Transparent},
     };
-    const bool clicked = ImGui::Button(ICON_FA_TRASH_CAN);
+    const bool clicked = ImGui::Button(DELETE_ICON);
     ImGui::SetItemTooltip("Remove filter");
     return clicked;
 }
@@ -653,6 +654,15 @@ bool draw_filter(std::unique_ptr<TaskFilter::Filter>& filter, bool changing, boo
 void TaskFilter::draw(const char *id)
 {
     widgets::ScopedImID id_scope(id);
+
+    if (m_filters.size() > 1) {
+        if (ImGui::Button(FILTER_CANCEL_ICON ICON_TEXT_SPACE "Clear all filters")) {
+            spdlog::debug("Cleared all {} filters", m_filters.size());
+            m_filters.clear();
+            m_and = true;
+        }
+    }
+
     draw_filters();
     draw_new_filter_control();
 }
@@ -679,41 +689,41 @@ void TaskFilter::draw_filters()
             it++;
         }
     }
+
+    // If all filters have been deleted, reset the AND/OR control
+    if (m_filters.empty()) {
+        m_and = true;
+    }
 }
 
 void TaskFilter::draw_new_filter_control()
 {
-    static const char *AddButtonText = ICON_FA_PLUS " Add";
-    static float AddButtonWidth =
-        ImGui::CalcTextSize(AddButtonText).x + 2 * ImGui::GetStyle().ItemSpacing.x;
+    if (!m_filters.empty()) {
+        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 3.5F);
+        bool_combo("##and_or_combo", m_and, "AND", "OR");
+        ImGui::SameLine();
+    }
 
-    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 3.5F);
-    bool_combo("##and_or_combo", m_and, "AND", "OR");
-
-    ImGui::SetNextItemWidth(-AddButtonWidth);
-    ImGui::SameLine();
+    const FilterChoice *new_filter = nullptr;
+    ImGui::SetNextItemWidth(-1);
     if (ImGui::BeginCombo(
             "##new_filter_combo",
-            FilterChoices[m_new_filter_index].name(),
+            FILTER_ICON ICON_TEXT_SPACE "Add task filter...",
             ImGuiComboFlags_HeightLarge
         ))
     {
-        for (std::size_t i = 0; i < FilterChoices.size(); i++) {
-            bool selected = i == m_new_filter_index;
-            if (ImGui::Selectable(FilterChoices[i].name(), selected)) {
-                m_new_filter_index = i;
+        for (const auto& filter : FilterChoices) {
+            if (ImGui::Selectable(filter.name())) {
+                new_filter = &filter;
             }
         }
         ImGui::EndCombo();
     }
 
-    ImGui::SameLine();
-    if (ImGui::Button(AddButtonText)) {
-        const auto& new_filter = FilterChoices[m_new_filter_index];
-        m_filters.emplace_back(new_filter.create());
-        m_new_filter_index = 0;
+    if (new_filter) {
+        m_filters.emplace_back(new_filter->create());
         reset_changing_filter();
-        spdlog::debug("Added '{}' filter", new_filter.name());
+        spdlog::debug("Added '{}' filter", new_filter->name());
     }
 }
 

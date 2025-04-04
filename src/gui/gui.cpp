@@ -5,6 +5,7 @@
 #include "app/app.hpp"
 #include "app/id-list.hpp"
 #include "gui/font.hpp"
+#include "gui/icons.h"
 #include "gui/task-filter.hpp"
 #include "gui/widgets/color-scheme-selector.hpp"
 #include "gui/widgets/enum-radio-button.hpp"
@@ -19,7 +20,6 @@
 #include "util/util.hpp"
 #include "util/variant-visitor.hpp"
 
-#include <IconsFontAwesome6.h>
 #include <fmt/format.h>
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -39,24 +39,6 @@
 #include <memory>
 #include <variant>
 
-#define FILE_ERR_ICON ICON_FA_FILE_CIRCLE_EXCLAMATION
-#define ERR_ICON ICON_FA_TRIANGLE_EXCLAMATION
-#define DEBUG_INFO_ICON ICON_FA_GEAR
-#define ANNOTATED_TASK_ICON ICON_FA_SQUARE_CHECK
-#define SUGGESTED_ANNOTATION_TASK_ICON ICON_FA_STAR_OF_LIFE
-#define HINT_ICON ICON_FA_LIGHTBULB
-#define DELETE_ICON ICON_FA_TRASH_CAN
-#define EXIT_ICON ICON_FA_XMARK
-#define SHUFFLE_ICON ICON_FA_SHUFFLE
-#define UNSHUFFLE_ICON ICON_FA_SORT
-#define SKIP_TASK_ICON ICON_FA_FORWARD
-#define FILTER_ICON ICON_FA_FILTER
-#define FILTER_CANCEL_ICON ICON_FA_FILTER_CIRCLE_XMARK
-#define FILTER_RESET_ICON ICON_FA_ROTATE_LEFT
-#define SCROLL_TO_TOP_ICON ICON_FA_ARROWS_UP_TO_LINE
-#define SCROLL_TO_BOTTOM_ICON ICON_FA_ARROWS_DOWN_TO_LINE
-#define SCROLL_TO_TASK_ICON ICON_FA_ARROWS_TO_DOT
-#define ICON_TEXT_SPACE "  "
 constexpr float LabelSummaryHeight = 8; // Same as default ImPlotStyle::DigitalBitHeight
 
 #define SAVE_SHORTCUT_STR "Ctrl+S"
@@ -391,7 +373,6 @@ private:
     bool m_show_debug_info = true;
 #endif
 
-    bool m_enable_task_filter = false;
     TaskFilter m_task_filter;
     std::size_t m_task_list_last_active_index = std::numeric_limits<std::size_t>::max();
 
@@ -1037,28 +1018,6 @@ private:
         );
     }
 
-    void draw_task_filter()
-    {
-        if (m_enable_task_filter) {
-            if (ImGui::Button(FILTER_CANCEL_ICON ICON_TEXT_SPACE "Show all tasks")) {
-                m_enable_task_filter = false;
-            }
-            ImGui::SameLine();
-            if (ImGui::Button(FILTER_RESET_ICON ICON_TEXT_SPACE "Reset filter")) {
-                m_task_filter = TaskFilter();
-            }
-        } else if (ImGui::Button(FILTER_ICON ICON_TEXT_SPACE "Filter tasks...")) {
-            m_enable_task_filter = true;
-        }
-
-        if (m_enable_task_filter) {
-            m_task_filter.draw("##task-filter");
-            ImGui::Spacing();
-            ImGui::Separator();
-            ImGui::Spacing();
-        }
-    }
-
     void draw_task_history_controls()
     {
         ImGui::BeginDisabled(!m_app.can_go_to_previous_task());
@@ -1082,17 +1041,14 @@ private:
 
     void draw_task_list()
     {
-        draw_task_filter();
-        if (!m_enable_task_filter) {
-            ImGui::SameLine();
-        }
+        m_task_filter.draw("##task-filter");
         draw_task_history_controls();
 
         const auto& tasks = m_app.tasks();
 
         const ImVec2 task_counts_pos = ImGui::GetCursorPos();
         const float task_counts_height =
-            ImGui::GetTextLineHeightWithSpacing() * (m_enable_task_filter ? 2 : 1);
+            ImGui::GetTextLineHeightWithSpacing() * (m_task_filter.enabled() ? 2 : 1);
         ImGui::SetCursorPos({
             task_counts_pos.x,
             task_counts_pos.y + task_counts_height,
@@ -1148,7 +1104,7 @@ private:
                     num_annotated += 1;
                 }
 
-                if (!m_enable_task_filter || m_task_filter.passes(task, annotation)) {
+                if (!m_task_filter.enabled() || m_task_filter.passes(task, annotation)) {
                     num_filtered += 1;
                     const bool has_suggested_annotation = m_app.task_has_suggested_annotation(task);
                     const bool selected = active_index == i;
@@ -1179,7 +1135,7 @@ private:
         }
 
         ImGui::SetCursorPos(task_counts_pos);
-        if (m_enable_task_filter) {
+        if (m_task_filter.enabled()) {
             ImGui::Text(
                 FILTER_ICON ICON_TEXT_SPACE "Showing %zu task%s out of %zu",
                 num_filtered,

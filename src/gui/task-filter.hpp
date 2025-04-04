@@ -18,6 +18,8 @@ public:
         const app::SwallowLabellingTask& task, const models::SwallowAnnotation *annotation
     ) const;
 
+    [[nodiscard]] bool enabled() const { return !m_filters.empty(); }
+
     class Filter {
     public:
         explicit Filter(const char *name) : m_name(name) {}
@@ -48,7 +50,6 @@ private:
     FilterList m_filters;
     std::optional<FilterList::const_iterator> m_changing_filter_it = std::nullopt;
     bool m_changing_filter_appearing = false;
-    std::size_t m_new_filter_index = 0;
     bool m_and = true;
 };
 
