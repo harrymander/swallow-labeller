@@ -488,9 +488,7 @@ private:
 
     void setup_dockspace() const
     {
-        constexpr ImGuiDockNodeFlags DockspaceFlags =
-            (ImGuiDockNodeFlags_NoUndocking | ImGuiDockNodeFlags_AutoHideTabBar
-             | ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoTabBar);
+        constexpr ImGuiDockNodeFlags DockspaceFlags = ImGuiDockNodeFlags_AutoHideTabBar;
 
         // Initial widths for sidebars from which we calculate dock node ratios - these are just
         // approximate sizes since the ratio calculations don't factor in window spacing etc.
@@ -1581,15 +1579,14 @@ private:
         ImGui::EndPopup();
     }
 
-    static constexpr const char *TaskListWindowId = "##tasklistwindow";
-    static constexpr const char *MainWindowId = "##mainwindow";
-    static constexpr const char *LabelInfoWindowId = "##labelinfowindow";
+    static constexpr const char *TaskListWindowId = "Task list##tasklistwindow";
+    static constexpr const char *MainWindowId = "Labelling##mainwindow";
+    static constexpr const char *LabelInfoWindowId = "Labelling info##labelinfowindow";
 
     template <typename DrawFunc> static void draw_window(const char *id, const DrawFunc& draw)
     {
-        constexpr ImGuiWindowFlags WindowFlags =
-            (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove
-             | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus);
+        constexpr ImGuiWindowFlags WindowFlags = ImGuiWindowFlags_NoCollapse
+            | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
 
         if (ImGui::Begin(id, nullptr, WindowFlags)) {
             draw();
