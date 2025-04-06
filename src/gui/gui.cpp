@@ -5,15 +5,18 @@
 #include "gui/icons.h"
 #include "gui/labeller-view.hpp"
 #include "gui/widgets/color-scheme-selector.hpp"
+#include "gui/widgets/util.hpp"
 #include "util/os.hpp"
 
 #include <fmt/std.h>
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <implot.h>
 #include <nfd.h>
 #include <nfd.hpp>
 #include <spdlog/spdlog.h>
 
+#include <algorithm>
 #include <future>
 #include <memory>
 
@@ -28,17 +31,40 @@ template <typename ShowFunc> void show_window(bool& open, ShowFunc&& show)
     }
 }
 
-static void draw_debug_info()
+void draw_status_bar()
 {
+    constexpr float FramePadding = 5;
+    widgets::ScopedImStyle style_scope = {
+        {ImGuiStyleVar_WindowBorderSize, 0.0F},
+        {ImGuiStyleVar_WindowPadding, ImVec2{ImGui::GetStyle().WindowPadding.x, 0}},
+        {ImGuiStyleVar_FramePadding, ImVec2{FramePadding, FramePadding}},
+    };
+
+    constexpr ImGuiWindowFlags WindowFlags = ImGuiWindowFlags_NoScrollbar
+        | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar;
+    if (!ImGui::BeginViewportSideBar(
+            "##viewport_status_bar",
+            ImGui::GetMainViewport(),
+            ImGuiDir_Down,
+            ImGui::GetFrameHeight(),
+            WindowFlags
+        ))
+    {
+        return;
+    }
+
+    ImGui::AlignTextToFramePadding();
     const ImGuiIO& io = ImGui::GetIO();
     ImGui::Text(
         DEBUG_INFO_ICON ICON_TEXT_SPACE
         "Mouse Position: [%.0f,%.0f]. Application average: %.3f ms/frame (%.1f FPS).",
         io.MousePos.x,
         io.MousePos.y,
-        1000.0f / io.Framerate,
+        1000.0F / io.Framerate,
         io.Framerate
     );
+
+    ImGui::End();
 }
 
 }; // namespace
@@ -238,9 +264,6 @@ public:
     {
         if (ImGui::BeginMainMenuBar()) {
             draw_menu_bar();
-            if (m_show_debug_info) {
-                draw_debug_info();
-            }
             ImGui::EndMainMenuBar();
         }
 
@@ -249,6 +272,10 @@ public:
         show_window(m_show_imgui_demo_window, ImGui::ShowDemoWindow);
         show_window(m_show_imgui_metrics, ImGui::ShowMetricsWindow);
         show_window(m_show_implot_demo_window, ImPlot::ShowDemoWindow);
+
+        if (m_show_debug_info) {
+            draw_status_bar();
+        }
     }
 
     void stop() { m_labeller_view.stop(); }
