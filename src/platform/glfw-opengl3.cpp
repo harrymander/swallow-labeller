@@ -4,7 +4,7 @@
 // documentation from the docs/ folder + read the top of imgui.cpp. Read online:
 // https://github.com/ocornut/imgui/tree/master/docs
 
-#include "app/labeller.hpp"
+#include "app/app.hpp"
 #include "gui/gui.hpp"
 #include "platform.hpp"
 
@@ -80,9 +80,9 @@ static bool should_stop(GLFWwindow *window)
     return false;
 }
 
-static void run_gui(app::Labeller& labeller, const char *glsl_version, GLFWwindow *window)
+static void run_gui(app::App& app, const char *glsl_version, GLFWwindow *window)
 {
-    gui::Gui gui(labeller);
+    gui::Gui gui(app);
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -116,8 +116,12 @@ static void run_gui(app::Labeller& labeller, const char *glsl_version, GLFWwindo
         }
         gui.draw();
         running = !gui.ready_to_stop();
-        if (stopping && running) {
-            spdlog::warn("Exit request received, but GUI is blocking exit");
+        if (stopping) {
+            if (running) {
+                spdlog::warn("Exit request received, but GUI is blocking exit");
+            } else {
+                spdlog::info("Stopping application...");
+            }
         }
 
         // Rendering
@@ -143,7 +147,7 @@ static void run_gui(app::Labeller& labeller, const char *glsl_version, GLFWwindo
     ImGui_ImplGlfw_Shutdown();
 }
 
-int run(recap::labeller::app::Labeller& labeller)
+int run(recap::labeller::app::App& app)
 {
     if (setup_stop_signal_handler() < 0) {
         return 1;
@@ -191,7 +195,7 @@ int run(recap::labeller::app::Labeller& labeller)
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
 
-    run_gui(labeller, glsl_version, window);
+    run_gui(app, glsl_version, window);
 
     spdlog::debug("Destroying GLFW window...");
     glfwDestroyWindow(window);

@@ -1,7 +1,5 @@
-#include "app/annotation-store.hpp"
-#include "app/config.hpp"
-#include "app/labeller.hpp"
-#include "models/task-info.hpp"
+#include "app/app.hpp"
+#include "app/labelling-config.hpp"
 #include "options.h"
 #include "platform/platform.hpp"
 #include "util/os.hpp"
@@ -17,12 +15,10 @@
 #include <spdlog/stopwatch.h>
 
 #include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <unordered_set>
 #include <vector>
 
 namespace {
@@ -269,92 +265,6 @@ struct ProgramOptions {
     std::optional<std::filesystem::path> config_file;
 };
 
-// TODO: this whole structure is a mess, need to encapsulate task management in a class...
-bool all_task_ids_unique(const std::vector<models::SwallowTaskInfo>& tasks)
-{
-    std::unordered_set<std::string> ids;
-    for (const auto& task : tasks) {
-        const auto& id = task.get_id();
-        if (ids.contains(id)) {
-            spdlog::error("Duplicate task ID: {}", id);
-            return false;
-        }
-        ids.insert(id);
-    }
-    return true;
-}
-
-std::optional<std::vector<models::SwallowTaskInfo>>
-load_labelling_tasks(const std::filesystem::path& tasks_path)
-{
-    std::ifstream stream(tasks_path);
-    if (!stream) {
-        spdlog::critical("Could not open labelling tasks file {}", tasks_path);
-        return std::nullopt;
-    }
-
-    try {
-        auto tasks = models::load_swallow_task_info_json(stream);
-        if (tasks.empty()) {
-            spdlog::critical("Labelling tasks list is empty!");
-            return std::nullopt;
-        }
-        if (!all_task_ids_unique(tasks)) {
-            spdlog::critical("Got duplicate task IDs");
-            return std::nullopt;
-        }
-        spdlog::debug("Loaded {} task info(s)", tasks.size());
-        return tasks;
-    } catch (const std::invalid_argument& e) {
-        spdlog::critical("Invalid labelling tasks file: {}", e.what());
-    } catch (const std::runtime_error& e) {
-        spdlog::critical("Error reading from file: {}", e.what());
-    }
-
-    return std::nullopt;
-}
-
-std::optional<SwallowAnnotationStore> make_annotations_store(const std::filesystem::path& path)
-{
-    std::unique_ptr<std::istream> stream;
-    if (std::filesystem::exists(path)) {
-        spdlog::info("Reading existing annotations from {}", path);
-        stream = std::make_unique<std::ifstream>(path);
-    } else {
-        spdlog::info("No existing annotations, creating annotations file at {}", path);
-    }
-
-    if (stream && stream->fail()) {
-        spdlog::critical("Error opening annotations file");
-        return std::nullopt;
-    }
-
-    try {
-        return SwallowAnnotationStore(path, stream.get());
-    } catch (const std::runtime_error& e) {
-        spdlog::critical("Error parsing annotations file: {}", e.what());
-    }
-    return std::nullopt;
-}
-
-std::optional<SwallowAnnotationResultMap>
-load_suggested_annotations(const std::filesystem::path& path)
-{
-    std::ifstream stream(path);
-    if (stream.fail()) {
-        spdlog::critical("Error opening suggested annotations file");
-        return std::nullopt;
-    }
-
-    try {
-        return load_swallow_annotation_result_map_json(stream);
-    } catch (const std::runtime_error& e) {
-        spdlog::critical("Error parsing suggested annotations file: {}", e.what());
-    }
-
-    return std::nullopt;
-}
-
 int run_main(int argc, const char *argv[])
 {
     setup_console_logging();
@@ -368,10 +278,10 @@ int run_main(int argc, const char *argv[])
     }
     spdlog::debug("Command line arguments:\n  {}", fmt::join(argv, argv + argc, "\n  "));
 
-    app::AppConfig config;
+    app::LabellingConfig config;
     if (options.config_file) {
         try {
-            config = app::load_config(*options.config_file);
+            config = app::load_labelling_config(*options.config_file);
         } catch (const std::invalid_argument& err) {
             spdlog::critical(
                 "Error parsing config file from {}: {}", *options.config_file, err.what()
@@ -382,41 +292,10 @@ int run_main(int argc, const char *argv[])
     } else {
         spdlog::info("No config file, using default settings:");
     }
-    app::log_config(config, spdlog::level::info);
+    app::log_labelling_config(config, spdlog::level::info);
 
-    auto labelling_tasks = load_labelling_tasks(options.tasks_file);
-    if (!labelling_tasks.has_value()) {
-        return 1;
-    }
-    auto annotations_store = make_annotations_store(options.annotations_file);
-    if (!annotations_store.has_value()) {
-        return 1;
-    }
-    try {
-        // Sync to file to check that writing works
-        annotations_store->sync_to_file();
-    } catch (const std::runtime_error& e) {
-        spdlog::critical("Error writing to annotations file: {}", e.what());
-        return 1;
-    }
-
-    std::optional<SwallowAnnotationResultMap> suggested_annotations;
-    if (options.suggested_annotations_file) {
-        suggested_annotations = load_suggested_annotations(*options.suggested_annotations_file);
-        if (!suggested_annotations.has_value()) {
-            return 1;
-        }
-        spdlog::info("Loaded {} suggested annotation(s)", suggested_annotations->size());
-    }
-
-    app::Labeller labeller(
-        config,
-        *labelling_tasks,
-        std::move(*annotations_store),
-        options.data_dir,
-        std::move(suggested_annotations)
-    );
-    return platform::run(labeller);
+    app::App app(config);
+    return platform::run(app);
 }
 
 }; // namespace

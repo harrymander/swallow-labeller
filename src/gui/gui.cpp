@@ -1,5 +1,6 @@
 #include "gui/gui.hpp"
 
+#include "app/app.hpp"
 #include "app/labeller.hpp"
 #include "gui/font.hpp"
 #include "gui/icons.h"
@@ -67,14 +68,47 @@ void draw_status_bar()
     ImGui::End();
 }
 
+void annotations_save_copy(app::Labeller& labeller)
+{
+    static const std::array<nfdfilteritem_t, 1> save_filters = {{
+        {"JSON", "json"},
+    }};
+
+    spdlog::info("Selecting annotations file save copy path...");
+    NFD::UniquePath save_path;
+    nfdresult_t res = NFD::SaveDialog(
+        save_path,
+        save_filters.data(),
+        static_cast<nfdfiltersize_t>(save_filters.size()),
+        nullptr,
+        "annotations.json"
+    );
+    if (res == NFD_OKAY) {
+        if (save_path) {
+            labeller.save_annotations_to_path(save_path.get());
+        } else {
+            spdlog::error("NFD::SaveDialog returned okay, but path string is null");
+        }
+    } else if (res == NFD_CANCEL) {
+        spdlog::info("Annotations file save copy cancelled");
+    } else {
+        spdlog::error("Error picking annotations save path: {}", NFD::GetError());
+    }
+}
+
 }; // namespace
 
 class Gui::Impl {
 private:
-    app::Labeller& m_labeller;
-    LabellerView m_labeller_view;
+    app::App& m_app;
+    app::App::LabellerUpdateObservable::Observer m_labeller_update_observer;
 
-    bool m_nfd_available = true;
+    bool m_stop_requested = false;
+
+    app::Labeller *m_labeller = nullptr;
+    std::unique_ptr<LabellerView> m_labeller_view;
+
+    bool m_nfd_available = false;
     std::string m_ini_path;
 
 #if NDEBUG
@@ -137,9 +171,9 @@ private:
     void draw_menu_bar()
     {
         if (ImGui::BeginMenu("File")) {
-            ImGui::BeginDisabled(!m_nfd_available);
+            ImGui::BeginDisabled(!(m_labeller && m_nfd_available));
             if (ImGui::MenuItem("Save a copy of annotations file...") && m_nfd_available) {
-                annotations_save_copy();
+                annotations_save_copy(*m_labeller);
             }
             ImGui::EndDisabled();
             annotations_path_open();
@@ -171,38 +205,10 @@ private:
 #ifndef NDEBUG
             if (ImGui::MenuItem("Show critical error")) {
                 spdlog::error("Set critical error from debug tools menu");
-                m_labeller.set_critical_error("Critical error set from debug tools");
+                m_app.set_critical_error("Critical error set from debug tools");
             }
 #endif
             ImGui::EndMenu();
-        }
-    }
-
-    void annotations_save_copy()
-    {
-        static const std::array<nfdfilteritem_t, 1> save_filters = {{
-            {"JSON", "json"},
-        }};
-
-        spdlog::info("Selecting annotations file save copy path...");
-        NFD::UniquePath save_path;
-        nfdresult_t res = NFD::SaveDialog(
-            save_path,
-            save_filters.data(),
-            static_cast<nfdfiltersize_t>(save_filters.size()),
-            nullptr,
-            "annotations.json"
-        );
-        if (res == NFD_OKAY) {
-            if (save_path) {
-                m_labeller.save_annotations_to_path(save_path.get());
-            } else {
-                spdlog::error("NFD::SaveDialog returned okay, but path string is null");
-            }
-        } else if (res == NFD_CANCEL) {
-            spdlog::info("Annotations file save copy cancelled");
-        } else {
-            spdlog::error("Error picking annotations save path: {}", NFD::GetError());
         }
     }
 
@@ -216,22 +222,52 @@ private:
             }
         }
         bool can_open = !m_open_annotations_path_future.valid();
-        ImGui::BeginDisabled(!can_open);
+        ImGui::BeginDisabled(!(m_labeller && can_open));
         if (ImGui::MenuItem("Open annotations file in explorer...") && can_open) {
             m_open_annotations_path_future =
-                os::open_path_in_file_explorer(m_labeller.annotations_path());
+                os::open_path_in_file_explorer(m_labeller->annotations_path());
         }
         ImGui::EndDisabled();
     }
 
+    void draw_critical_error(const std::string& error)
+    {
+        constexpr ImGuiWindowFlags WindowsFlags = ImGuiWindowFlags_NoCollapse
+            | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDocking
+            | ImGuiWindowFlags_NoMove;
+        constexpr ImU32 TitleColor = 0xCC2929FF;
+        constexpr ImVec2 CentrePos = {0.5F, 0.5F};
+
+        widgets::ScopedImColor color_scope = {
+            {ImGuiCol_TitleBg, TitleColor},
+            {ImGuiCol_TitleBgActive, TitleColor},
+        };
+        ImGui::SetNextWindowPos(
+            ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, CentrePos
+        );
+        if (ImGui::Begin(ERR_ICON ICON_TEXT_SPACE "Critical error", nullptr, WindowsFlags)) {
+            ImGui::TextUnformatted(error.c_str());
+            ImGui::Spacing();
+            if (widgets::ButtonRed(EXIT_ICON ICON_TEXT_SPACE "Quit")) {
+                stop();
+            }
+        }
+        ImGui::End();
+    }
+
 public:
-    explicit Impl(app::Labeller& labeller) : m_labeller(labeller), m_labeller_view(m_labeller)
+    explicit Impl(app::App& app) :
+        m_app(app),
+        m_labeller_update_observer(m_app.subscribe_labeller_update([this](app::Labeller& labeller) {
+            m_labeller = &labeller;
+            m_labeller_view = std::make_unique<LabellerView>(labeller);
+        }))
     {
         if (NFD::Init() != NFD_OKAY) {
             spdlog::error("Error initialising NFD: {}", NFD::GetError());
-            m_nfd_available = false;
         } else {
             spdlog::debug("NFD initialised");
+            m_nfd_available = true;
         }
 
         IMGUI_CHECKVERSION();
@@ -267,7 +303,10 @@ public:
             ImGui::EndMainMenuBar();
         }
 
-        m_labeller_view.draw();
+        const auto& critical_error = m_app.critical_error();
+        if (critical_error) {
+            draw_critical_error(*critical_error);
+        }
 
         show_window(m_show_imgui_demo_window, ImGui::ShowDemoWindow);
         show_window(m_show_imgui_metrics, ImGui::ShowMetricsWindow);
@@ -278,12 +317,21 @@ public:
         }
     }
 
-    void stop() { m_labeller_view.stop(); }
+    void stop()
+    {
+        m_stop_requested = true;
+        if (m_labeller_view) {
+            m_labeller_view->stop();
+        }
+    }
 
-    [[nodiscard]] bool ready_to_stop() const { return m_labeller_view.ready_to_stop(); }
+    [[nodiscard]] bool ready_to_stop() const
+    {
+        return m_labeller_view ? m_labeller_view->ready_to_stop() : m_stop_requested;
+    }
 };
 
-Gui::Gui(app::Labeller& labeller) : m_pimpl(std::make_unique<Impl>(labeller)) {}
+Gui::Gui(app::App& app) : m_pimpl(std::make_unique<Impl>(app)) {}
 
 Gui::~Gui() = default;
 

@@ -86,8 +86,9 @@ configure_file(src/options.h.in ${OPTIONS_INCLUDE_DIR}/options.h)
 
 add_executable(recap-labeller
     src/app/annotation-store.cpp
-    src/app/config.cpp
+    src/app/app.cpp
     src/app/labeller.cpp
+    src/app/labelling-config.cpp
     src/gui/font.cpp
     src/gui/gui.cpp
     src/gui/labeller-view.cpp

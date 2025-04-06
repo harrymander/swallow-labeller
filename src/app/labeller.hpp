@@ -2,8 +2,8 @@
 #define RECAP_LABELLER_APP_LABELLER_INCLUDE_HPP
 
 #include "app/annotation-store.hpp"
-#include "app/config.hpp"
 #include "app/id-list.hpp"
+#include "app/labelling-config.hpp"
 #include "app/view-list.hpp"
 #include "models/annotation.hpp"
 #include "models/data.hpp"
@@ -207,7 +207,7 @@ private:
 class Labeller {
 public:
     Labeller(
-        AppConfig config,
+        LabellingConfig config,
         const std::vector<models::SwallowTaskInfo>& swallow_tasks,
         SwallowAnnotationStore annotation_store,
         const std::filesystem::path& data_dir,
@@ -223,7 +223,7 @@ public:
 
     void stop();
 
-    [[nodiscard]] const AppConfig& config() const { return m_config; }
+    [[nodiscard]] const LabellingConfig& config() const { return m_config; }
 
     [[nodiscard]] bool can_stop() const { return m_ready_to_stop; }
 
@@ -304,11 +304,6 @@ public:
         return m_suggested_annotations.contains(task.info().get_id());
     }
 
-    [[nodiscard]] const std::optional<std::string>& critical_error() const
-    {
-        return m_critical_error;
-    }
-
     [[nodiscard]] bool auto_advance_on_save() const { return m_auto_advance_on_save; }
 
     void set_auto_advance_on_save(bool advance) { m_auto_advance_on_save = advance; }
@@ -320,27 +315,21 @@ public:
 
     void save_annotations_to_path(const std::filesystem::path& path) const;
 
-#ifndef NDEBUG
-    void set_critical_error(std::string s) { m_critical_error.emplace(std::move(s)); }
-#endif // ifndef NDEBUG
-
 private:
     class UnsavedTaskHandler;
     friend class UnsavedTaskCloser;
     template <typename Submit> friend class UnsavedTaskSwitcher;
 
-    AppConfig m_config;
+    LabellingConfig m_config;
     SwallowLabellingTaskList m_swallow_task_list;
     SwallowAnnotationStore m_annotation_store;
     SwallowAnnotationResultMap m_suggested_annotations;
     std::unique_ptr<ActiveTaskVariant> m_active_task;
     NewActiveTaskObservable m_new_active_task_observable;
-    SwallowAnnotationStore::ErrorObservable::Observer m_annotation_store_error_observer;
     std::unique_ptr<UnsavedTaskHandler> m_unsaved_task_handler;
 
     bool m_stop_requested = false;
     bool m_ready_to_stop = false;
-    std::optional<std::string> m_critical_error = std::nullopt;
     bool m_auto_advance_on_save = true;
 
     [[nodiscard]] bool active_task_unsaved() const;

@@ -357,7 +357,6 @@ private:
     };
 
     bool m_first_draw = true;
-    bool m_reset_dockspace = false;
     bool m_unsaved_task_switch_modal_open = false;
 
     TaskFilter m_task_filter;
@@ -402,32 +401,7 @@ private:
         }(new_task);
     }
 
-    void draw_critical_error(const std::string& error)
-    {
-        constexpr ImGuiWindowFlags WindowsFlags = ImGuiWindowFlags_NoCollapse
-            | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDocking
-            | ImGuiWindowFlags_NoMove;
-        constexpr ImU32 TitleColor = 0xCC2929FF;
-        constexpr ImVec2 CentrePos = {0.5F, 0.5F};
-
-        widgets::ScopedImColor color_scope = {
-            {ImGuiCol_TitleBg, TitleColor},
-            {ImGuiCol_TitleBgActive, TitleColor},
-        };
-        ImGui::SetNextWindowPos(
-            ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, CentrePos
-        );
-        if (ImGui::Begin(ERR_ICON ICON_TEXT_SPACE "Critical error", nullptr, WindowsFlags)) {
-            ImGui::TextUnformatted(error.c_str());
-            ImGui::Spacing();
-            if (widgets::ButtonRed(EXIT_ICON ICON_TEXT_SPACE "Quit")) {
-                stop();
-            }
-        }
-        ImGui::End();
-    }
-
-    void setup_dockspace()
+    void setup_dockspace() const
     {
         constexpr ImGuiDockNodeFlags DockspaceFlags = ImGuiDockNodeFlags_AutoHideTabBar;
 
@@ -443,9 +417,8 @@ private:
         // https://gist.github.com/AidanSun05/953f1048ffe5699800d2c92b88c36d9f
         ImGuiID id = ImGui::GetID("##dockspace");
         const ImGuiViewport *const viewport = ImGui::GetMainViewport();
-        if (m_first_draw || m_reset_dockspace) [[unlikely]] {
-            const bool configure = m_reset_dockspace || ImGui::DockBuilderGetNode(id) == nullptr;
-            m_reset_dockspace = false;
+        if (m_first_draw) [[unlikely]] {
+            const bool configure = ImGui::DockBuilderGetNode(id) == nullptr;
             ImGui::DockSpaceOverViewport(id, viewport, DockspaceFlags);
             if (configure) {
                 spdlog::debug("Setting up dockspace");
@@ -1458,22 +1431,15 @@ public:
         setup_dockspace();
         m_first_draw = false;
 
-        const auto& critical_error = m_labeller.critical_error();
-        if (critical_error.has_value()) {
-            draw_critical_error(*critical_error);
-        } else {
-            if (m_labeller.unsaved_task_switch_blocked()) {
-                draw_unsaved_task_prompt();
-            }
-            draw_window(TaskListWindowId, [this]() { draw_task_list(); });
-            draw_window(MainWindowId, [this]() { draw_main_window(); });
+        if (m_labeller.unsaved_task_switch_blocked()) {
+            draw_unsaved_task_prompt();
+        }
+        draw_window(TaskListWindowId, [this]() { draw_task_list(); });
+        draw_window(MainWindowId, [this]() { draw_main_window(); });
 
-            auto *task_view = m_labeller.active_task_labelling_view();
-            if (task_view != nullptr) {
-                draw_window(LabelInfoWindowId, [this, task_view]() {
-                    draw_label_editor(*task_view);
-                });
-            }
+        auto *task_view = m_labeller.active_task_labelling_view();
+        if (task_view != nullptr) {
+            draw_window(LabelInfoWindowId, [this, task_view]() { draw_label_editor(*task_view); });
         }
     }
 

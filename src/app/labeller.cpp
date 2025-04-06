@@ -73,7 +73,7 @@ void SwallowLabellingTask::clear_error_msg()
 }
 
 Labeller::Labeller(
-    AppConfig config,
+    LabellingConfig config,
     const std::vector<models::SwallowTaskInfo>& swallow_tasks,
     SwallowAnnotationStore annotation_store,
     const fs::path& data_dir,
@@ -88,12 +88,6 @@ Labeller::Labeller(
     m_annotation_store(std::move(annotation_store)),
     m_suggested_annotations(
         suggested_annotations ? std::move(*suggested_annotations) : SwallowAnnotationResultMap{}
-    ),
-    m_annotation_store_error_observer(
-        m_annotation_store.subscribe_sync_error([this](const std::string& err) {
-            m_critical_error = fmt::format("Error syncing to annotation file: {}", err);
-            spdlog::critical(*m_critical_error);
-        })
     ),
     m_unsaved_task_handler(nullptr)
 {
@@ -167,10 +161,7 @@ private:
 void Labeller::stop()
 {
     m_stop_requested = true;
-    if (m_critical_error) {
-        spdlog::critical("Force-stopping application due to critical error");
-        m_ready_to_stop = true;
-    } else if (active_task_unsaved()) {
+    if (active_task_unsaved()) {
         spdlog::debug("Application stop requested, but there is an unsaved annotation; blocking");
         m_unsaved_task_handler = std::make_unique<UnsavedTaskCloser>(*this);
     } else {

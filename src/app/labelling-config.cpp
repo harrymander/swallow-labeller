@@ -1,4 +1,4 @@
-#include "config.hpp"
+#include "labelling-config.hpp"
 
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
@@ -25,10 +25,12 @@ void get_json_field(const nlohmann::json& json, std::string_view key, T& value)
 
 }; // namespace
 
-void from_json(const nlohmann::json& json, AppConfig& config) // cppcheck-suppress unusedFunction
+void from_json(
+    const nlohmann::json& json, LabellingConfig& config
+) // cppcheck-suppress unusedFunction
 {
 #define APP_CONFIG_PARSE_FIELD(type, name, default_value) get_json_field(json, #name, config.name);
-    RECAP_LABELLER_APP_CONFIG_FIELDS(APP_CONFIG_PARSE_FIELD);
+    RECAP_LABELLER_LABELLING_CONFIG_FIELDS(APP_CONFIG_PARSE_FIELD);
 #undef APP_CONFIG_PARSE_FIELD
 }
 
@@ -39,7 +41,7 @@ namespace {
     throw std::invalid_argument(fmt::format("invalid config: {}", err.what()));
 }
 
-AppConfig load_raw_config(const std::filesystem::path& path)
+LabellingConfig load_raw_config(const std::filesystem::path& path)
 {
     std::ifstream stream(path);
     nlohmann::json json;
@@ -50,7 +52,7 @@ AppConfig load_raw_config(const std::filesystem::path& path)
     }
 
     try {
-        return json.template get<AppConfig>();
+        return json.template get<LabellingConfig>();
     } catch (const nlohmann::json::exception& err) {
         throw_invalid_config(err);
     } catch (const std::invalid_argument& err) {
@@ -63,7 +65,7 @@ AppConfig load_raw_config(const std::filesystem::path& path)
     throw std::invalid_argument(fmt::format("invalid value for '{}': {}", key, msg));
 }
 
-void validate_config(const AppConfig& config)
+void validate_config(const LabellingConfig& config)
 {
     if (config.max_snrf_time <= 0) {
         invalid_field("max_snrf_time", "must be greater than 0");
@@ -72,7 +74,7 @@ void validate_config(const AppConfig& config)
 
 }; // namespace
 
-AppConfig load_config(const std::filesystem::path& path)
+LabellingConfig load_labelling_config(const std::filesystem::path& path)
 {
     auto config = load_raw_config(path);
     validate_config(config);
