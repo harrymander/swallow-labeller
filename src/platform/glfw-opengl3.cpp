@@ -5,7 +5,7 @@
 // https://github.com/ocornut/imgui/tree/master/docs
 
 #include "app/labeller.hpp"
-#include "gui/labeller-view.hpp"
+#include "gui/gui.hpp"
 #include "platform.hpp"
 
 #include <backends/imgui_impl_glfw.h>
@@ -80,9 +80,9 @@ static bool should_stop(GLFWwindow *window)
     return false;
 }
 
-static void run_gui(app::Labeller& app, const char *glsl_version, GLFWwindow *window)
+static void run_gui(app::Labeller& labeller, const char *glsl_version, GLFWwindow *window)
 {
-    gui::LabellerView gui(app);
+    gui::Gui gui(labeller);
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);

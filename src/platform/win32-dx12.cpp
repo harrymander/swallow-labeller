@@ -8,7 +8,7 @@
 // to be replicated in your app or by adding it to your imconfig.h file.
 
 #include "app/labeller.hpp"
-#include "gui/labeller-view.hpp"
+#include "gui/gui.hpp"
 #include "platform.hpp"
 
 #include <backends/imgui_impl_dx12.h>

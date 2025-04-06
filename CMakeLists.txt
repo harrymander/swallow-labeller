@@ -89,6 +89,7 @@ add_executable(recap-labeller
     src/app/config.cpp
     src/app/labeller.cpp
     src/gui/font.cpp
+    src/gui/gui.cpp
     src/gui/labeller-view.cpp
     src/gui/task-filter.cpp
     src/gui/widgets/combo-forced.cpp
