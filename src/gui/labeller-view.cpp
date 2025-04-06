@@ -358,6 +358,7 @@ private:
 
     bool m_first_draw = true;
     bool m_unsaved_task_switch_modal_open = false;
+    bool m_reset_dockspace = false;
 
     TaskFilter m_task_filter;
     std::size_t m_task_list_last_active_index = std::numeric_limits<std::size_t>::max();
@@ -401,7 +402,7 @@ private:
         }(new_task);
     }
 
-    void setup_dockspace() const
+    void setup_dockspace()
     {
         constexpr ImGuiDockNodeFlags DockspaceFlags = ImGuiDockNodeFlags_AutoHideTabBar;
 
@@ -417,8 +418,9 @@ private:
         // https://gist.github.com/AidanSun05/953f1048ffe5699800d2c92b88c36d9f
         ImGuiID id = ImGui::GetID("##dockspace");
         const ImGuiViewport *const viewport = ImGui::GetMainViewport();
-        if (m_first_draw) [[unlikely]] {
-            const bool configure = ImGui::DockBuilderGetNode(id) == nullptr;
+        if (m_first_draw || m_reset_dockspace) [[unlikely]] {
+            const bool configure = m_reset_dockspace || ImGui::DockBuilderGetNode(id) == nullptr;
+            m_reset_dockspace = false;
             ImGui::DockSpaceOverViewport(id, viewport, DockspaceFlags);
             if (configure) {
                 spdlog::debug("Setting up dockspace");
@@ -1446,6 +1448,8 @@ public:
     void stop() { m_labeller.stop(); }
 
     [[nodiscard]] bool ready_to_stop() const { return m_labeller.can_stop(); }
+
+    void reset_view() { m_reset_dockspace = true; }
 };
 
 LabellerView::LabellerView(app::Labeller& labeller) : m_pimpl(std::make_unique<Impl>(labeller)) {}
@@ -1465,6 +1469,11 @@ void LabellerView::stop()
 bool LabellerView::ready_to_stop() const
 {
     return m_pimpl->ready_to_stop();
+}
+
+void LabellerView::reset_view()
+{
+    m_pimpl->reset_view();
 }
 
 }; // namespace recap::labeller::gui

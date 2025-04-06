@@ -21,6 +21,8 @@ public:
     void stop();
     [[nodiscard]] bool ready_to_stop() const;
 
+    void reset_view();
+
 private:
     class Impl;
     std::unique_ptr<Impl> m_pimpl;

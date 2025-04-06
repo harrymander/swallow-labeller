@@ -187,6 +187,15 @@ private:
         }
 
         if (ImGui::BeginMenu("View")) {
+            if (ImGui::MenuItem("Reset window layout")) {
+                if (m_labeller_view) {
+                    m_labeller_view->reset_view();
+                }
+                m_show_imgui_demo_window = false;
+                m_show_implot_demo_window = false;
+                m_show_imgui_metrics = false;
+                m_show_debug_info = DefaultShowDebugInfo;
+            }
             m_color_scheme_selector.draw();
             ImGui::EndMenu();
         }
