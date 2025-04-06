@@ -1,6 +1,6 @@
 #include "app/annotation-store.hpp"
-#include "app/app.hpp"
 #include "app/config.hpp"
+#include "app/labeller.hpp"
 #include "models/task-info.hpp"
 #include "options.h"
 #include "platform/platform.hpp"
@@ -409,14 +409,14 @@ int run_main(int argc, const char *argv[])
         spdlog::info("Loaded {} suggested annotation(s)", suggested_annotations->size());
     }
 
-    app::App app(
+    app::Labeller labeller(
         config,
         *labelling_tasks,
         std::move(*annotations_store),
         options.data_dir,
         std::move(suggested_annotations)
     );
-    return platform::run(app);
+    return platform::run(labeller);
 }
 
 }; // namespace

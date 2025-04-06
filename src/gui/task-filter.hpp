@@ -1,7 +1,7 @@
 #ifndef INCLUDE_RECAP_LABELLER_GUI_TASK_FILTER_HPP
 #define INCLUDE_RECAP_LABELLER_GUI_TASK_FILTER_HPP
 
-#include "app/app.hpp"
+#include "app/labeller.hpp"
 #include "models/annotation.hpp"
 
 #include <cstddef>

@@ -4,8 +4,8 @@
 // documentation from the docs/ folder + read the top of imgui.cpp. Read online:
 // https://github.com/ocornut/imgui/tree/master/docs
 
-#include "app/app.hpp"
-#include "gui/gui.hpp"
+#include "app/labeller.hpp"
+#include "gui/labeller-view.hpp"
 #include "platform.hpp"
 
 #include <backends/imgui_impl_glfw.h>
@@ -80,9 +80,9 @@ static bool should_stop(GLFWwindow *window)
     return false;
 }
 
-static void run_gui(app::App& app, const char *glsl_version, GLFWwindow *window)
+static void run_gui(app::Labeller& app, const char *glsl_version, GLFWwindow *window)
 {
-    gui::Gui gui(app);
+    gui::LabellerView gui(app);
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -143,7 +143,7 @@ static void run_gui(app::App& app, const char *glsl_version, GLFWwindow *window)
     ImGui_ImplGlfw_Shutdown();
 }
 
-int run(recap::labeller::app::App& app)
+int run(recap::labeller::app::Labeller& labeller)
 {
     if (setup_stop_signal_handler() < 0) {
         return 1;
@@ -191,7 +191,7 @@ int run(recap::labeller::app::App& app)
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
 
-    run_gui(app, glsl_version, window);
+    run_gui(labeller, glsl_version, window);
 
     spdlog::debug("Destroying GLFW window...");
     glfwDestroyWindow(window);

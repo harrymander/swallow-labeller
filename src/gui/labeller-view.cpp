@@ -1,9 +1,9 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 
-#include "gui.hpp"
+#include "labeller-view.hpp"
 
-#include "app/app.hpp"
 #include "app/id-list.hpp"
+#include "app/labeller.hpp"
 #include "gui/font.hpp"
 #include "gui/icons.h"
 #include "gui/task-filter.hpp"
@@ -37,7 +37,6 @@
 #include <filesystem>
 #include <future>
 #include <memory>
-#include <variant>
 
 constexpr float LabelSummaryHeight = 8; // Same as default ImPlotStyle::DigitalBitHeight
 
@@ -313,7 +312,7 @@ private:
 
 }; // namespace
 
-class Gui::Impl {
+class LabellerView::Impl {
 private:
     static constexpr double FlowMinSelectionRange = 1.0 / 1000;
     static constexpr double AudioMinSelectionRange = FlowMinSelectionRange;
@@ -384,8 +383,8 @@ private:
 
     Annotator m_annotator;
 
-    recap::labeller::app::App& m_app;
-    recap::labeller::app::App::NewActiveTaskObservable::Observer m_new_active_task_observer;
+    recap::labeller::app::Labeller& m_labeller;
+    recap::labeller::app::Labeller::NewActiveTaskObservable::Observer m_new_active_task_observer;
     Plotter m_flow_plotter;
     Plotter m_audio_plotter;
 
@@ -435,7 +434,7 @@ private:
         }
     }
 
-    void on_new_active_task(const app::App::ActiveTaskVariant& new_task)
+    void on_new_active_task(const app::Labeller::ActiveTaskVariant& new_task)
     {
         constexpr double EventBufferSecs = 6;
 
@@ -582,7 +581,7 @@ private:
 
     void draw_main_window()
     {
-        const auto& task = m_app.tasks().at(m_app.active_task_index());
+        const auto& task = m_labeller.tasks().at(m_labeller.active_task_index());
         const auto& info = task.info();
         ImGui::Text(
             "Subject #%u, %s swallows, repeat #%u, swallow #%u (%s)",
@@ -598,14 +597,14 @@ private:
             [this](const app::ActiveSwallowLabellingTaskErrorView& error) {
                 ImGui::Text(ERR_ICON ICON_TEXT_SPACE "%s", error.error_msg().c_str());
                 if (ImGui::Button("Go to next unannotated task" ICON_TEXT_SPACE SKIP_TASK_ICON)) {
-                    m_app.go_to_next_unannotated_task();
+                    m_labeller.go_to_next_unannotated_task();
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("Retry...")) {
-                    m_app.reload_active_task();
+                    m_labeller.reload_active_task();
                 }
             },
-        }(m_app.active_task_variant());
+        }(m_labeller.active_task_variant());
     }
 
     void draw_plots(app::ActiveSwallowLabellingTaskView& task_view)
@@ -678,7 +677,7 @@ private:
         } else if (!m_annotator.editing_apnea && task_view.can_add_new_non_resp_flow_label()) {
             const auto text = fmt::format(
                 "Labelling non-respiratory flow (maximum time = {:g} s)",
-                m_app.config().max_snrf_time
+                m_labeller.config().max_snrf_time
             );
             add_plot_text(text.c_str(), 1);
         }
@@ -922,7 +921,7 @@ private:
         }
         widgets::draw_plot_range(m_plot_summary_range, SummaryColor);
 
-        const auto *task_view = m_app.active_task_labelling_view();
+        const auto *task_view = m_labeller.active_task_labelling_view();
         if (task_view) {
             draw_flow_label_regions(*task_view, LabelSummaryHeight, true);
             draw_earclick_label_regions(*task_view, LabelSummaryHeight, true);
@@ -946,7 +945,7 @@ private:
         );
         if (res == NFD_OKAY) {
             if (save_path) {
-                m_app.save_annotations_to_path(save_path.get());
+                m_labeller.save_annotations_to_path(save_path.get());
             } else {
                 spdlog::error("NFD::SaveDialog returned okay, but path string is null");
             }
@@ -970,7 +969,7 @@ private:
         ImGui::BeginDisabled(!can_open);
         if (ImGui::MenuItem("Open annotations file in explorer...") && can_open) {
             m_open_annotations_path_future =
-                os::open_path_in_file_explorer(m_app.annotations_path());
+                os::open_path_in_file_explorer(m_labeller.annotations_path());
         }
         ImGui::EndDisabled();
     }
@@ -1020,7 +1019,7 @@ private:
 #ifndef NDEBUG
             if (ImGui::MenuItem("Show critical error")) {
                 spdlog::error("Set critical error from debug tools menu");
-                m_app.set_critical_error("Critical error set from debug tools");
+                m_labeller.set_critical_error("Critical error set from debug tools");
             }
 #endif
             ImGui::EndMenu();
@@ -1054,20 +1053,20 @@ private:
 
     void draw_task_history_controls()
     {
-        ImGui::BeginDisabled(!m_app.can_go_to_previous_task());
+        ImGui::BeginDisabled(!m_labeller.can_go_to_previous_task());
         if (ImGui::ArrowButton("##prev_task", ImGuiDir_Left)
             || widgets::global_shortcut(ImGuiMod_Alt | ImGuiKey_LeftArrow))
         {
-            m_app.go_to_previous_task_in_history();
+            m_labeller.go_to_previous_task_in_history();
         }
         ImGui::SetItemTooltip("Go back [Alt+Left]");
         ImGui::EndDisabled();
         ImGui::SameLine();
-        ImGui::BeginDisabled(!m_app.can_go_to_forward_task());
+        ImGui::BeginDisabled(!m_labeller.can_go_to_forward_task());
         if (ImGui::ArrowButton("##fwrd_task", ImGuiDir_Right)
             || widgets::global_shortcut(ImGuiMod_Alt | ImGuiKey_RightArrow))
         {
-            m_app.go_to_next_task_in_history();
+            m_labeller.go_to_next_task_in_history();
         }
         ImGui::SetItemTooltip("Go forward [Alt+Right]");
         ImGui::EndDisabled();
@@ -1078,7 +1077,7 @@ private:
         m_task_filter.draw("##task-filter");
         draw_task_history_controls();
 
-        const auto& tasks = m_app.tasks();
+        const auto& tasks = m_labeller.tasks();
 
         const ImVec2 task_counts_pos = ImGui::GetCursorPos();
         const float task_counts_height =
@@ -1093,14 +1092,14 @@ private:
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32_BLACK_TRANS);
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, IM_COL32_BLACK_TRANS);
         ImGui::BeginGroup();
-        if (m_app.tasks_shuffled()) {
+        if (m_labeller.tasks_shuffled()) {
             if (ImGui::SmallButton(UNSHUFFLE_ICON)) {
-                m_app.unshuffle_tasks();
+                m_labeller.unshuffle_tasks();
             }
             ImGui::SetItemTooltip("Sort tasks");
         } else {
             if (ImGui::SmallButton(SHUFFLE_ICON)) {
-                m_app.shuffle_tasks();
+                m_labeller.shuffle_tasks();
             }
             ImGui::SetItemTooltip("Shuffle tasks");
         }
@@ -1116,7 +1115,7 @@ private:
         ImGui::SameLine();
         ImGui::PopStyleColor(3);
 
-        const std::size_t active_index = m_app.active_task_index();
+        const std::size_t active_index = m_labeller.active_task_index();
         if (!scroll_to_selected_task) {
             scroll_to_selected_task = m_task_list_last_active_index != active_index;
         }
@@ -1132,7 +1131,7 @@ private:
 
             std::size_t i = 0;
             for (const auto& task : tasks.items()) {
-                const auto *annotation = m_app.task_annotation(task);
+                const auto *annotation = m_labeller.task_annotation(task);
                 const bool has_annotation = annotation != nullptr;
                 if (has_annotation) {
                     num_annotated += 1;
@@ -1140,7 +1139,8 @@ private:
 
                 if (!m_task_filter.enabled() || m_task_filter.passes(task, annotation)) {
                     num_filtered += 1;
-                    const bool has_suggested_annotation = m_app.task_has_suggested_annotation(task);
+                    const bool has_suggested_annotation =
+                        m_labeller.task_has_suggested_annotation(task);
                     const bool selected = active_index == i;
                     const auto str =
                         swallow_task_info_str(task, has_annotation, has_suggested_annotation);
@@ -1185,7 +1185,7 @@ private:
         );
 
         if (active_index != new_active_index) {
-            m_app.set_active_task_index(new_active_index);
+            m_labeller.set_active_task_index(new_active_index);
         }
     }
 
@@ -1237,9 +1237,9 @@ private:
         }
         ImGui::SetItemTooltip("Skip to next unannotated task");
         ImGui::SameLine();
-        bool auto_advance = m_app.auto_advance_on_save();
+        bool auto_advance = m_labeller.auto_advance_on_save();
         if (ImGui::Checkbox("Auto-advance to next task on save", &auto_advance)) {
-            m_app.set_auto_advance_on_save(auto_advance);
+            m_labeller.set_auto_advance_on_save(auto_advance);
             spdlog::debug("{}abled auto-advance on save", auto_advance ? "En" : "Dis");
         }
 
@@ -1350,10 +1350,10 @@ private:
         switch (action) {
             using enum AnnotationSubmitAction;
         case Save:
-            m_app.save_active_task();
+            m_labeller.save_active_task();
             break;
         case Skip:
-            m_app.go_to_next_unannotated_task();
+            m_labeller.go_to_next_unannotated_task();
             break;
         case None:
             break;
@@ -1579,7 +1579,7 @@ private:
         // TODO: [FIXME(?)] the below is a bit of a hack, since currently we can't save an
         // annotation that is in an invalid state. Ideally, would be able to save invalid
         // annotations to a intermediary store so they can be restored.
-        const auto *task_view = m_app.active_task_labelling_view();
+        const auto *task_view = m_labeller.active_task_labelling_view();
         const bool can_save = task_view ? task_view->can_save_annotation() : false;
 
         ImGui::Text("There are unsaved annotation changes!");
@@ -1590,19 +1590,19 @@ private:
 
         if (can_save) {
             if (ImGui::Button("Save", size) || save_shortcut_pushed()) {
-                m_app.save_unsaved_task_and_switch();
+                m_labeller.save_unsaved_task_and_switch();
                 m_unsaved_task_switch_modal_open = false;
             }
             ImGui::SetItemDefaultFocus();
             ImGui::SameLine();
         }
         if (ImGui::Button(dont_save_str, size)) {
-            m_app.discard_unsaved_task_and_switch();
+            m_labeller.discard_unsaved_task_and_switch();
             m_unsaved_task_switch_modal_open = false;
         }
         ImGui::SameLine();
         if (ImGui::Button("Cancel", size) || widgets::global_shortcut(ImGuiKey_Escape)) {
-            m_app.cancel_unsaved_task_switch();
+            m_labeller.cancel_unsaved_task_switch();
             m_unsaved_task_switch_modal_open = false;
         }
         if (!can_save) {
@@ -1638,9 +1638,9 @@ private:
     }
 
 public:
-    explicit Impl(app::App& app) :
-        m_app(app),
-        m_new_active_task_observer(m_app.subscribe_new_active_task([this](const auto& v) {
+    explicit Impl(app::Labeller& app) :
+        m_labeller(app),
+        m_new_active_task_observer(m_labeller.subscribe_new_active_task([this](const auto& v) {
             on_new_active_task(v);
         })),
         m_flow_plotter("Flow (L/min)", "{:g} L/min", m_plot_summary_range),
@@ -1663,7 +1663,7 @@ public:
 
         setup_fonts();
 
-        on_new_active_task(m_app.active_task_variant());
+        on_new_active_task(m_labeller.active_task_variant());
     }
 
     ~Impl()
@@ -1695,17 +1695,17 @@ public:
         setup_dockspace();
         m_first_draw = false;
 
-        const auto& critical_error = m_app.critical_error();
+        const auto& critical_error = m_labeller.critical_error();
         if (critical_error.has_value()) {
             draw_critical_error(*critical_error);
         } else {
-            if (m_app.unsaved_task_switch_blocked()) {
+            if (m_labeller.unsaved_task_switch_blocked()) {
                 draw_unsaved_task_prompt();
             }
             draw_window(TaskListWindowId, [this]() { draw_task_list(); });
             draw_window(MainWindowId, [this]() { draw_main_window(); });
 
-            auto *task_view = m_app.active_task_labelling_view();
+            auto *task_view = m_labeller.active_task_labelling_view();
             if (task_view != nullptr) {
                 draw_window(LabelInfoWindowId, [this, task_view]() {
                     draw_label_editor(*task_view);
@@ -1718,31 +1718,31 @@ public:
         show_window(m_show_implot_demo_window, ImPlot::ShowDemoWindow);
     }
 
-    void stop() { m_app.stop(); }
+    void stop() { m_labeller.stop(); }
 
-    [[nodiscard]] bool ready_to_stop() const { return m_app.can_stop(); }
+    [[nodiscard]] bool ready_to_stop() const { return m_labeller.can_stop(); }
 };
 
-Gui::Gui(app::App& app) : m_pimpl(std::make_unique<Impl>(app)) {}
+LabellerView::LabellerView(app::Labeller& labeller) : m_pimpl(std::make_unique<Impl>(labeller)) {}
 
-Gui::~Gui() = default;
+LabellerView::~LabellerView() = default;
 
-void Gui::draw()
+void LabellerView::draw()
 {
     m_pimpl->draw();
 }
 
-void Gui::stop()
+void LabellerView::stop()
 {
     m_pimpl->stop();
 }
 
-void Gui::set_scaling_factor(float scaling_factor)
+void LabellerView::set_scaling_factor(float scaling_factor)
 {
     ImGui::GetStyle().ScaleAllSizes(scaling_factor);
 }
 
-bool Gui::ready_to_stop() const
+bool LabellerView::ready_to_stop() const
 {
     return m_pimpl->ready_to_stop();
 }

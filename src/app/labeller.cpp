@@ -1,4 +1,4 @@
-#include "app.hpp"
+#include "labeller.hpp"
 
 #include "app/annotation-store.hpp"
 #include "app/id-list.hpp"
@@ -72,7 +72,7 @@ void SwallowLabellingTask::clear_error_msg()
     m_error_msg.reset();
 }
 
-App::App(
+Labeller::Labeller(
     AppConfig config,
     const std::vector<models::SwallowTaskInfo>& swallow_tasks,
     SwallowAnnotationStore annotation_store,
@@ -100,9 +100,9 @@ App::App(
     load_active_task();
 }
 
-App::~App() = default;
+Labeller::~Labeller() = default;
 
-class App::UnsavedTaskHandler {
+class Labeller::UnsavedTaskHandler {
 public:
     UnsavedTaskHandler() = default;
     virtual ~UnsavedTaskHandler() = default;
@@ -116,49 +116,55 @@ public:
     UnsavedTaskHandler& operator=(UnsavedTaskHandler&&) = delete;
 };
 
-template <typename Submit> class UnsavedTaskSwitcher : public App::UnsavedTaskHandler {
+template <typename Submit> class UnsavedTaskSwitcher : public Labeller::UnsavedTaskHandler {
 public:
-    UnsavedTaskSwitcher(App& app, Submit submit) : m_app(app), m_submit(std::move(submit)) {}
+    UnsavedTaskSwitcher(Labeller& labeller, Submit submit) :
+        m_labeller(labeller), m_submit(std::move(submit))
+    {}
 
     void cancel() override
     {
-        spdlog::debug("Cancelling task switch, staying on {}", m_app.m_swallow_task_list.index());
+        spdlog::debug(
+            "Cancelling task switch, staying on {}", m_labeller.m_swallow_task_list.index()
+        );
     }
 
     void submit() override
     {
-        const auto old_index = m_app.m_swallow_task_list.index();
+        const auto old_index = m_labeller.m_swallow_task_list.index();
         m_submit();
-        spdlog::debug("Switched task index {} -> {}", old_index, m_app.m_swallow_task_list.index());
-        m_app.load_active_task();
+        spdlog::debug(
+            "Switched task index {} -> {}", old_index, m_labeller.m_swallow_task_list.index()
+        );
+        m_labeller.load_active_task();
     }
 
 private:
-    App& m_app;
+    Labeller& m_labeller;
     Submit m_submit;
 };
 
-class UnsavedTaskCloser : public App::UnsavedTaskHandler {
+class UnsavedTaskCloser : public Labeller::UnsavedTaskHandler {
 public:
-    explicit UnsavedTaskCloser(App& app) : m_app(app) {}
+    explicit UnsavedTaskCloser(Labeller& labeller) : m_labeller(labeller) {}
 
     void cancel() override
     {
         spdlog::info("App close cancelled");
-        m_app.m_stop_requested = false;
+        m_labeller.m_stop_requested = false;
     }
 
     void submit() override
     {
         spdlog::info("Closing app");
-        m_app.m_ready_to_stop = true;
+        m_labeller.m_ready_to_stop = true;
     }
 
 private:
-    App& m_app;
+    Labeller& m_labeller;
 };
 
-void App::stop()
+void Labeller::stop()
 {
     m_stop_requested = true;
     if (m_critical_error) {
@@ -173,7 +179,7 @@ void App::stop()
     }
 }
 
-template <typename Submit> void App::switch_active_task_index(Submit&& submit)
+template <typename Submit> void Labeller::switch_active_task_index(Submit&& submit)
 {
     auto switcher =
         std::make_unique<UnsavedTaskSwitcher<Submit>>(*this, std::forward<Submit>(submit));
@@ -188,7 +194,7 @@ template <typename Submit> void App::switch_active_task_index(Submit&& submit)
     }
 }
 
-void App::set_active_task_index(std::size_t index)
+void Labeller::set_active_task_index(std::size_t index)
 {
     if (m_unsaved_task_handler) {
         spdlog::error("There is already an unsaved task action pending, not switching");
@@ -206,12 +212,12 @@ void App::set_active_task_index(std::size_t index)
     switch_active_task_index([this, index]() { m_swallow_task_list.set_index(index); });
 }
 
-void App::go_to_next_unannotated_task()
+void Labeller::go_to_next_unannotated_task()
 {
     auto_advance_active_task();
 }
 
-void App::go_to_next_task_in_history()
+void Labeller::go_to_next_task_in_history()
 {
     if (!m_swallow_task_list.can_go_forward()) {
         spdlog::error("Cannot go forward in task history");
@@ -220,7 +226,7 @@ void App::go_to_next_task_in_history()
     switch_active_task_index([this]() { m_swallow_task_list.go_forward(); });
 }
 
-void App::go_to_previous_task_in_history()
+void Labeller::go_to_previous_task_in_history()
 {
     if (!m_swallow_task_list.can_go_back()) {
         spdlog::error("Cannot go backwards in task history");
@@ -229,7 +235,7 @@ void App::go_to_previous_task_in_history()
     switch_active_task_index([this]() { m_swallow_task_list.go_back(); });
 }
 
-void App::cancel_unsaved_task_switch()
+void Labeller::cancel_unsaved_task_switch()
 {
     if (m_unsaved_task_handler) {
         spdlog::debug("Cancelling unsaved task change");
@@ -240,7 +246,7 @@ void App::cancel_unsaved_task_switch()
     }
 }
 
-void App::save_unsaved_task_and_switch()
+void Labeller::save_unsaved_task_and_switch()
 {
     if (m_unsaved_task_handler) {
         spdlog::debug("Saving unsaved task");
@@ -252,7 +258,7 @@ void App::save_unsaved_task_and_switch()
     }
 }
 
-void App::discard_unsaved_task_and_switch()
+void Labeller::discard_unsaved_task_and_switch()
 {
     if (m_unsaved_task_handler) {
         spdlog::debug("Discarding unsaved task");
@@ -265,7 +271,7 @@ void App::discard_unsaved_task_and_switch()
     }
 }
 
-void App::reload_active_task()
+void Labeller::reload_active_task()
 {
     if (active_task_unsaved()) {
         spdlog::error("Current task is unsaved, cannot reload");
@@ -275,7 +281,7 @@ void App::reload_active_task()
     }
 }
 
-void App::save_active_task()
+void Labeller::save_active_task()
 {
     auto *task_view = active_task_labelling_view();
     if (task_view) {
@@ -290,7 +296,7 @@ void App::save_active_task()
     }
 }
 
-void App::save_annotations_to_path(const std::filesystem::path& path) const
+void Labeller::save_annotations_to_path(const std::filesystem::path& path) const
 {
     try {
         m_annotation_store.sync_to_file(path);
@@ -300,12 +306,12 @@ void App::save_annotations_to_path(const std::filesystem::path& path) const
 }
 
 template <typename T, typename... Args>
-std::unique_ptr<App::ActiveTaskVariant> App::make_unique_active_task(Args&&...args)
+std::unique_ptr<Labeller::ActiveTaskVariant> Labeller::make_unique_active_task(Args&&...args)
 {
     return std::make_unique<ActiveTaskVariant>(T{std::forward<Args>(args)...});
 }
 
-bool App::active_task_unsaved() const
+bool Labeller::active_task_unsaved() const
 {
     const auto *task_view = active_task_labelling_view();
     if (task_view) {
@@ -314,7 +320,7 @@ bool App::active_task_unsaved() const
     return false;
 }
 
-void App::auto_advance_active_task()
+void Labeller::auto_advance_active_task()
 {
     spdlog::debug("Finding next unannotated task...");
     const std::size_t active_index = m_swallow_task_list.index();
@@ -341,7 +347,7 @@ void App::auto_advance_active_task()
     spdlog::info("No more un-annotated tasks to auto-advance to!");
 }
 
-void App::load_active_task()
+void Labeller::load_active_task()
 {
     SwallowLabellingTask& task = m_swallow_task_list.index_item();
     const auto path = fs::path(task.data_path());
@@ -367,13 +373,16 @@ void App::load_active_task()
 }
 
 ActiveSwallowLabellingTaskView::ActiveSwallowLabellingTaskView(
-    const App& app,
+    const Labeller& labeller,
     SwallowLabellingTask& task,
     SwallowTaskData data,
     SwallowAnnotationStore& annotation_store,
     const SwallowAnnotationResultMap& suggested_annotations
 ) :
-    m_app(app), m_task(task), m_data(std::move(data)), m_annotation_store(annotation_store)
+    m_labeller(labeller),
+    m_task(task),
+    m_data(std::move(data)),
+    m_annotation_store(annotation_store)
 {
     const auto& id = task.annotation_id();
     const auto *annotation = m_annotation_store.get_annotation(id);
@@ -574,7 +583,7 @@ bool ActiveSwallowLabellingTaskView::swallow_apnea_label_error() const
         return true;
     }
 
-    const double max_snrf_time = m_app.config().max_snrf_time;
+    const double max_snrf_time = m_labeller.config().max_snrf_time;
     if (can_edit_swallow_apnea_range()) {
         const auto& labels = m_annotation.non_resp_flow_labels.items();
         return std::any_of(labels.begin(), labels.end(), [max_snrf_time](const auto& label) {
@@ -597,7 +606,7 @@ std::optional<std::string> ActiveSwallowLabellingTaskView::swallow_apnea_label_e
 
     return fmt::format(
         "SNRF label too long, cannot be greater than than {:g} seconds!",
-        m_app.config().max_snrf_time
+        m_labeller.config().max_snrf_time
     );
 }
 

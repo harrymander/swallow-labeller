@@ -86,10 +86,10 @@ configure_file(src/options.h.in ${OPTIONS_INCLUDE_DIR}/options.h)
 
 add_executable(recap-labeller
     src/app/annotation-store.cpp
-    src/app/app.cpp
     src/app/config.cpp
+    src/app/labeller.cpp
     src/gui/font.cpp
-    src/gui/gui.cpp
+    src/gui/labeller-view.cpp
     src/gui/task-filter.cpp
     src/gui/widgets/combo-forced.cpp
     src/gui/widgets/integer-range-input.cpp

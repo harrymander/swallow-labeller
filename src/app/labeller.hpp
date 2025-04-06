@@ -1,5 +1,5 @@
-#ifndef RECAP_LABELLER_APP_INCLUDE_HPP
-#define RECAP_LABELLER_APP_INCLUDE_HPP
+#ifndef RECAP_LABELLER_APP_LABELLER_INCLUDE_HPP
+#define RECAP_LABELLER_APP_LABELLER_INCLUDE_HPP
 
 #include "app/annotation-store.hpp"
 #include "app/config.hpp"
@@ -52,7 +52,7 @@ public:
     [[nodiscard]] const std::string& error_msg() const { return *m_task.error_msg(); }
 
 private:
-    friend class App;
+    friend class Labeller;
 
     explicit ActiveSwallowLabellingTaskErrorView(const SwallowLabellingTask& task) : m_task(task) {}
 
@@ -79,7 +79,7 @@ using TimeRangeIDList = IDList<models::TimeRange>;
 using EarClickLabel = TimeRangeIDList::Item;
 using NonRespFlowLabel = TimeRangeIDList::Item;
 
-class App;
+class Labeller;
 
 class ActiveSwallowLabellingTaskView {
 public:
@@ -164,21 +164,21 @@ public:
     void delete_annotation();
 
 private:
-    friend class App;
+    friend class Labeller;
 
     [[nodiscard]] bool save_annotation();
     [[nodiscard]] bool has_apnea_range() const;
     [[nodiscard]] bool valid_earclick_annotation() const;
 
     ActiveSwallowLabellingTaskView(
-        const App& app,
+        const Labeller& app,
         SwallowLabellingTask& task,
         SwallowTaskData data,
         SwallowAnnotationStore& annotation_store,
         const SwallowAnnotationResultMap& suggested_annotations
     );
 
-    const App& m_app;
+    const Labeller& m_labeller;
     SwallowLabellingTask& m_task;
     SwallowTaskData m_data;
     SwallowAnnotationStore& m_annotation_store;
@@ -204,20 +204,22 @@ private:
     std::optional<Annotation> m_suggested_annotation = std::nullopt;
 };
 
-class App {
+class Labeller {
 public:
-    App(AppConfig config,
+    Labeller(
+        AppConfig config,
         const std::vector<models::SwallowTaskInfo>& swallow_tasks,
         SwallowAnnotationStore annotation_store,
         const std::filesystem::path& data_dir,
-        std::optional<SwallowAnnotationResultMap> suggested_annotations);
+        std::optional<SwallowAnnotationResultMap> suggested_annotations
+    );
 
-    ~App();
+    ~Labeller();
 
-    App(const App&) = delete;
-    App& operator=(const App&) = delete;
-    App(App&&) = delete;
-    App& operator=(App&&) = delete;
+    Labeller(const Labeller&) = delete;
+    Labeller& operator=(const Labeller&) = delete;
+    Labeller(Labeller&&) = delete;
+    Labeller& operator=(Labeller&&) = delete;
 
     void stop();
 
@@ -352,4 +354,4 @@ private:
 
 }; // namespace recap::labeller::app
 
-#endif // RECAP_LABELLER_APP_INCLUDE_HPP
+#endif // RECAP_LABELLER_APP_LABELLER_INCLUDE_HPP
