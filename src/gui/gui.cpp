@@ -359,6 +359,7 @@ private:
     };
 
     bool m_first_draw = true;
+    bool m_reset_dockspace = false;
     std::string m_ini_path;
     bool m_show_imgui_demo_window = false;
     bool m_show_implot_demo_window = false;
@@ -486,7 +487,7 @@ private:
         }
     }
 
-    void setup_dockspace() const
+    void setup_dockspace()
     {
         constexpr ImGuiDockNodeFlags DockspaceFlags = ImGuiDockNodeFlags_AutoHideTabBar;
 
@@ -502,10 +503,11 @@ private:
         // https://gist.github.com/AidanSun05/953f1048ffe5699800d2c92b88c36d9f
         ImGuiID id = ImGui::GetID("##dockspace");
         const ImGuiViewport *const viewport = ImGui::GetMainViewport();
-        if (m_first_draw) [[unlikely]] {
-            const bool is_configured = ImGui::DockBuilderGetNode(id) == nullptr;
+        if (m_first_draw || m_reset_dockspace) [[unlikely]] {
+            const bool configure = m_reset_dockspace || ImGui::DockBuilderGetNode(id) == nullptr;
+            m_reset_dockspace = false;
             ImGui::DockSpaceOverViewport(id, viewport, DockspaceFlags);
-            if (is_configured) {
+            if (configure) {
                 spdlog::debug("Setting up dockspace");
                 ImGui::DockBuilderRemoveNode(id);
                 ImGui::DockBuilderAddNode(id);
@@ -971,6 +973,9 @@ private:
         }
 
         if (ImGui::BeginMenu("View")) {
+            if (ImGui::MenuItem("Reset window layout")) {
+                m_reset_dockspace = true;
+            }
             m_color_scheme_selector.draw();
             ImGui::EndMenu();
         }
