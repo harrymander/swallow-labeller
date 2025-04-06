@@ -132,3 +132,19 @@ TEST(TestObservable, TestRvaluesAreNotMoved)
     EXPECT_EQ(cb.called(), 2);
     EXPECT_EQ(cb.total(), 6);
 }
+
+TEST(TestObservable, TestMoveConstructor)
+{
+    TestObservable obs;
+    Callback cb;
+    std::optional<TestObservable::Observer> subscriber;
+    {
+        auto moved_from_subscriber = obs.subscribe([&cb](int i) { cb(i); });
+        obs.notify(10);
+        subscriber = std::move(moved_from_subscriber);
+    }
+
+    obs.notify(10);
+    EXPECT_EQ(cb.called(), 2);
+    EXPECT_EQ(cb.total(), 20);
+}

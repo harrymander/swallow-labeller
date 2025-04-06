@@ -30,16 +30,22 @@ public:
     public:
         ~Observer()
         {
+            // list will be empty if the Observable has already been destroyed or if this Observer
+            // was moved-from.
             std::shared_ptr<ObserverList> list = list_ptr.lock();
             if (list) {
                 list->erase(handle);
             }
         }
 
+        // A moved-from weak_ptr will return an empty shared_ptr from lock(), so safe to use default
+        // move constructor/operator, as the handle will not be erased in the moved-from Observer's
+        // destructor.
+        Observer(Observer&&) = default;
+        Observer& operator=(Observer&&) = default;
+
         Observer(const Observer&) = delete;
         Observer& operator=(const Observer&) = delete;
-        Observer(Observer&&) = delete;
-        Observer& operator=(Observer&&) = delete;
     };
 
     [[nodiscard]] typename ObserverList::size_type num_observers() const
