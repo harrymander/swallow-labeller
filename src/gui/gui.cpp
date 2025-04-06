@@ -544,8 +544,29 @@ private:
         }
     }
 
-    static void draw_debug_info()
+    static void draw_status_bar()
     {
+        constexpr float FramePadding = 5;
+        widgets::ScopedImStyle style_scope = {
+            {ImGuiStyleVar_WindowBorderSize, 0.0F},
+            {ImGuiStyleVar_WindowPadding, ImVec2{ImGui::GetStyle().WindowPadding.x, 0}},
+            {ImGuiStyleVar_FramePadding, ImVec2{FramePadding, FramePadding}},
+        };
+
+        constexpr ImGuiWindowFlags WindowFlags = ImGuiWindowFlags_NoScrollbar
+            | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar;
+        if (!ImGui::BeginViewportSideBar(
+                "##viewport_status_bar",
+                ImGui::GetMainViewport(),
+                ImGuiDir_Down,
+                ImGui::GetFrameHeight(),
+                WindowFlags
+            ))
+        {
+            return;
+        }
+
+        ImGui::AlignTextToFramePadding();
         const ImGuiIO& io = ImGui::GetIO();
         ImGui::Text(
             DEBUG_INFO_ICON ICON_TEXT_SPACE
@@ -555,14 +576,12 @@ private:
             1000.0f / io.Framerate,
             io.Framerate
         );
+
+        ImGui::End();
     }
 
     void draw_main_window()
     {
-        if (m_show_debug_info) {
-            draw_debug_info();
-        }
-
         const auto& task = m_app.tasks().at(m_app.active_task_index());
         const auto& info = task.info();
         ImGui::Text(
@@ -1662,6 +1681,11 @@ public:
             draw_menu_bar();
             ImGui::EndMainMenuBar();
         }
+
+        if (m_show_debug_info) {
+            draw_status_bar();
+        }
+
         setup_dockspace();
 
         const auto& critical_error = m_app.critical_error();
