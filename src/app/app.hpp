@@ -281,9 +281,9 @@ public:
     }
 
     NewActiveTaskObservable::Observer
-    subscribe_new_active_task(NewActiveTaskObservable::Function&& func)
+    subscribe_new_active_task(NewActiveTaskObservable::Function func)
     {
-        return m_new_active_task_observable.subscribe(func);
+        return m_new_active_task_observable.subscribe(std::move(func));
     }
 
     [[nodiscard]] const models::SwallowAnnotation *task_annotation(const SwallowLabellingTask& task

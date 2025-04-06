@@ -96,9 +96,9 @@ public:
 
     using ErrorObservable = Observable<const std::string&>;
 
-    ErrorObservable::Observer subscribe_sync_error(ErrorObservable::Function&& function)
+    ErrorObservable::Observer subscribe_sync_error(ErrorObservable::Function function)
     {
-        return m_error_observable.subscribe(function);
+        return m_error_observable.subscribe(std::move(function));
     }
 
     /**

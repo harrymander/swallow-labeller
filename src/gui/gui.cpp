@@ -1585,7 +1585,7 @@ private:
     static constexpr const char *MainWindowId = "##mainwindow";
     static constexpr const char *LabelInfoWindowId = "##labelinfowindow";
 
-    template <typename DrawFunc> static void draw_window(const char *id, DrawFunc&& draw)
+    template <typename DrawFunc> static void draw_window(const char *id, const DrawFunc& draw)
     {
         constexpr ImGuiWindowFlags WindowFlags =
             (ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove
@@ -1597,7 +1597,7 @@ private:
         ImGui::End();
     }
 
-    template <typename ShowFunc> static void show_window(bool& open, ShowFunc&& show)
+    template <typename ShowFunc> static void show_window(bool& open, const ShowFunc& show)
     {
         if (open) {
             show(&open);
