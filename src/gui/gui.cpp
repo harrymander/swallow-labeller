@@ -358,21 +358,22 @@ private:
         }
     };
 
+#if NDEBUG
+    static constexpr bool DefaultShowDebugInfo = false;
+#else
+    static constexpr bool DefaultShowDebugInfo = true;
+#endif
+
     bool m_first_draw = true;
     bool m_reset_dockspace = false;
     std::string m_ini_path;
     bool m_show_imgui_demo_window = false;
     bool m_show_implot_demo_window = false;
     bool m_show_imgui_metrics = false;
+    bool m_show_debug_info = DefaultShowDebugInfo;
     bool m_critical_error_modal_open = false;
     bool m_unsaved_task_switch_modal_open = false;
     recap::labeller::gui::widgets::ColorSchemeSelector m_color_scheme_selector;
-
-#if NDEBUG
-    bool m_show_debug_info = false;
-#else
-    bool m_show_debug_info = true;
-#endif
 
     TaskFilter m_task_filter;
     std::size_t m_task_list_last_active_index = std::numeric_limits<std::size_t>::max();
@@ -974,7 +975,12 @@ private:
 
         if (ImGui::BeginMenu("View")) {
             if (ImGui::MenuItem("Reset window layout")) {
+                spdlog::debug("Resetting view...");
                 m_reset_dockspace = true;
+                m_show_imgui_demo_window = false;
+                m_show_implot_demo_window = false;
+                m_show_imgui_metrics = false;
+                m_show_debug_info = DefaultShowDebugInfo;
             }
             m_color_scheme_selector.draw();
             ImGui::EndMenu();
