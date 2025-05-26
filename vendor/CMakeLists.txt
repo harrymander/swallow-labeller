@@ -63,12 +63,21 @@ else()
     find_package(spdlog CONFIG REQUIRED)
 endif()
 
-# GCC doesn't support C++20 std::chrono::parse, but date::parse doesn't work on
-# MSVC. Fortunately, std::chrono::parse works on MSVC; so we use Howard
-# Hinnant's date library on GCC and stdlib on MSVC, with the option to manually
-# select which library is used
+# C++20 provides std::chrono::parse, but full support is not available on some
+# compilers that mostly support C++20 (e.g. GCC 13). By default use Howard
+# Hinnant's date library with compilers that don't support the stdlib version.
+# Note that the Howard Hinnant library may not work on compilers that _do_
+# support std::chrono::parse.
 add_library(chrono_util INTERFACE)
-if(MSVC)
+if(
+    MSVC OR (
+        (CMAKE_CXX_COMPILER_ID STREQUAL GNU) AND
+        (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14)
+    ) OR (
+        (CMAKE_CXX_COMPILER_ID STREQUAL Clang) AND
+        (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 18)
+    )
+)
     set(USE_HOWARDHINNANT_DATE_DEFAULT off)
 else()
     set(USE_HOWARDHINNANT_DATE_DEFAULT on)
@@ -79,6 +88,7 @@ option(
     ${USE_HOWARDHINNANT_DATE_DEFAULT}
 )
 if(USE_HOWARDHINNANT_DATE)
+    message("Using Howard Hinnant date library for chrono utils")
     fetchcontent_declare(howardhinnant_date
       GIT_REPOSITORY https://github.com/HowardHinnant/date.git
       GIT_TAG 6e921e1b1d21e84a5c82416ba7ecd98e33a436d0 # v3.0.1
@@ -94,6 +104,8 @@ if(USE_HOWARDHINNANT_DATE)
 
     target_link_libraries(chrono_util INTERFACE date::date)
     target_compile_definitions(chrono_util INTERFACE USE_HOWARDHINNANT_DATE)
+else()
+    message("Using stdlib chrono utils")
 endif()
 
 fetchcontent_declare(
