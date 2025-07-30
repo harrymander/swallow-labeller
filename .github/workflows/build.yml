@@ -46,6 +46,7 @@ jobs:
           cmake --preset windows-static \
             -DBUILD_DEMO=off \
             -DENABLE_LINTING=off \
+            -DENABLE_TEST_SANITIZERS=on \
             -DRECAP_LABELLER_LOG_TO_APP_DATA_DIR=on
         env:
             VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
@@ -55,6 +56,7 @@ jobs:
       - name: Run tests
         env:
           GTEST_COLOR: "yes"
+          ASAN_OPTIONS: "color=always"
         run: ctest --test-dir build --build-config ${{ env.BUILD_TYPE }} --output-on-failure
 
       - name: Upload artifacts

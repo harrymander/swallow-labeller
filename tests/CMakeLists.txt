@@ -1,3 +1,22 @@
+option(
+    ENABLE_TEST_SANITIZERS
+    "Enable sanitizers (AddressSanitizer, UndefinedSanitizier, LeakSanitizer) \
+for tests"
+    ON
+)
+if(ENABLE_TEST_SANITIZERS)
+    if(MSVC)
+        add_compile_options(/fsanitize=address)
+    else()
+        set(
+            sanitizer_flags
+            -fsanitize=address -fsanitize=undefined -fsanitize=leak
+        )
+        add_compile_options(${sanitizer_flags})
+        add_link_options(${sanitizer_flags})
+    endif()
+endif()
+
 if(FETCH_VENDORED)
     include(FetchContent)
     fetchcontent_declare(
