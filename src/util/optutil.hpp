@@ -2,6 +2,7 @@
 #define RECAP_LABELLER_UTIL_OPTUTIL_HPP_INCLUDE
 
 #include <optional>
+#include <utility>
 
 namespace recap::labeller::optutil {
 
@@ -22,7 +23,7 @@ template <class T> inline bool has_value_and_equal(const std::optional<T>& opt, 
 template <class T, class Map, class R>
 inline R map_or(const std::optional<T>& opt, Map map_func, R&& default_value)
 {
-    return opt.has_value() ? map_func(*opt) : default_value;
+    return opt.has_value() ? map_func(*opt) : std::forward<R>(default_value);
 }
 
 /**
@@ -32,10 +33,10 @@ inline R map_or(const std::optional<T>& opt, Map map_func, R&& default_value)
 template <class T, class Map, class R>
 inline R map_or(const T *ptr, Map map_func, R&& default_value)
 {
-    return ptr == nullptr ? default_value : map_func(*ptr);
+    return ptr == nullptr ? std::forward<R>(default_value) : map_func(*ptr);
 }
 
-template <class T, class F> inline auto transform(const std::optional<T>& opt, F&& func)
+template <class T, class F> inline auto transform(const std::optional<T>& opt, const F& func)
 {
     return opt.has_value() ? std::make_optional(func(*opt)) : std::nullopt;
 }
