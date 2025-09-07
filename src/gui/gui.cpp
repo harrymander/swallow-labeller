@@ -5,6 +5,7 @@
 #include "gui/font.hpp"
 #include "gui/icons.h"
 #include "gui/task-list.hpp"
+#include "gui/task-view.hpp"
 #include "gui/widgets/util.hpp"
 #include "models/task-info.hpp"
 #include "util/os.hpp"
@@ -28,7 +29,9 @@ class Gui::Impl {
     app::TaskLoader m_task_loader;
 
     TaskList m_task_list;
+    std::filesystem::path m_data_dir;
     SwallowAnnotationStore& m_annotation_store;
+    std::unique_ptr<TaskView> m_task_view;
 
     static bool is_valid_ini_path(const std::filesystem::path& path)
     {
@@ -116,7 +119,10 @@ public:
         const std::filesystem::path& data_dir
     ) :
         m_task_list(tasks, annotation_store, m_task_loader, data_dir),
-        m_annotation_store(annotation_store)
+        m_data_dir(data_dir),
+        m_annotation_store(annotation_store),
+        m_task_view(load_task_view(m_task_loader, m_data_dir, m_task_list.currently_selected_task())
+        )
     {
         if (NFD::Init() != NFD_OKAY) {
             spdlog::error("Error initialising NFD: {}", NFD::GetError());
@@ -153,7 +159,17 @@ public:
     void draw()
     {
         draw_status_bar();
-        m_task_list.draw("Labelling tasks");
+        const models::SwallowTaskInfo *new_task = m_task_list.draw("Labelling tasks");
+        if (new_task) {
+            m_task_view = load_task_view(m_task_loader, m_data_dir, *new_task);
+        }
+
+        if (m_task_view) {
+            if (ImGui::Begin("Labelling task")) {
+                m_task_view->draw();
+            }
+            ImGui::End();
+        }
     }
 
     void stop() { m_ready_to_stop = true; }

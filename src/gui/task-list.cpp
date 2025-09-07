@@ -45,16 +45,25 @@ public:
         m_data_dir(data_dir)
     {}
 
-    void draw()
+    const models::SwallowTaskInfo *draw()
     {
+        const models::SwallowTaskInfo *new_task = nullptr;
         if (ImGui::BeginListBox("##task-list", {-1, -1})) {
             for (std::size_t i = 0; i < m_tasks.size(); i++) {
-                if (draw_task_selectable(m_tasks[i], m_active_idx == i)) {
+                const auto& task = m_tasks[i];
+                if (draw_task_selectable(task, m_active_idx == i)) {
+                    if (m_active_idx != i) {
+                        new_task = &task;
+                    }
                     m_active_idx = i;
                 }
             }
         }
+
+        return new_task;
     }
+
+    const models::SwallowTaskInfo& current_task() const { return m_tasks[m_active_idx]; }
 
 private:
     const std::vector<models::SwallowTaskInfo>& m_tasks;
@@ -114,12 +123,19 @@ TaskList::TaskList(
 
 TaskList::~TaskList() = default;
 
-void TaskList::draw(const char *id)
+const models::SwallowTaskInfo *TaskList::draw(const char *id)
 {
+    const models::SwallowTaskInfo *new_task = nullptr;
     if (ImGui::Begin(id)) {
-        m_pimpl->draw();
+        new_task = m_pimpl->draw();
     }
     ImGui::End();
+    return new_task;
+}
+
+const models::SwallowTaskInfo& TaskList::currently_selected_task() const
+{
+    return m_pimpl->current_task();
 }
 
 }; // namespace recap::labeller::gui

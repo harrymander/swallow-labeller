@@ -25,7 +25,10 @@ public:
     TaskList(TaskList&&) = delete;
     TaskList& operator=(TaskList&&) = delete;
 
-    void draw(const char *id);
+    // Return pointer to newly selected task or nullptr if no change
+    [[nodiscard]] const models::SwallowTaskInfo *draw(const char *id);
+
+    const models::SwallowTaskInfo& currently_selected_task() const;
 
 private:
     class Impl;
