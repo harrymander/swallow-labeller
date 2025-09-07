@@ -2,7 +2,6 @@
 #include "app/app.hpp"
 #include "app/config.hpp"
 #include "models/task-info.hpp"
-#include "options.h"
 #include "platform/platform.hpp"
 #include "util/os.hpp"
 
@@ -416,7 +415,7 @@ int run_main(int argc, const char *argv[])
         options.data_dir,
         std::move(suggested_annotations)
     );
-    return platform::run(app);
+    return platform::run(*labelling_tasks, *annotations_store);
 }
 
 }; // namespace

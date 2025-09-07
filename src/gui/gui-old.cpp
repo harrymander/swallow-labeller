@@ -1,3 +1,4 @@
+#include "app/annotation-store.hpp"
 #include "models/annotation.hpp"
 #define IMGUI_DEFINE_MATH_OPERATORS
 
@@ -1200,7 +1201,9 @@ public:
     [[nodiscard]] bool ready_to_stop() const { return m_app.can_stop(); }
 };
 
-Gui::Gui(app::App& app) : m_pimpl(std::make_unique<Impl>(app)) {}
+Gui::Gui(app::App& app, SwallowAnnotationStore& annotation_store) :
+    m_pimpl(std::make_unique<Impl>(app))
+{}
 
 Gui::~Gui() = default;
 

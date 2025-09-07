@@ -1,6 +1,11 @@
 #include "gui/gui.hpp"
 
+#include "app/annotation-store.hpp"
 #include "gui/font.hpp"
+#include "gui/icons.h"
+#include "gui/task-list.hpp"
+#include "gui/widgets/util.hpp"
+#include "models/task-info.hpp"
 #include "util/os.hpp"
 
 #include <fmt/std.h>
@@ -18,6 +23,9 @@ class Gui::Impl {
     bool m_nfd_available = false;
     bool m_ready_to_stop = false;
     std::string m_ini_path;
+
+    TaskList m_task_list;
+    SwallowAnnotationStore& m_annotation_store;
 
     static bool is_valid_ini_path(const std::filesystem::path& path)
     {
@@ -62,8 +70,47 @@ class Gui::Impl {
         }
     }
 
+    static void draw_status_bar()
+    {
+        constexpr float FramePadding = 5;
+        widgets::ScopedImStyle style_scope = {
+            {ImGuiStyleVar_WindowBorderSize, 0.0F},
+            {ImGuiStyleVar_WindowPadding, ImVec2{ImGui::GetStyle().WindowPadding.x, 0}},
+            {ImGuiStyleVar_FramePadding, ImVec2{FramePadding, FramePadding}},
+        };
+
+        constexpr ImGuiWindowFlags WindowFlags = ImGuiWindowFlags_NoScrollbar
+            | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar;
+        if (!ImGui::BeginViewportSideBar(
+                "##viewport_status_bar",
+                ImGui::GetMainViewport(),
+                ImGuiDir_Down,
+                ImGui::GetFrameHeight(),
+                WindowFlags
+            ))
+        {
+            return;
+        }
+
+        ImGui::AlignTextToFramePadding();
+        const ImGuiIO& io = ImGui::GetIO();
+        ImGui::Text(
+            DEBUG_INFO_ICON ICON_TEXT_SPACE
+            "Mouse Position: [%.0f,%.0f]. Application average: %.3f ms/frame (%.1f FPS).",
+            io.MousePos.x,
+            io.MousePos.y,
+            1000.0f / io.Framerate,
+            io.Framerate
+        );
+
+        ImGui::End();
+    }
+
 public:
-    Impl()
+    Impl(
+        const std::vector<models::SwallowTaskInfo>& tasks, SwallowAnnotationStore& annotation_store
+    ) :
+        m_task_list(tasks, annotation_store), m_annotation_store(annotation_store)
     {
         if (NFD::Init() != NFD_OKAY) {
             spdlog::error("Error initialising NFD: {}", NFD::GetError());
@@ -97,14 +144,22 @@ public:
     Impl(Impl&&) = delete;
     Impl& operator=(Impl&&) = delete;
 
-    void draw() {}
+    void draw()
+    {
+        draw_status_bar();
+        m_task_list.draw("Labelling tasks");
+    }
 
     void stop() { m_ready_to_stop = true; }
 
     bool ready_to_stop() const { return m_ready_to_stop; }
 };
 
-Gui::Gui() : m_pimpl(std::make_unique<Impl>()) {}
+Gui::Gui(
+    const std::vector<models::SwallowTaskInfo>& tasks, SwallowAnnotationStore& annotation_store
+) :
+    m_pimpl(std::make_unique<Impl>(tasks, annotation_store))
+{}
 
 Gui::~Gui() = default;
 

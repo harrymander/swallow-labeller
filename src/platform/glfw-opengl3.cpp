@@ -4,13 +4,17 @@
 // documentation from the docs/ folder + read the top of imgui.cpp. Read online:
 // https://github.com/ocornut/imgui/tree/master/docs
 
+#include "app/annotation-store.hpp"
 #include "app/app.hpp"
 #include "gui/gui.hpp"
+#include "models/task-info.hpp"
 #include "platform.hpp"
 
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 #include <imgui.h>
+
+#include <vector>
 
 #define GL_SILENCE_DEPRECATION
 #if defined(IMGUI_IMPL_OPENGL_ES2)
@@ -80,9 +84,14 @@ static bool should_stop(GLFWwindow *window)
     return false;
 }
 
-static void run_gui(app::App& app, const char *glsl_version, GLFWwindow *window)
+static void run_gui(
+    const std::vector<models::SwallowTaskInfo>& tasks,
+    SwallowAnnotationStore& annotation_store,
+    const char *glsl_version,
+    GLFWwindow *window
+)
 {
-    gui::Gui gui;
+    gui::Gui gui(tasks, annotation_store);
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -143,7 +152,7 @@ static void run_gui(app::App& app, const char *glsl_version, GLFWwindow *window)
     ImGui_ImplGlfw_Shutdown();
 }
 
-int run(recap::labeller::app::App& app)
+int run(const std::vector<models::SwallowTaskInfo>& tasks, SwallowAnnotationStore& annotation_store)
 {
     if (setup_stop_signal_handler() < 0) {
         return 1;
@@ -191,7 +200,7 @@ int run(recap::labeller::app::App& app)
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
 
-    run_gui(app, glsl_version, window);
+    run_gui(tasks, annotation_store, glsl_version, window);
 
     spdlog::debug("Destroying GLFW window...");
     glfwDestroyWindow(window);

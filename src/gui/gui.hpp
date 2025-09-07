@@ -1,13 +1,18 @@
 #ifndef RECAP_LABELLER_GUI_HPP
 #define RECAP_LABELLER_GUI_HPP
 
+#include "app/annotation-store.hpp"
+#include "models/task-info.hpp"
+
 #include <memory>
+#include <vector>
 
 namespace recap::labeller::gui {
 
 class Gui {
 public:
-    Gui();
+    Gui(const std::vector<models::SwallowTaskInfo>& tasks,
+        SwallowAnnotationStore& annotation_store);
     ~Gui();
 
     Gui(const Gui&) = delete;
