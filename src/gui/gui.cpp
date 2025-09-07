@@ -121,7 +121,8 @@ public:
         m_task_list(tasks, annotation_store, m_task_loader, data_dir),
         m_data_dir(data_dir),
         m_annotation_store(annotation_store),
-        m_task_view(load_task_view(m_task_loader, m_data_dir, m_task_list.currently_selected_task())
+        m_task_view(
+            load_task_view(m_task_loader, m_data_dir, m_task_list.currently_selected_task())
         )
     {
         if (NFD::Init() != NFD_OKAY) {

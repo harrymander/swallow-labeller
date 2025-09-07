@@ -54,7 +54,7 @@ static void signal_handler(int sig)
 
 static int setup_stop_signal_handler()
 {
-    static struct ::sigaction sigaction {};
+    static struct ::sigaction sigaction{};
 
     ::sigemptyset(&sigaction.sa_mask);
     sigaction.sa_handler = signal_handler;

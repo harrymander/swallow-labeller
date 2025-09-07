@@ -1,7 +1,7 @@
 set(Python3_FIND_UNVERSIONED_NAMES FIRST)
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
-set(CLANG_FORMAT_VERSION 18.1.3)
+set(CLANG_FORMAT_VERSION 21.1.0)
 set(CPPCHECK_VERSION 1.4.7)  # equivalent to cppcheck 2.16.1
 
 set(VENV_DIR ${CMAKE_CURRENT_BINARY_DIR}/clang-format-venv)

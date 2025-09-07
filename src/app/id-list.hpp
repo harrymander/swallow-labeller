@@ -58,10 +58,9 @@ private:
     template <typename Self> static auto find_item(Self&& self, Item::ID id)
     {
         auto it = std::lower_bound(
-            self.m_items.begin(),
-            self.m_items.end(),
-            id,
-            [](const Item& item, Item::ID id) { return item.id < id; }
+            self.m_items.begin(), self.m_items.end(), id, [](const Item& item, Item::ID id) {
+                return item.id < id;
+            }
         );
         if (it != self.m_items.end() && it->id == id) {
             return it;

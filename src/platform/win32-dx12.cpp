@@ -254,7 +254,7 @@ bool CreateDeviceD3D(HWND hWnd)
     if (D3D12CreateDevice(NULL, featureLevel, IID_PPV_ARGS(&g_pd3dDevice)) != S_OK)
         return false;
 
-        // [DEBUG] Setup debug interface to break on any warnings/errors
+    // [DEBUG] Setup debug interface to break on any warnings/errors
 #ifdef DX12_ENABLE_DEBUG_LAYER
     if (pdx12Debug != NULL) {
         ID3D12InfoQueue *pInfoQueue = NULL;

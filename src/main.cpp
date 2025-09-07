@@ -161,8 +161,10 @@ struct ProgramOptions {
         argparse::ArgumentParser parser(program_name, program_version);
         parser.add_argument("--log").help(LogCliHelp).action(check_path_writable);
         parser.add_argument("--config", "-c")
-            .help("path to config file; pass empty string to use default settings, ignoring\n"
-                  "the config file that may be located in the user app data dir.");
+            .help(
+                "path to config file; pass empty string to use default settings, ignoring\n"
+                "the config file that may be located in the user app data dir."
+            );
         parser.add_argument("--tasks", "-t")
             .help("path to labelling tasks JSON")
             .action(regular_file_action);
@@ -170,15 +172,19 @@ struct ProgramOptions {
             .help("directory containing data files")
             .action(check_is_dir);
         parser.add_argument("--annotations", "-a")
-            .help("path to write annotations to; if exists, "
-                  "reads existing annotations from this file")
+            .help(
+                "path to write annotations to; if exists, "
+                "reads existing annotations from this file"
+            )
             .action(check_path_writable);
         parser.add_argument("--no-app-data-dir")
             .implicit_value(true)
             .default_value(false)
-            .help("by default, if any of --config, --data-dir, --tasks, --annotations are not\n"
-                  "provided, they will be set relative to the user app data dir. If this is\n"
-                  "passed, then all paths must be explicitly provided.");
+            .help(
+                "by default, if any of --config, --data-dir, --tasks, --annotations are not\n"
+                "provided, they will be set relative to the user app data dir. If this is\n"
+                "passed, then all paths must be explicitly provided."
+            );
         parser.add_argument("--suggestions", "-s")
             .help("path to annotations file to use as suggestions")
             .action(regular_file_action);

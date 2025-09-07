@@ -666,8 +666,7 @@ private:
         widgets::draw_plot_range(m_plot_summary_range, SummaryColor);
 
         const auto *task_view = m_app.active_task_labelling_view();
-        if (task_view) {
-        }
+        if (task_view) {}
     }
 
     void annotations_save_copy()
