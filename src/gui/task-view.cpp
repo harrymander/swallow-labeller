@@ -22,6 +22,9 @@ namespace recap::labeller::gui {
 
 namespace {
 
+constexpr ImU32 EventLabelColor = IM_COL32(0xFC, 0x65, 0x5A, 0xFF);
+constexpr float LabelSummaryHeight = 8; // Same as default ImPlotStyle::DigitalBitHeight
+
 widgets::PlotRange initial_plot_range(double t0, double t1, const models::SwallowTaskInfo& info)
 {
     constexpr double Margin = 3;
@@ -32,17 +35,6 @@ widgets::PlotRange initial_plot_range(double t0, double t1, const models::Swallo
         t1 = std::min(t1, first_event.end + Margin);
     }
     return {t0, t1};
-}
-
-void draw_plot(const char *id, Plot& plot, float height)
-{
-    constexpr ImPlotFlags Flags =
-        ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus;
-    widgets::ScopedImID scoped_id(id);
-    if (ImPlot::BeginPlot("##plot", {-1, height}, Flags)) {
-        plot.draw();
-        ImPlot::EndPlot();
-    }
 }
 
 class TaskLabellingView : public TaskView {
@@ -76,7 +68,27 @@ private:
 
         if (ImPlot::BeginPlot("##summary_plot", {-1, SummaryPlotHeight}, ImPlotFlags_CanvasOnly)) {
             draw_plot_summary_selector();
+            draw_event_labels();
             ImPlot::EndPlot();
+        }
+    }
+
+    void draw_plot(const char *id, Plot& plot, float height) const
+    {
+        constexpr ImPlotFlags Flags =
+            ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus;
+        widgets::ScopedImID scoped_id(id);
+        if (ImPlot::BeginPlot("##plot", {-1, height}, Flags)) {
+            plot.draw();
+            draw_event_labels();
+            ImPlot::EndPlot();
+        }
+    }
+
+    void draw_event_labels() const
+    {
+        for (const auto& event : m_task_info.event_times) {
+            widgets::draw_plot_range(event.start, event.end, EventLabelColor, -LabelSummaryHeight);
         }
     }
 
