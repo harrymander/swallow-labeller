@@ -401,6 +401,23 @@ private:
     void on_new_active_task(const app::App::ActiveTaskVariant& new_task)
     {
         constexpr double InitViewRangeMargin = 0.025;
+
+        VariantVisitor{
+            [this](const app::ActiveSwallowLabellingTaskView& task) {
+                const auto& time = task.data().flow_time;
+                const double margin = (time.back() - time.front()) * InitViewRangeMargin;
+                m_plot_summary_range = {time.front() + margin, time.back() - margin};
+                spdlog::debug(
+                    "Set new summary range to [{}, {}]",
+                    m_plot_summary_range.start,
+                    m_plot_summary_range.end
+                );
+            },
+            [this](const app::ActiveSwallowLabellingTaskErrorView&) {
+                m_plot_summary_selector.reset();
+                m_plot_summary_range = {NAN, NAN};
+            },
+        }(new_task);
     }
 
     void draw_critical_error(const std::string& error)
@@ -844,6 +861,20 @@ private:
         if (ImGui::BeginListBox("##task_info_list", {-1, -1})) {
             if (scroll_to_top) {
                 ImGui::SetScrollHereY();
+            }
+
+            std::size_t i = 0;
+            for (const auto& task : tasks.items()) {
+                const bool selected = active_index == i;
+                const auto str = swallow_task_info_str(task, true, true);
+                if (ImGui::Selectable(str.c_str(), selected)) {
+                    new_active_index = i;
+                }
+                if (selected && scroll_to_selected_task && !ImGui::IsItemVisible()) {
+                    ImGui::ScrollToItem();
+                }
+
+                i += 1;
             }
 
             if (scroll_to_bottom) {
