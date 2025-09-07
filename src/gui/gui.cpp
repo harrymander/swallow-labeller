@@ -1,9 +1,9 @@
+#include "models/annotation.hpp"
 #define IMGUI_DEFINE_MATH_OPERATORS
-
-#include "gui.hpp"
 
 #include "app/app.hpp"
 #include "app/id-list.hpp"
+#include "gui.hpp"
 #include "gui/font.hpp"
 #include "gui/icons.h"
 #include "gui/task-filter.hpp"
@@ -64,25 +64,25 @@ struct GuiColors {
     static constexpr RGB EarClickLabelColor = {0xFC, 0x5A, 0xE1};
     static constexpr RGB NonRespFlowLabelColor = {0x8D, 0x5A, 0xFC};
 
-    static constexpr ImU32
-    apnea_label_color(app::SwallowApneaAnnotationStatus status, uint8_t alpha = 0xff)
-    {
-        using enum app::SwallowApneaAnnotationStatus;
-        switch (status) {
-        case ExEx:
-            return color({0xFC, 0xEE, 0x5A}, alpha);
-        case ExIn:
-            return color({0x80, 0xFC, 0x5A}, alpha);
-        case InEx:
-            return color({0x5A, 0xFC, 0xBE}, alpha);
-        case InIn:
-            break;
-        default:
-            spdlog::error("apnea_label_color: invalid SwallowApneaAnnotationStatus!");
-            break;
-        }
-        return color({0x5A, 0xB0, 0xFC}, alpha);
-    }
+    // static constexpr ImU32
+    // apnea_label_color(app::SwallowApneaAnnotationStatus status, uint8_t alpha = 0xff)
+    // {
+    //     using enum app::SwallowApneaAnnotationStatus;
+    //     switch (status) {
+    //     case ExEx:
+    //         return color({0xFC, 0xEE, 0x5A}, alpha);
+    //     case ExIn:
+    //         return color({0x80, 0xFC, 0x5A}, alpha);
+    //     case InEx:
+    //         return color({0x5A, 0xFC, 0xBE}, alpha);
+    //     case InIn:
+    //         break;
+    //     default:
+    //         spdlog::error("apnea_label_color: invalid SwallowApneaAnnotationStatus!");
+    //         break;
+    //     }
+    //     return color({0x5A, 0xB0, 0xFC}, alpha);
+    // }
 
     static constexpr ImU32 color(const RGB& rgb, uint8_t alpha = 0xff)
     {
@@ -284,11 +284,7 @@ public:
         }
     }
 
-    void plot_data(
-        const std::vector<double>& x,
-        const std::vector<double>& y,
-        const models::TimeRange& event_range
-    )
+    void plot_data(const std::vector<double>& x, const std::vector<double>& y)
     {
         setup_axis_links(ImAxis_X1, m_xrange.start, m_xrange.end);
         ImPlot::SetupAxis(
@@ -300,7 +296,6 @@ public:
         if (is_mouse_inside_plot()) {
             draw_plot_hovered(x.data(), x.size(), y.data(), m_cursor_format);
         }
-        plot_event(event_range);
         draw_delta_selector();
     }
 
@@ -328,36 +323,6 @@ private:
         TimeRangeAnnotator() = default;
     };
 
-    struct Annotator {
-        widgets::PlotRangeSelector apnea_range_selector;
-        widgets::PlotRange apnea_temp_range = {NAN, NAN};
-        widgets::PlotRangeDragger apnea_range_dragger;
-        bool editing_apnea = true;
-        TimeRangeAnnotator non_resp_flow_annotator;
-        TimeRangeAnnotator ear_clicks_annotator;
-        std::string note;
-
-        Annotator() = default;
-
-        explicit Annotator(const app::ActiveSwallowLabellingTaskView& task_view) :
-            apnea_temp_range(optutil::map_or(
-                task_view.swallow_anpea_range(),
-                [](const models::TimeRange& range) {
-                    return widgets::PlotRange{range.start, range.end};
-                },
-                widgets::PlotRange{NAN, NAN}
-            )),
-            note(task_view.note())
-        {
-            {
-                const auto *labels = task_view.ear_click_labels();
-                if (labels && !labels->empty()) {
-                    ear_clicks_annotator.selected_id = labels->front().id;
-                }
-            }
-        }
-    };
-
 #if NDEBUG
     static constexpr bool DefaultShowDebugInfo = false;
 #else
@@ -381,8 +346,6 @@ private:
     widgets::PlotRangeDragger m_plot_summary_dragger;
     widgets::PlotRangeSelector m_plot_summary_selector;
     widgets::PlotRange m_plot_summary_range = {NAN, NAN};
-
-    Annotator m_annotator;
 
     recap::labeller::app::App& m_app;
     recap::labeller::app::App::NewActiveTaskObservable::Observer m_new_active_task_observer;
@@ -437,30 +400,7 @@ private:
 
     void on_new_active_task(const app::App::ActiveTaskVariant& new_task)
     {
-        constexpr double EventBufferSecs = 6;
-
-        VariantVisitor{
-            [this](const app::ActiveSwallowLabellingTaskView& task) {
-                const auto& info = task.info();
-                const auto& time = task.data().flow_time;
-                m_plot_summary_range = {
-                    std::max(info.event_range_secs.start - EventBufferSecs, time.front()),
-                    std::min(info.event_range_secs.end + EventBufferSecs, time.back()),
-                };
-                spdlog::debug(
-                    "Set new summary range to [{}, {}]",
-                    m_plot_summary_range.start,
-                    m_plot_summary_range.end
-                );
-
-                m_annotator = Annotator(task);
-            },
-            [this](const app::ActiveSwallowLabellingTaskErrorView&) {
-                m_plot_summary_selector.reset();
-                m_plot_summary_range = {NAN, NAN};
-                m_annotator = Annotator();
-            },
-        }(new_task);
+        constexpr double InitViewRangeMargin = 0.025;
     }
 
     void draw_critical_error(const std::string& error)
@@ -585,11 +525,10 @@ private:
         const auto& task = m_app.tasks().at(m_app.active_task_index());
         const auto& info = task.info();
         ImGui::Text(
-            "Subject #%u, %s swallows, repeat #%u, swallow #%u (%s)",
+            "Subject #%u, %s swallows, repeat #%u (%s)",
             info.subject,
             swallow_test_type_string(info.test_type).c_str(),
             info.repeatnum,
-            info.swallownum,
             task.data_path().c_str()
         );
 
@@ -632,7 +571,7 @@ private:
             draw_plot_summary_selector();
             const auto& data = task_view.data();
             plot_line("##summary_flow_plot_line", data.flow_time, data.flow);
-            plot_event(task_view.info().event_range_secs);
+            // TODO: plot event button pushes
             ImPlot::EndPlot();
         }
     }
@@ -656,212 +595,14 @@ private:
     void draw_flow_plot(app::ActiveSwallowLabellingTaskView& task_view)
     {
         const auto& data = task_view.data();
-        m_flow_plotter.plot_data(data.flow_time, data.flow, task_view.info().event_range_secs);
-
-        draw_flow_label_regions(task_view);
-        draw_earclick_label_regions(task_view, LabelSummaryHeight, true);
-
+        m_flow_plotter.plot_data(data.flow_time, data.flow);
         add_plot_text("Positive flow = expiration");
-        if (m_annotator.editing_apnea) {
-            if (task_view.can_add_new_swallow_apnea_range()
-                || task_view.can_edit_swallow_apnea_range())
-            {
-                add_plot_text("Labelling swallow apnea", 1);
-            }
-            if (task_view.can_add_new_swallow_apnea_range()) {
-                add_plot_text(
-                    HINT_ICON ICON_TEXT_SPACE
-                    "Hold Ctrl and left click and drag to add apnea label",
-                    2
-                );
-            }
-        } else if (!m_annotator.editing_apnea && task_view.can_add_new_non_resp_flow_label()) {
-            const auto text = fmt::format(
-                "Labelling non-respiratory flow (maximum time = {:g} s)",
-                m_app.config().max_snrf_time
-            );
-            add_plot_text(text.c_str(), 1);
-        }
-
-        if (task_view.can_add_new_swallow_apnea_range()) {
-            auto new_range = m_annotator.apnea_range_selector.update(
-                "##apnea_range_selector",
-                0,
-                ImGuiMouseButton_Left,
-                ImGuiKey_LeftCtrl,
-                FlowMinSelectionRange
-            );
-            if (new_range) {
-                task_view.add_swallow_apnea_range(new_range->start, new_range->end);
-            }
-        } else if (!m_annotator.editing_apnea && task_view.can_add_new_non_resp_flow_label()) {
-            auto new_range = m_annotator.non_resp_flow_annotator.range_selector.update(
-                "##snrf_range_selector",
-                0,
-                ImGuiMouseButton_Left,
-                ImGuiKey_LeftCtrl,
-                FlowMinSelectionRange
-            );
-            if (new_range) {
-                const auto new_id =
-                    task_view.add_non_resp_flow_label(new_range->start, new_range->end);
-                if (new_id) {
-                    m_annotator.non_resp_flow_annotator.selected_id = new_id;
-                }
-            }
-        }
-
-        if (m_annotator.editing_apnea) {
-            const auto *range = task_view.swallow_anpea_range();
-            if (range && task_view.can_edit_swallow_apnea_range()) {
-                if (!m_annotator.apnea_range_dragger.is_editing()) {
-                    m_annotator.apnea_temp_range = {range->start, range->end};
-                }
-                if (m_annotator.apnea_range_dragger.update(
-                        "##apnea_range_dragger", m_annotator.apnea_temp_range, FlowMinSelectionRange
-                    ))
-                {
-                    task_view.set_swallow_apnea_range(
-                        m_annotator.apnea_temp_range.start, m_annotator.apnea_temp_range.end
-                    );
-                }
-            }
-        } else if (task_view.can_add_new_non_resp_flow_label()
-                   && m_annotator.non_resp_flow_annotator.selected_id.has_value())
-        {
-            // TODO: this is repeated in ear click label updater...
-            auto& annotator = m_annotator.non_resp_flow_annotator;
-            const auto *range = task_view.non_resp_flow_label(*annotator.selected_id);
-            if (range) {
-                if (!annotator.range_dragger.is_editing()) {
-                    annotator.temp_range = {range->start, range->end};
-                }
-                if (annotator.range_dragger.update(
-                        "##snrf_range_dragger", annotator.temp_range, FlowMinSelectionRange
-                    ))
-                {
-                    task_view.set_non_resp_flow_label(
-                        *annotator.selected_id, annotator.temp_range.start, annotator.temp_range.end
-                    );
-                }
-            } else {
-                spdlog::error("No SNRF range for ID = {}", *annotator.selected_id);
-                annotator.selected_id.reset();
-            }
-        }
-    }
-
-    void draw_flow_label_regions(
-        const app::ActiveSwallowLabellingTaskView& task_view,
-        float height = 0,
-        bool selected_color = false
-    ) const
-    {
-        draw_apnea_label_region(task_view, height, selected_color);
-        draw_non_resp_flow_label_regions(task_view, height, selected_color);
-    }
-
-    void draw_apnea_label_region(
-        const app::ActiveSwallowLabellingTaskView& task_view, float height, bool selected_color
-    ) const
-    {
-        constexpr uint8_t SelectingAlpha = 0x33;
-        constexpr uint8_t SelectedAlpha = 0x66;
-
-        if (!(task_view.can_add_new_ear_click_range() || task_view.can_edit_swallow_apnea_range()))
-        {
-            return;
-        }
-
-        const auto *selecting_range = m_annotator.apnea_range_selector.range();
-        const app::SwallowApneaAnnotationStatus status =
-            task_view.swallow_apnea_annotation_status();
-        if (selecting_range) {
-            widgets::draw_plot_range(
-                *selecting_range,
-                GuiColors::apnea_label_color(
-                    status, selected_color ? SelectedAlpha : SelectingAlpha
-                ),
-                height
-            );
-        } else {
-            const auto *range = task_view.swallow_anpea_range();
-            if (range) {
-                const ImU32 color = GuiColors::apnea_label_color(
-                    status,
-                    selected_color || m_annotator.editing_apnea ? SelectedAlpha : SelectingAlpha
-                );
-                if (m_annotator.apnea_range_dragger.is_editing()) {
-                    widgets::draw_plot_range(m_annotator.apnea_temp_range, color, height);
-                } else {
-                    widgets::draw_plot_range(range->start, range->end, color, height);
-                }
-            }
-        }
-    }
-
-    void draw_non_resp_flow_label_regions(
-        const app::ActiveSwallowLabellingTaskView& task_view, float height, bool selected_color
-    ) const
-    {
-        constexpr TimeRangeLabelRegionColors colors =
-            GuiColors::time_range_label_region_colors(GuiColors::NonRespFlowLabelColor);
-        const auto *labels = task_view.non_resp_flow_labels();
-        if (labels) {
-            draw_labels_regions(
-                *labels, m_annotator.non_resp_flow_annotator, height, colors, selected_color
-            );
-        }
     }
 
     void draw_audio_plot(app::ActiveSwallowLabellingTaskView& task_view)
     {
         const auto& data = task_view.data();
-        m_audio_plotter.plot_data(data.audio_time, data.audio, task_view.info().event_range_secs);
-
-        draw_earclick_label_regions(task_view);
-        draw_flow_label_regions(task_view, LabelSummaryHeight, true);
-
-        if (task_view.can_add_new_ear_click_range()) {
-            add_plot_text(HINT_ICON ICON_TEXT_SPACE
-                          "Hold Ctrl and left click and drag to add ear click label(s)");
-            auto new_range = m_annotator.ear_clicks_annotator.range_selector.update(
-                "##earclick_new_range_selector",
-                0,
-                ImGuiMouseButton_Left,
-                ImGuiKey_LeftCtrl,
-                AudioMinSelectionRange
-            );
-            if (new_range) {
-                auto new_id = task_view.add_ear_click_label(new_range->start, new_range->end);
-                if (new_id) {
-                    m_annotator.ear_clicks_annotator.selected_id = new_id;
-                }
-            }
-        }
-
-        if (task_view.can_add_new_ear_click_range()
-            && m_annotator.ear_clicks_annotator.selected_id.has_value())
-        {
-            auto& annotator = m_annotator.ear_clicks_annotator;
-            const auto *range = task_view.ear_click_label(*annotator.selected_id);
-            if (range) {
-                if (!annotator.range_dragger.is_editing()) {
-                    annotator.temp_range = {range->start, range->end};
-                }
-                if (annotator.range_dragger.update(
-                        "##earclick_range_dragger", annotator.temp_range, AudioMinSelectionRange
-                    ))
-                {
-                    task_view.set_ear_click_label(
-                        *annotator.selected_id, annotator.temp_range.start, annotator.temp_range.end
-                    );
-                }
-            } else {
-                spdlog::error("No ear click range for ID = {}", *annotator.selected_id);
-                annotator.selected_id.reset();
-            }
-        }
+        m_audio_plotter.plot_data(data.audio_time, data.audio);
     }
 
     static void draw_labels_regions(
@@ -893,22 +634,6 @@ private:
         }
     }
 
-    void draw_earclick_label_regions(
-        const app::ActiveSwallowLabellingTaskView& task_view,
-        float height = 0,
-        bool selected_color = false
-    ) const
-    {
-        constexpr TimeRangeLabelRegionColors colors =
-            GuiColors::time_range_label_region_colors(GuiColors::EarClickLabelColor);
-        const auto *labels = task_view.ear_click_labels();
-        if (labels) {
-            draw_labels_regions(
-                *labels, m_annotator.ear_clicks_annotator, height, colors, selected_color
-            );
-        }
-    }
-
     void draw_plot_summary_selector()
     {
         constexpr ImColor SummaryColor = {.5F, .5F, .5F, .6F};
@@ -924,8 +649,6 @@ private:
 
         const auto *task_view = m_app.active_task_labelling_view();
         if (task_view) {
-            draw_flow_label_regions(*task_view, LabelSummaryHeight, true);
-            draw_earclick_label_regions(*task_view, LabelSummaryHeight, true);
         }
     }
 
@@ -1034,12 +757,11 @@ private:
 
         const models::SwallowTaskInfo& info = task.info();
         return fmt::format(
-            "{}Subject #{}, {}\nRepeat #{}, swallow #{}{}",
+            "{}Subject #{}, {}\nRepeat #{}{}",
             task_icon,
             info.subject,
             swallow_test_type_string(info.test_type),
             info.repeatnum,
-            info.swallownum,
             !*task_icon && has_suggested_annotation ?
                 ICON_TEXT_SPACE SUGGESTED_ANNOTATION_TASK_ICON :
                 ""
@@ -1124,38 +846,6 @@ private:
                 ImGui::SetScrollHereY();
             }
 
-            std::size_t i = 0;
-            for (const auto& task : tasks.items()) {
-                const auto *annotation = m_app.task_annotation(task);
-                const bool has_annotation = annotation != nullptr;
-                if (has_annotation) {
-                    num_annotated += 1;
-                }
-
-                if (!m_task_filter.enabled() || m_task_filter.passes(task, annotation)) {
-                    num_filtered += 1;
-                    const bool has_suggested_annotation = m_app.task_has_suggested_annotation(task);
-                    const bool selected = active_index == i;
-                    const auto str =
-                        swallow_task_info_str(task, has_annotation, has_suggested_annotation);
-                    if (ImGui::Selectable(str.c_str(), selected)) {
-                        new_active_index = i;
-                    }
-                    if (selected && scroll_to_selected_task && !ImGui::IsItemVisible()) {
-                        ImGui::ScrollToItem();
-                    }
-                    const auto& err = task.error_msg();
-                    if (err.has_value()) {
-                        ImGui::SetItemTooltip(ERR_ICON ICON_TEXT_SPACE "%s", err->c_str());
-                    } else if (!has_annotation && has_suggested_annotation) {
-                        ImGui::SetItemTooltip(SUGGESTED_ANNOTATION_TASK_ICON ICON_TEXT_SPACE
-                                              "Task has suggested annotations");
-                    }
-                }
-
-                i += 1;
-            }
-
             if (scroll_to_bottom) {
                 ImGui::SetScrollHereY();
             }
@@ -1198,33 +888,6 @@ private:
     {
         using enum AnnotationSubmitAction;
         AnnotationSubmitAction action = None;
-
-        static const char *del_str =
-            ICON_TEXT_SPACE DELETE_ICON ICON_TEXT_SPACE; // cppcheck-suppress unknownMacro
-        const float del_button_width =
-            ImGui::CalcTextSize(del_str).x + ImGui::GetStyle().ItemInnerSpacing.x * 4;
-        float button_height = del_button_width;
-
-        const bool can_delete = task_view.can_delete_annotation();
-        const float submit_button_width =
-            can_delete ? ImGui::GetContentRegionAvail().x - del_button_width : -1;
-
-        ImGui::BeginDisabled(!task_view.can_save_annotation());
-        if (ImGui::Button("Save [" SAVE_SHORTCUT_STR "]", {submit_button_width, button_height})
-            || save_shortcut_pushed())
-        {
-            action = Save;
-        }
-        ImGui::EndDisabled();
-
-        if (can_delete) {
-            ImGui::SameLine();
-            if (widgets::ButtonRed(del_str, {del_button_width, button_height})) {
-                task_view.delete_annotation();
-                m_annotator = Annotator(task_view);
-            }
-            ImGui::SetItemTooltip("Delete annotation");
-        }
 
         if (ImGui::Button("Skip" ICON_TEXT_SPACE SKIP_TASK_ICON) && action == None) {
             action = Skip;
@@ -1337,10 +1000,6 @@ private:
     {
         const AnnotationSubmitAction action = draw_annotation_submit(task_view);
 
-        draw_note_editor(task_view);
-        draw_apnea_editor(task_view);
-        draw_ear_clicks_editor(task_view);
-
         switch (action) {
             using enum AnnotationSubmitAction;
         case Save:
@@ -1351,196 +1010,6 @@ private:
             break;
         case None:
             break;
-        }
-    }
-
-    void draw_note_editor(app::ActiveSwallowLabellingTaskView& task_view)
-    {
-        constexpr float HeightNumLines = 3;
-
-        ImGui::SeparatorText("Note");
-        const float note_height = (HeightNumLines - 1) * ImGui::GetTextLineHeightWithSpacing()
-            + ImGui::GetTextLineHeight();
-        bool update_note = ImGui::InputTextMultiline(
-            "##annotation_note_input", &m_annotator.note, {-1, note_height}
-        );
-        if (ImGui::SmallButton("Clear##clear_note_text")) {
-            m_annotator.note.clear();
-            update_note = true;
-        }
-        if (update_note) {
-            task_view.set_note(m_annotator.note);
-        }
-    }
-
-    void draw_apnea_editor(app::ActiveSwallowLabellingTaskView& task_view)
-    {
-        ImGui::SeparatorText("Swallow apnea");
-        if (const auto& error = task_view.swallow_apnea_label_error_str()) {
-            ImGui::TextWrapped(ERR_ICON ICON_TEXT_SPACE "%s", error->c_str());
-        }
-
-        if (task_view.can_edit_swallow_apnea_range() && task_view.can_add_new_non_resp_flow_label())
-        {
-            bool toggle = widgets::global_shortcut(ImGuiKey_S);
-            if (ImGui::RadioButton("Apnea", m_annotator.editing_apnea)
-                && !m_annotator.editing_apnea)
-            {
-                toggle = true;
-            }
-            ImGui::SameLine();
-            if (ImGui::RadioButton("SNRF", !m_annotator.editing_apnea) && m_annotator.editing_apnea)
-            {
-                toggle = true;
-            }
-            ImGui::SetItemTooltip("Swallow non-respiratory flow");
-
-            if (toggle) {
-                m_annotator.editing_apnea = !m_annotator.editing_apnea;
-                if (m_annotator.editing_apnea) {
-                    m_annotator.non_resp_flow_annotator.selected_id.reset();
-                }
-            }
-            ImGui::Spacing();
-        } else {
-            m_annotator.editing_apnea = true;
-        }
-
-        const auto *apnea_range = task_view.swallow_anpea_range();
-        draw_apnea_annotation_selection(task_view);
-        if (apnea_range) {
-            ImGui::Text(
-                "Apnea: [%.3f, %.3f] s (Δ = %.3f s)",
-                apnea_range->start,
-                apnea_range->end,
-                apnea_range->end - apnea_range->start
-            );
-            if (task_view.can_delete_swallow_apnea_range()) {
-                ImGui::SameLine();
-                if (delete_label_button("##delete_swallow_apnea_range")) {
-                    task_view.delete_swallow_apnea_range();
-                }
-            }
-        }
-
-        const auto *nrf_labels = task_view.non_resp_flow_labels();
-        if (task_view.can_add_new_non_resp_flow_label() && nrf_labels && !nrf_labels->empty()) {
-            draw_labels_list_box(
-                "NRF",
-                m_annotator.non_resp_flow_annotator,
-                *nrf_labels,
-                [&](app::EarClickLabel::ID id) { task_view.remove_non_resp_flow_label(id); }
-            );
-            if (m_annotator.non_resp_flow_annotator.selected_id.has_value()) {
-                m_annotator.editing_apnea = false;
-            }
-        }
-    }
-
-    static bool shortcut_toggle(ImGuiKeyChord chord, bool& val)
-    {
-        if (widgets::global_shortcut(chord)) {
-            val = !val;
-            return true;
-        }
-        return false;
-    }
-
-    static bool ear_click_annotation_status_radio(app::EarClickAnnotationStatus& status)
-    {
-        using enum app::EarClickAnnotationStatus;
-        using Option = widgets::RadioButtonField<app::EarClickAnnotationStatus>;
-
-        constexpr std::array Options = {
-            Option("Ok [e]", Ok, ImGuiKey_E, GuiColors::color(GuiColors::EarClickLabelColor)),
-            Option("No ear click [w]", NoEarClick, ImGuiKey_W),
-            Option("Audio error", AudioError),
-        };
-        return widgets::enum_radio_buttons("##earclick_annotation_status", status, Options);
-    }
-
-    static void draw_apnea_annotation_selection(app::ActiveSwallowLabellingTaskView& task_view)
-    {
-        using enum app::SwallowApneaAnnotationStatus;
-        using Option = widgets::RadioButtonField<app::SwallowApneaAnnotationStatus>;
-
-        widgets::ScopedImID id_scope("##apnea_annotation_status");
-
-        auto status = task_view.swallow_apnea_annotation_status();
-        bool is_ambiguous = task_view.swallow_is_ambiguous();
-        bool status_changed = false;
-
-        constexpr std::array SrcOptions = {
-            Option("ex-ex [1]", ExEx, ImGuiKey_1),
-            Option("ex-in [2]", ExIn, ImGuiKey_2),
-            Option("in-ex [3]", InEx, ImGuiKey_3),
-            Option("in-in [4]", InIn, ImGuiKey_4),
-        };
-        for (const auto& opt : SrcOptions) {
-            bool selected = opt.value == status;
-            const bool radio_clicked = widgets::colored_radio_button(
-                opt.label, selected, GuiColors::apnea_label_color(opt.value)
-            );
-            if (radio_clicked || widgets::global_shortcut(opt.key)) {
-                if (!selected) {
-                    status = opt.value;
-                    status_changed = true;
-                    selected = true;
-                    spdlog::debug("Apnea SRC selection changed to {}", opt.label);
-                }
-            }
-            if (selected) {
-                ImGui::SameLine();
-                if (ImGui::Checkbox("Ambiguous [a]", &is_ambiguous)
-                    || shortcut_toggle(ImGuiKey_A, is_ambiguous))
-                {
-                    spdlog::debug("Swallow apnea is_ambiguous changed: {}", is_ambiguous);
-                    task_view.set_swallow_is_ambiguous(is_ambiguous);
-                }
-            }
-        }
-
-        ImGui::Separator();
-        constexpr std::array OtherOptions = {
-            Option("No swallow", NoSwallow),
-            Option("Apnea cut-off", ApneaCutoff),
-            Option("FlowError", FlowError),
-        };
-        if (widgets::enum_radio_buttons("##other_options", status, OtherOptions)) {
-            status_changed = true;
-        }
-
-        if (status_changed) {
-            task_view.set_swallow_apnea_annotation_status(status);
-        }
-    }
-
-    void draw_ear_clicks_editor(app::ActiveSwallowLabellingTaskView& task_view)
-    {
-        ImGui::SeparatorText("Ear clicks");
-        if (const auto& error = task_view.earclick_label_error()) {
-            ImGui::TextUnformatted(fmt::format(ERR_ICON ICON_TEXT_SPACE "{}", *error).c_str());
-        }
-        app::EarClickAnnotationStatus ear_click_status = task_view.ear_click_annotation_status();
-        if (ear_click_annotation_status_radio(ear_click_status)) {
-            task_view.set_ear_click_annotation_status(ear_click_status);
-        }
-        const auto *labels = task_view.ear_click_labels();
-        if (task_view.can_add_new_ear_click_range() && labels) {
-            if (labels->empty()) {
-                ImGui::TextWrapped(
-                    HINT_ICON ICON_TEXT_SPACE
-                    "No ear click labels - hold Ctrl and left click on audio plot to "
-                    "add one, or select the relevant option above"
-                );
-            } else {
-                draw_labels_list_box(
-                    "Ear click",
-                    m_annotator.ear_clicks_annotator,
-                    *labels,
-                    [&](app::EarClickLabel::ID id) { task_view.remove_ear_click_label(id); }
-                );
-            }
         }
     }
 
@@ -1573,23 +1042,9 @@ private:
         // TODO: [FIXME(?)] the below is a bit of a hack, since currently we can't save an
         // annotation that is in an invalid state. Ideally, would be able to save invalid
         // annotations to a intermediary store so they can be restored.
-        const auto *task_view = m_app.active_task_labelling_view();
-        const bool can_save = task_view ? task_view->can_save_annotation() : false;
-
         ImGui::Text("There are unsaved annotation changes!");
-        if (can_save) {
-            ImGui::Text("Do you want to save these changes?");
-        }
         ImGui::Spacing();
 
-        if (can_save) {
-            if (ImGui::Button("Save", size) || save_shortcut_pushed()) {
-                m_app.save_unsaved_task_and_switch();
-                m_unsaved_task_switch_modal_open = false;
-            }
-            ImGui::SetItemDefaultFocus();
-            ImGui::SameLine();
-        }
         if (ImGui::Button(dont_save_str, size)) {
             m_app.discard_unsaved_task_and_switch();
             m_unsaved_task_switch_modal_open = false;
@@ -1598,9 +1053,6 @@ private:
         if (ImGui::Button("Cancel", size) || widgets::global_shortcut(ImGuiKey_Escape)) {
             m_app.cancel_unsaved_task_switch();
             m_unsaved_task_switch_modal_open = false;
-        }
-        if (!can_save) {
-            ImGui::SetItemDefaultFocus();
         }
 
         if (!m_unsaved_task_switch_modal_open) {

@@ -59,22 +59,6 @@ private:
     const SwallowLabellingTask& m_task;
 };
 
-enum class SwallowApneaAnnotationStatus {
-    ExEx,
-    ExIn,
-    InEx,
-    InIn,
-    FlowError,
-    NoSwallow,
-    ApneaCutoff,
-};
-
-enum class EarClickAnnotationStatus {
-    Ok,
-    AudioError,
-    NoEarClick,
-};
-
 using TimeRangeIDList = IDList<models::TimeRange>;
 using EarClickLabel = TimeRangeIDList::Item;
 using NonRespFlowLabel = TimeRangeIDList::Item;
@@ -87,88 +71,8 @@ public:
 
     [[nodiscard]] const models::SwallowTaskInfo& info() const { return m_task.info(); }
 
-    [[nodiscard]] bool annotation_unsaved() const;
-
-    [[nodiscard]] SwallowApneaAnnotationStatus swallow_apnea_annotation_status() const
-    {
-        return m_annotation.swallow_apnea_status;
-    }
-
-    void set_swallow_apnea_annotation_status(SwallowApneaAnnotationStatus status)
-    {
-        m_annotation.swallow_apnea_status = status;
-    }
-
-    [[nodiscard]] bool swallow_is_ambiguous() const { return m_annotation.swallow_is_ambiguous; }
-
-    void set_swallow_is_ambiguous(bool is_ambiguous)
-    {
-        m_annotation.swallow_is_ambiguous = is_ambiguous;
-    }
-
-    [[nodiscard]] bool can_add_new_swallow_apnea_range() const;
-    [[nodiscard]] bool can_edit_swallow_apnea_range() const;
-    [[nodiscard]] bool can_delete_swallow_apnea_range() const;
-    [[nodiscard]] bool swallow_apnea_label_error() const;
-    [[nodiscard]] std::optional<std::string> swallow_apnea_label_error_str() const;
-    [[nodiscard]] const models::TimeRange *swallow_anpea_range() const;
-    void add_swallow_apnea_range(models::TimeRange range);
-    void set_swallow_apnea_range(models::TimeRange range);
-    void delete_swallow_apnea_range();
-
-    void set_swallow_apnea_range(double start, double end)
-    {
-        set_swallow_apnea_range({start, end});
-    }
-
-    void add_swallow_apnea_range(double start, double end)
-    {
-        add_swallow_apnea_range({start, end});
-    }
-
-    [[nodiscard]] bool can_add_new_non_resp_flow_label() const;
-    [[nodiscard]] const std::vector<NonRespFlowLabel> *non_resp_flow_labels() const;
-    [[nodiscard]] const models::TimeRange *non_resp_flow_label(NonRespFlowLabel::ID id) const;
-    std::optional<NonRespFlowLabel::ID> add_non_resp_flow_label(double start, double end);
-    void set_non_resp_flow_label(NonRespFlowLabel::ID id, double start, double end);
-    void remove_non_resp_flow_label(NonRespFlowLabel::ID id);
-
-    [[nodiscard]] EarClickAnnotationStatus ear_click_annotation_status() const
-    {
-        return m_annotation.ear_click_status;
-    }
-
-    void set_ear_click_annotation_status(EarClickAnnotationStatus status)
-    {
-        m_annotation.ear_click_status = status;
-    }
-
-    [[nodiscard]] bool can_add_new_ear_click_range() const;
-    [[nodiscard]] std::optional<std::string_view> earclick_label_error() const;
-
-    [[nodiscard]] const std::vector<EarClickLabel> *ear_click_labels() const;
-    [[nodiscard]] const models::TimeRange *ear_click_label(EarClickLabel::ID id) const;
-    std::optional<EarClickLabel::ID> add_ear_click_label(double start, double end);
-    void set_ear_click_label(EarClickLabel::ID id, double start, double end);
-    void remove_ear_click_label(EarClickLabel::ID id);
-
-    [[nodiscard]] const std::string& note() const { return m_annotation.note; }
-
-    void set_note(std::string note) { m_annotation.note = std::move(note); }
-
-    // TODO
-    [[nodiscard]] static constexpr bool can_delete_annotation() { return true; }
-
-    [[nodiscard]] bool can_save_annotation() const;
-
-    void delete_annotation();
-
 private:
     friend class App;
-
-    [[nodiscard]] bool save_annotation();
-    [[nodiscard]] bool has_apnea_range() const;
-    [[nodiscard]] bool valid_earclick_annotation() const;
 
     ActiveSwallowLabellingTaskView(
         const App& app,
@@ -182,26 +86,6 @@ private:
     SwallowLabellingTask& m_task;
     SwallowTaskData m_data;
     SwallowAnnotationStore& m_annotation_store;
-
-    struct Annotation {
-        Annotation() = default;
-        explicit Annotation(const models::SwallowAnnotation& annotation);
-
-        [[nodiscard]] models::SwallowAnnotation to_model() const;
-
-        SwallowApneaAnnotationStatus swallow_apnea_status = SwallowApneaAnnotationStatus::ExEx;
-        bool swallow_is_ambiguous = false;
-        models::TimeRange swallow_apnea_range = {NAN, NAN};
-        TimeRangeIDList non_resp_flow_labels;
-
-        EarClickAnnotationStatus ear_click_status = EarClickAnnotationStatus::Ok;
-        TimeRangeIDList ear_click_labels;
-
-        std::string note;
-    };
-
-    Annotation m_annotation;
-    std::optional<Annotation> m_suggested_annotation = std::nullopt;
 };
 
 class App {
@@ -286,22 +170,6 @@ public:
         return m_new_active_task_observable.subscribe(std::move(func));
     }
 
-    [[nodiscard]] const models::SwallowAnnotation *task_annotation(const SwallowLabellingTask& task
-    ) const
-    {
-        return m_annotation_store.get_annotation(task.info().get_id());
-    }
-
-    [[nodiscard]] bool task_has_annotation(const SwallowLabellingTask& task) const
-    {
-        return m_annotation_store.has_annotation(task.info().get_id());
-    }
-
-    [[nodiscard]] bool task_has_suggested_annotation(const SwallowLabellingTask& task) const
-    {
-        return m_suggested_annotations.contains(task.info().get_id());
-    }
-
     [[nodiscard]] const std::optional<std::string>& critical_error() const
     {
         return m_critical_error;
@@ -337,7 +205,8 @@ private:
     std::optional<std::string> m_critical_error = std::nullopt;
     bool m_auto_advance_on_save = true;
 
-    [[nodiscard]] bool active_task_unsaved() const;
+    [[nodiscard]] static bool active_task_unsaved() { return false; }
+
     void load_active_task();
     void auto_advance_active_task();
     template <typename Submit> void switch_active_task_index(Submit&& submit);

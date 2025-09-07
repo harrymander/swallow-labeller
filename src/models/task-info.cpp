@@ -45,15 +45,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LabellingDataFile, path, checksum);
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TimeRange, start, end);
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
-    SwallowTaskInfo,
-    subject,
-    test_type,
-    repeatnum,
-    swallownum,
-    recording_file,
-    csv_range_secs,
-    event_range_secs,
-    npz_file
+    SwallowTaskInfo, subject, test_type, repeatnum, recording_file, npz_file, event_times
 );
 
 std::vector<SwallowTaskInfo> load_swallow_task_info_json(std::istream& stream)

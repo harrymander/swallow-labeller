@@ -22,7 +22,7 @@ TEST(TestSwallowLabellingTask, TestParseJson)
 {
     std::vector<SwallowTaskInfo> tasks;
     load_from_path(JSON_PATH, tasks);
-    ASSERT_EQ(tasks.size(), 728);
+    ASSERT_EQ(tasks.size(), 10);
 }
 
 TEST(TestSwallowLabellingTask, TestParseInvalidJsonFails)

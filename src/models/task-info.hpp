@@ -28,11 +28,9 @@ struct SwallowTaskInfo {
     unsigned int subject;
     SwallowTestType test_type;
     unsigned int repeatnum;
-    unsigned int swallownum;
     std::string recording_file;
-    TimeRange csv_range_secs;
-    TimeRange event_range_secs;
     LabellingDataFile npz_file;
+    std::vector<TimeRange> event_times;
 
     [[nodiscard]] const std::string& get_id() const { return npz_file.path; }
 

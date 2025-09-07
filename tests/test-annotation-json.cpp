@@ -9,7 +9,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string_view>
-#include <variant>
 
 // TODO: these tests are a mess
 
@@ -31,168 +30,110 @@ void load_annotation_json(SwallowAnnotation& annotation, std::string_view json_s
     annotation = json.template get<SwallowAnnotation>();
 }
 
-TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndEarClick)
+TEST(TestSwallowAnnotationJson, TestParsingSwallowAnnotationsWithoutNote)
 {
     SwallowAnnotation annotation;
     load_annotation_json(annotation, R"({
-        "swallow_apnea": {
-            "is_ambiguous": false,
-            "pattern": "ex-ex",
-            "time": {"start": 0.0, "end": 1.0},
-            "non_respiratory_flow": [
-                {"start": 1.05, "end": 1.10}
-            ]
+      "swallow_apneas": [
+        {
+          "is_ambiguous": false,
+          "pattern": "in-in",
+          "time": {
+            "start": 119.08481475903011,
+            "end": 120.48098328244551
+          }
         },
-        "ear_clicks": [{"start": 12, "end": 100}, {"start": 200, "end": 300}],
-        "note": null
+        {
+          "is_ambiguous": true,
+          "pattern": "in-ex",
+          "time": {
+            "start": 245.05845865157465,
+            "end": 245.60912588908397
+          }
+        },
+        {
+          "is_ambiguous": false,
+          "pattern": "in-in",
+          "time": {
+            "start": 374.12441952867147,
+            "end": 375.0705088668944
+          }
+        }
+      ],
+      "ear_clicks": [
+        {
+          "start": 121.3987885795338,
+          "end": 121.42115575741595
+        }
+      ],
+      "non_respiratory_flow_events": [
+        {
+          "start": 118.95642548594623,
+          "end": 119.08919092071459
+        },
+        {
+          "start": 120.48326282214042,
+          "end": 120.64156868974659
+        }
+      ],
+      "note": null
     })");
 
-    ASSERT_TRUE(std::holds_alternative<SwallowApneaAnnotation>(annotation.swallow_apnea));
-    auto apnea = std::get<SwallowApneaAnnotation>(annotation.swallow_apnea);
-    EXPECT_FALSE(apnea.is_ambiguous);
-    EXPECT_EQ(apnea.pattern, SrcPattern::ExEx);
-    TimeRange exp_time_range = {0.0, 1.0};
-    EXPECT_EQ(apnea.time, exp_time_range);
-    std::vector<TimeRange> exp_non_respiratory_flow = {{1.05, 1.10}};
-    EXPECT_EQ(apnea.non_respiratory_flow, exp_non_respiratory_flow);
+    std::vector<SwallowApneaAnnotation> expected_apneas = {
+        SwallowApneaAnnotation{
+            .is_ambiguous = false,
+            .pattern = SrcPattern::InIn,
+            .time = TimeRange{119.08481475903011, 120.48098328244551},
+        },
+        SwallowApneaAnnotation{
+            .is_ambiguous = true,
+            .pattern = SrcPattern::InEx,
+            .time = TimeRange{245.05845865157465, 245.60912588908397},
+        },
+        SwallowApneaAnnotation{
+            .is_ambiguous = false,
+            .pattern = SrcPattern::InIn,
+            .time = TimeRange{374.12441952867147, 375.0705088668944},
+        },
+    };
+    EXPECT_EQ(annotation.swallow_apneas, expected_apneas);
 
-    ASSERT_TRUE(std::holds_alternative<std::vector<TimeRange>>(annotation.ear_clicks));
-    auto clicks = std::get<std::vector<TimeRange>>(annotation.ear_clicks);
-    std::vector<TimeRange> exp_clicks = {{12, 100}, {200, 300}};
-    EXPECT_EQ(clicks, exp_clicks);
+    std::vector<TimeRange> expected_ear_clicks = {
+        TimeRange{121.3987885795338, 121.42115575741595},
+    };
+    EXPECT_EQ(annotation.ear_clicks, expected_ear_clicks);
 
-    EXPECT_FALSE(annotation.note.has_value());
+    std::vector<TimeRange> expected_snrf_events = {
+        TimeRange{118.95642548594623, 119.08919092071459},
+        TimeRange{120.48326282214042, 120.64156868974659},
+    };
+    EXPECT_EQ(annotation.non_respiratory_flow_events, expected_snrf_events);
+
+    EXPECT_EQ(annotation.note, std::nullopt);
 }
 
-TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndEarClickAndNote)
+TEST(TestSwallowAnnotationJson, TestParsingSwallowAnnotationsWithNote)
 {
     SwallowAnnotation annotation;
     load_annotation_json(annotation, R"({
-        "swallow_apnea": {
-            "is_ambiguous": false,
-            "pattern": "ex-ex",
-            "time": {"start": 0.0, "end": 1.0},
-            "non_respiratory_flow": [
-                {"start": 1.05, "end": 1.10}
-            ]
-        },
-        "ear_clicks": [{"start": 12, "end": 100}, {"start": 200, "end": 300}],
-        "note": "Hello, world! β"
+      "swallow_apneas": [],
+      "ear_clicks": [],
+      "non_respiratory_flow_events": [],
+      "note": "hello, world!!!"
     })");
 
-    ASSERT_TRUE(std::holds_alternative<SwallowApneaAnnotation>(annotation.swallow_apnea));
-    auto apnea = std::get<SwallowApneaAnnotation>(annotation.swallow_apnea);
-    EXPECT_FALSE(apnea.is_ambiguous);
-    EXPECT_EQ(apnea.pattern, SrcPattern::ExEx);
-    TimeRange exp_time_range = {0.0, 1.0};
-    EXPECT_EQ(apnea.time, exp_time_range);
-    std::vector<TimeRange> exp_non_respiratory_flow = {{1.05, 1.10}};
-    EXPECT_EQ(apnea.non_respiratory_flow, exp_non_respiratory_flow);
-
-    ASSERT_TRUE(std::holds_alternative<std::vector<TimeRange>>(annotation.ear_clicks));
-    auto clicks = std::get<std::vector<TimeRange>>(annotation.ear_clicks);
-    std::vector<TimeRange> exp_clicks = {{12, 100}, {200, 300}};
-    EXPECT_EQ(clicks, exp_clicks);
-
-    ASSERT_TRUE(annotation.note.has_value());
-    EXPECT_EQ(annotation.note.value(), "Hello, world! β");
+    EXPECT_TRUE(annotation.swallow_apneas.empty());
+    EXPECT_TRUE(annotation.ear_clicks.empty());
+    EXPECT_TRUE(annotation.non_respiratory_flow_events.empty());
+    EXPECT_TRUE(annotation.note.has_value());
+    EXPECT_EQ(*annotation.note, "hello, world!!!");
 }
 
-TEST(TestSwallowAnnotationJson, TestParsingInvalidSRCPatternFails)
+TEST(TestSwallowAnnotationJson, TestParsingMissingSwallowApneasFails)
 {
     const auto json = R"({
-        "swallow_apnea": {
-            "is_ambiguous": false,
-            "pattern": "ExEx",
-            "time": {"start": 0.0, "end": 1.0},
-            "non_respiratory_flow": [
-                {"start": 1.05, "end": 1.10}
-            ]
-        },
-        "ear_clicks": [{"start": 12, "end": 100}, {"start": 200, "end": 300}],
-        "note": null
-    })";
-    SwallowAnnotation annotation;
-    EXPECT_THROW(load_annotation_json(annotation, json), nlohmann::json::exception);
-}
-
-TEST(TestSwallowAnnotationJson, TestParsingWithApneaAndNoEarClick)
-{
-    SwallowAnnotation annotation;
-    load_annotation_json(annotation, R"({
-        "swallow_apnea": {
-            "is_ambiguous": false,
-            "pattern": "ex-ex",
-            "time": {"start": 0.0, "end": 1.0},
-            "non_respiratory_flow": [
-                {"start": 1.05, "end": 1.10}
-            ]
-        },
-        "ear_clicks": {"error": "audio-error"},
-        "note": null
-    })");
-
-    ASSERT_TRUE(std::holds_alternative<SwallowApneaAnnotation>(annotation.swallow_apnea));
-    auto apnea = std::get<SwallowApneaAnnotation>(annotation.swallow_apnea);
-    EXPECT_FALSE(apnea.is_ambiguous);
-    EXPECT_EQ(apnea.pattern, SrcPattern::ExEx);
-    TimeRange exp_time_range = {0.0, 1.0};
-    EXPECT_EQ(apnea.time, exp_time_range);
-    std::vector<TimeRange> exp_non_respiratory_flow = {{1.05, 1.10}};
-    EXPECT_EQ(apnea.non_respiratory_flow, exp_non_respiratory_flow);
-
-    ASSERT_TRUE(std::holds_alternative<EarClickError>(annotation.ear_clicks));
-    EXPECT_EQ(std::get<EarClickError>(annotation.ear_clicks), EarClickError::AudioError);
-
-    EXPECT_FALSE(annotation.note.has_value());
-}
-
-TEST(TestSwallowAnnotationJson, TestParsingWithEarClickAndNoApnea)
-{
-    SwallowAnnotation annotation;
-    load_annotation_json(annotation, R"({
-        "swallow_apnea": { "error": "apnea-cutoff" },
-        "ear_clicks": [{"start": 12, "end": 100}, {"start": 200, "end": 300}],
-        "note": null
-    })");
-
-    ASSERT_TRUE(std::holds_alternative<SwallowApneaError>(annotation.swallow_apnea));
-    ASSERT_EQ(
-        std::get<SwallowApneaError>(annotation.swallow_apnea), SwallowApneaError::ApneaCutoff
-    );
-
-    ASSERT_TRUE(std::holds_alternative<std::vector<TimeRange>>(annotation.ear_clicks));
-    auto clicks = std::get<std::vector<TimeRange>>(annotation.ear_clicks);
-    std::vector<TimeRange> exp_clicks = {{12, 100}, {200, 300}};
-    EXPECT_EQ(clicks, exp_clicks);
-
-    EXPECT_FALSE(annotation.note.has_value());
-}
-
-TEST(TestSwallowAnnotationJson, TestParsingWithoutApneaAndEarClick)
-{
-    SwallowAnnotation annotation;
-    load_annotation_json(annotation, R"({
-        "swallow_apnea": { "error": "apnea-cutoff" },
-        "ear_clicks": { "error": "audio-error" },
-        "note": null
-    })");
-
-    ASSERT_TRUE(std::holds_alternative<SwallowApneaError>(annotation.swallow_apnea));
-    ASSERT_EQ(
-        std::get<SwallowApneaError>(annotation.swallow_apnea), SwallowApneaError::ApneaCutoff
-    );
-
-    ASSERT_TRUE(std::holds_alternative<EarClickError>(annotation.ear_clicks));
-    EXPECT_EQ(std::get<EarClickError>(annotation.ear_clicks), EarClickError::AudioError);
-
-    EXPECT_FALSE(annotation.note.has_value());
-}
-
-TEST(TestSwallowAnnotationJson, TestParsingMissingApneaFails)
-{
-    const auto json = R"({
-        "ear_clicks": { "error": "audio-error" },
+        "ear_clicks": [],
+        "non_respiratory_flow_events": [],
         "note": null
     })";
 
@@ -203,7 +144,20 @@ TEST(TestSwallowAnnotationJson, TestParsingMissingApneaFails)
 TEST(TestSwallowAnnotationJson, TestParsingMissingEarClicksFails)
 {
     const auto json = R"({
-        "swallow_apnea": { "error": "apnea-cutoff" },
+        "swallow_apneas": [],
+        "non_respiratory_flow_events": [],
+        "note": null
+    })";
+
+    SwallowAnnotation annotation;
+    EXPECT_THROW(load_annotation_json(annotation, json), nlohmann::json::exception);
+}
+
+TEST(TestSwallowAnnotationJson, TestParsingMissingSNRFsFails)
+{
+    const auto json = R"({
+        "swallow_apneas": [],
+        "ear_clicks": [],
         "note": null
     })";
 
@@ -214,44 +168,11 @@ TEST(TestSwallowAnnotationJson, TestParsingMissingEarClicksFails)
 TEST(TestSwallowAnnotationJson, TestParsingMissingNoteFails)
 {
     const auto json = R"({
-        "swallow_apnea": { "error": "apnea-cutoff" },
-        "ear_clicks": { "error": "audio-error" }
+        "swallow_apneas": [],
+        "ear_clicks": [],
+        "non_respiratory_flow_events": []
     })";
 
-    SwallowAnnotation annotation;
-    EXPECT_THROW(load_annotation_json(annotation, json), nlohmann::json::exception);
-}
-
-TEST(TestSwallowAnnotationJson, TestParsingInvalidErrorKeyFails)
-{
-    const auto json = R"({
-        "swallow_apnea": { "errors": "apnea-cutoff" },
-        "ear_clicks": { "error": "audio-error" },
-        "note": null
-    })";
-
-    SwallowAnnotation annotation;
-    EXPECT_THROW(load_annotation_json(annotation, json), nlohmann::json::exception);
-}
-
-TEST(TestSwallowAnnotationJson, TestParsingInvalidApneaErrorFails)
-{
-    const auto json = R"({
-        "swallow_apnea": { "error": "apnea-is-cutoff" },
-        "ear_clicks": { "error": "audio-error" },
-        "note": null
-    })";
-    SwallowAnnotation annotation;
-    EXPECT_THROW(load_annotation_json(annotation, json), nlohmann::json::exception);
-}
-
-TEST(TestSwallowAnnotationJson, TestParsingInvalidEarClickErrorFails)
-{
-    const auto json = R"({
-        "swallow_apnea": { "error": "apnea-cutoff" },
-        "ear_clicks": { "error": "audio-no-error" },
-        "note": null
-    })";
     SwallowAnnotation annotation;
     EXPECT_THROW(load_annotation_json(annotation, json), nlohmann::json::exception);
 }
@@ -268,52 +189,20 @@ TEST(TestSwallowAnnotationJson, TestParsingInvalidEarClickErrorFails)
         ASSERT_EQ(annotation, annotation_deserialized);                                            \
     } while (0)
 
-TEST(TestSwallowAnnotationJson, TestSerializingWithApneaAndEarClickAndNote)
+TEST(TestSwallowAnnotationJson, TestSerializing)
 {
     SwallowAnnotation annotation{
-        .swallow_apnea =
-            SwallowApneaAnnotation{
-                .is_ambiguous = true,
-                .pattern = SrcPattern::ExEx,
-                .time = {0.0, 1.0},
+        .swallow_apneas =
+            {
+                SwallowApneaAnnotation{
+                    .is_ambiguous = true,
+                    .pattern = SrcPattern::ExEx,
+                    .time = {0.0, 1.0},
+                },
             },
         .ear_clicks = std::vector<TimeRange>{{12, 100}, {200, 300}},
+        .non_respiratory_flow_events = std::vector<TimeRange>{{150, 200}},
         .note = "Hello, world! β",
-    };
-    ASSERT_SERIALIZE_DERIALIZE_EQ(annotation);
-}
-
-TEST(TestSwallowAnnotationJson, TestSerializingWithApneaAndNoEarClickAndNote)
-{
-    SwallowAnnotation annotation{
-        .swallow_apnea =
-            SwallowApneaAnnotation{
-                .is_ambiguous = true,
-                .pattern = SrcPattern::ExEx,
-                .time = {0.0, 1.0},
-            },
-        .ear_clicks = EarClickError::NoEarClick,
-        .note = "Goodbye world ☺",
-    };
-    ASSERT_SERIALIZE_DERIALIZE_EQ(annotation);
-}
-
-TEST(TestSwallowAnnotationJson, TestSerializingWithEarClickAndNoApneaAndNoNote)
-{
-    SwallowAnnotation annotation{
-        .swallow_apnea = SwallowApneaError::ApneaCutoff,
-        .ear_clicks = std::vector<TimeRange>{{12, 100}, {200, 300}},
-        .note = std::nullopt,
-    };
-    ASSERT_SERIALIZE_DERIALIZE_EQ(annotation);
-}
-
-TEST(TestSwallowAnnotationJson, TestSerializingWithoutApneaAndEarClickAndNote)
-{
-    SwallowAnnotation annotation{
-        .swallow_apnea = SwallowApneaError::NoSwallow,
-        .ear_clicks = EarClickError::NoEarClick,
-        .note = std::nullopt,
     };
     ASSERT_SERIALIZE_DERIALIZE_EQ(annotation);
 }

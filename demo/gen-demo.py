@@ -1,4 +1,5 @@
 import argparse
+from collections.abc import Iterable
 import dataclasses
 import datetime
 import hashlib
@@ -28,6 +29,8 @@ class TimeRange:
     def __post_init__(self):
         if self.end <= self.start:
             raise ValueError("end must be greater than start")
+        if self.start < 0:
+            raise ValueError("start must be >= 0")
 
 
 @dataclasses.dataclass
@@ -41,11 +44,9 @@ class SwallowTask:
     subject: int
     test_type: str
     repeatnum: int
-    swallownum: int
     recording_file: str
-    csv_range_secs: TimeRange
-    event_range_secs: TimeRange
     npz_file: FileInfo
+    event_times: list[TimeRange]
 
     def annotation_id(self) -> str:
         return self.npz_file.path
@@ -54,16 +55,16 @@ class SwallowTask:
 @dataclasses.dataclass
 class SwallowApneaAnnotation:
     is_ambiguous: bool
-    non_respiratory_flow: list[TimeRange]
     pattern: str
     time: TimeRange
 
 
 @dataclasses.dataclass
 class AnnotationResult:
+    swallow_apneas: list[SwallowApneaAnnotation]
     ear_clicks: list[TimeRange]
-    note: str
-    swallow_apnea: SwallowApneaAnnotation
+    non_respiratory_flow_events: list[TimeRange]
+    note: str | None
 
 
 @dataclasses.dataclass
@@ -82,7 +83,9 @@ def random_sinusoid(t, f0, amplitude, sigma):
 
 
 def random_task_data(
-    start: float, end: float, event_start: float, event_end: float
+    start: float,
+    end: float,
+    event_times: Iterable[TimeRange],
 ) -> dict[str, np.ndarray]:
     duration = end - start
     flow_time = np.linspace(
@@ -91,8 +94,11 @@ def random_task_data(
     audio_time = np.linspace(
         start, end, round(duration * AUDIO_SAMPLE_RATE), dtype=np.float64
     )
+
     event = np.zeros(flow_time.size, dtype=bool)
-    event[(flow_time >= event_start) & (flow_time <= event_end)] = True
+    for event_time in event_times:
+        mask = (flow_time >= event_time.start) & (flow_time <= event_time.end)
+        event[mask] = True
 
     return {
         'flow': random_sinusoid(
@@ -119,19 +125,26 @@ def gen_random_task(
 ) -> SwallowTask:
     test_type = random.choice(('tidal', 'cued'))
     repeatnum = random.randrange(3) + 1
-    swallownum = random.randrange(10 if test_type == 'tidal' else 4) + 1
-    path = f'{subject:02}-{test_type}-r{repeatnum}-s{swallownum}.npz'
+    path = f'{subject:02}-{test_type}-r{repeatnum}.npz'
 
-    start_time = random.uniform(0, 10)
-    end_time = start_time + random.uniform(10, 15)
-
-    event_start = start_time + random.uniform(1, 5)
-    event_end = event_start + random.uniform(.2, 1.5)
+    start_time = 0
+    duration = 600
+    end_time = start_time + duration + random.uniform(-30, 30)
+    num_events = random.randint(2, 5)
+    event_midtimes = (
+        np.linspace(start_time, end_time, num_events + 2)[1:-1]
+        + np.random.uniform(-10, 10, size=num_events)
+    )
+    event_times: list[TimeRange] = []
+    for mid_time in event_midtimes:
+        time_range = TimeRange(
+            start=mid_time - random.uniform(0.5, 1.5),
+            end=mid_time + random.uniform(0.5, 1.5),
+        )
+        event_times.append(time_range)
 
     bytesio = BytesIO()
-    data_fields = random_task_data(
-        start_time, end_time, event_start, event_end
-    )
+    data_fields = random_task_data(start_time, end_time, event_times)
     if action == 'corrupt':
         data_fields = corrupt_task_data(data_fields)
 
@@ -142,11 +155,9 @@ def gen_random_task(
         subject=subject,
         test_type=test_type,
         repeatnum=repeatnum,
-        swallownum=swallownum,
         recording_file=random_md5_hexdigest(),
-        csv_range_secs=TimeRange(start=start_time, end=end_time),
-        event_range_secs=TimeRange(start=event_start, end=event_end),
         npz_file=FileInfo(path=path, checksum=checksum),
+        event_times=event_times,
     )
 
     if action != 'nosave':
@@ -168,40 +179,40 @@ def random_text(k: int) -> str:
 
 
 def gen_random_annotation(task: SwallowTask) -> Annotation:
-    def random_time_range(d1: float, d2: float) -> TimeRange:
-        if d2 <= d1:
-            raise ValueError("d2 must be greater than d1")
-
-        min_start = max(
-            task.csv_range_secs.start,
-            task.event_range_secs.start - random.uniform(.1, 2),
-        )
-        csv_end = task.csv_range_secs.end
-        max_start = min(
-            csv_end,
-            task.event_range_secs.end + random.uniform(.1, 2),
-        )
-        start = random.uniform(min_start, (min_start + max_start) * .6)
-        return TimeRange(
-            start,
-            min(start + random.uniform(d1, d2), csv_end),
-        )
+    ear_clicks: list[TimeRange] = []
+    swallow_apneas: list[SwallowApneaAnnotation] = []
+    non_respiratory_flow_events: list[TimeRange] = []
+    for event in task.event_times:
+        apnea_start = event.start + random.uniform(-3, 3)
+        apnea_end = apnea_start + random.uniform(0.5, 2)
+        swallow_apneas.append(SwallowApneaAnnotation(
+            is_ambiguous=random.uniform(0, 1) < 0.2,
+            pattern=random.choice(("ex-ex", "ex-in", "in-in", "in-ex")),
+            time=TimeRange(apnea_start, apnea_end),
+        ))
+        if random.uniform(0, 1) < 0.7:
+            # SNRF before apnea
+            t1 = apnea_start + random.uniform(-0.01, 0.01)
+            t0 = t1 - random.uniform(0.05, 0.2)
+            non_respiratory_flow_events.append(TimeRange(t0, t1))
+        if random.uniform(0, 1) < 0.6:
+            # SNRF after apnea
+            t0 = apnea_end + random.uniform(-0.01, 0.01)
+            t1 = t0 + random.uniform(0.05, 0.2)
+            non_respiratory_flow_events.append(TimeRange(t0, t1))
+        if random.uniform(0, 1) < 0.9:
+            # Ear click
+            t0 = event.start + random.uniform(-0.2, 0.2)
+            t1 = t0 + random.uniform(0.01, 0.1)
+            ear_clicks.append(TimeRange(t0, t1))
 
     result = AnnotationResult(
         note='\n'.join(textwrap.wrap(random_text(random.randint(6, 12)), 30)),
-        ear_clicks=[
-            random_time_range(0.1, 0.5) for _ in range(random.randint(1, 4))
-        ],
-        swallow_apnea=SwallowApneaAnnotation(
-            is_ambiguous=random.randint(0, 4) == 0,
-            non_respiratory_flow=[
-                random_time_range(0.05, 0.199)
-                for _ in range(random.randint(0, 2))
-            ],
-            pattern=random.choice(('ex-ex', 'ex-in', 'in-in', 'in-ex')),
-            time=random_time_range(0.3, 0.8),
-        ),
+        ear_clicks=ear_clicks,
+        swallow_apneas=swallow_apneas,
+        non_respiratory_flow_events=non_respiratory_flow_events,
     )
+
     now = datetime.datetime.now(datetime.timezone.utc)
     last_modified = None
     if random.randint(0, 3):

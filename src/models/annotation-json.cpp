@@ -86,8 +86,9 @@ public:
             // FIXME: using internal details of JSON library to throw error... The 403 code is for
             // "key not found" errors:
             // https://json.nlohmann.me/home/exceptions/#jsonexceptionout_of_range403
+            constexpr int KeyNotFoundError = 403;
             throw nlohmann::detail::out_of_range::create(
-                403, "Invalid enum value: " + std::string(str), nullptr
+                KeyNotFoundError, "Invalid enum value: " + std::string(str), nullptr
             );
         }
         e = it->first;
@@ -104,55 +105,36 @@ constexpr EnumStrConverter SRCPatternStrConverter{std::array{
     std::make_pair(SrcPattern::InIn, "in-in"),
 }};
 
-constexpr EnumStrConverter ApneaErrorStrConverter{std::array{
-    std::make_pair(SwallowApneaError::FlowError, "flow-error"),
-    std::make_pair(SwallowApneaError::NoSwallow, "no-swallow"),
-    std::make_pair(SwallowApneaError::ApneaCutoff, "apnea-cutoff"),
-}};
-
-constexpr EnumStrConverter EarClickErrorStrConverter{std::array{
-    std::make_pair(EarClickError::NoEarClick, "no-ear-click"),
-    std::make_pair(EarClickError::AudioError, "audio-error"),
-}};
-
 }; // namespace
 
-// A macro could possibly be avoided here by patching into the nlohman:: namespace and defining an
-// adl_serializer (see above)
-#define DEFINE_JSON_ENUM_CONVERTERS(enum_type, converter)                                          \
-    void to_json(nlohmann::json& j, const enum_type& e)                                            \
-    {                                                                                              \
-        (converter).to_json(j, e);                                                                 \
-    }                                                                                              \
-    void from_json(const nlohmann::json& j, enum_type& e)                                          \
-    {                                                                                              \
-        (converter).from_json(j, e);                                                               \
-    }
+void to_json(nlohmann::json& j, const SrcPattern& pattern)
+{
+    SRCPatternStrConverter.to_json(j, pattern);
+}
 
-DEFINE_JSON_ENUM_CONVERTERS(SrcPattern, SRCPatternStrConverter);
-DEFINE_JSON_ENUM_CONVERTERS(SwallowApneaError, ApneaErrorStrConverter);
-DEFINE_JSON_ENUM_CONVERTERS(EarClickError, EarClickErrorStrConverter);
-#undef DEFINE_JSON_ENUM_CONVERTERS
+void from_json(const nlohmann::json& j, SrcPattern& pattern)
+{
+    SRCPatternStrConverter.from_json(j, pattern);
+}
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TimeRange, start, end);
-
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
-    SwallowApneaAnnotation, is_ambiguous, pattern, time, non_respiratory_flow
-);
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SwallowApneaAnnotation, is_ambiguous, pattern, time);
 
 void to_json(nlohmann::json& j, const SwallowAnnotation& annotation)
 {
     j = nlohmann::json{
-        {"swallow_apnea", annotation.swallow_apnea},
+        {"swallow_apneas", annotation.swallow_apneas},
         {"ear_clicks", annotation.ear_clicks},
+        {"non_respiratory_flow_events", annotation.non_respiratory_flow_events},
         {"note", annotation.note},
     };
 }
 
 void from_json(const nlohmann::json& j, SwallowAnnotation& annotation)
 {
-    j.at("swallow_apnea").get_to(annotation.swallow_apnea);
+    j.at("swallow_apneas").get_to(annotation.swallow_apneas);
     j.at("ear_clicks").get_to(annotation.ear_clicks);
+    j.at("non_respiratory_flow_events").get_to(annotation.non_respiratory_flow_events);
     j.at("note").get_to(annotation.note);
 }
 
