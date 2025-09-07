@@ -2,8 +2,10 @@
 #define RECAP_LABELLER_GUI_TASK_LIST_HPP_INCLUDE
 
 #include "app/annotation-store.hpp"
+#include "app/task-loader.hpp"
 #include "models/task-info.hpp"
 
+#include <filesystem>
 #include <memory>
 #include <vector>
 
@@ -13,7 +15,9 @@ class TaskList {
 public:
     TaskList(
         const std::vector<models::SwallowTaskInfo>& tasks,
-        const SwallowAnnotationStore& annotation_store
+        const SwallowAnnotationStore& annotation_store,
+        app::TaskLoader& task_loader,
+        const std::filesystem::path& data_dir
     );
     ~TaskList();
     TaskList(const TaskList&) = delete;

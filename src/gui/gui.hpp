@@ -12,7 +12,8 @@ namespace recap::labeller::gui {
 class Gui {
 public:
     Gui(const std::vector<models::SwallowTaskInfo>& tasks,
-        SwallowAnnotationStore& annotation_store);
+        SwallowAnnotationStore& annotation_store,
+        const std::filesystem::path& data_dir);
     ~Gui();
 
     Gui(const Gui&) = delete;

@@ -5,7 +5,6 @@
 // https://github.com/ocornut/imgui/tree/master/docs
 
 #include "app/annotation-store.hpp"
-#include "app/app.hpp"
 #include "gui/gui.hpp"
 #include "models/task-info.hpp"
 #include "platform.hpp"
@@ -84,15 +83,8 @@ static bool should_stop(GLFWwindow *window)
     return false;
 }
 
-static void run_gui(
-    const std::vector<models::SwallowTaskInfo>& tasks,
-    SwallowAnnotationStore& annotation_store,
-    const char *glsl_version,
-    GLFWwindow *window
-)
+static void run_gui(gui::Gui& gui, const char *glsl_version, GLFWwindow *window)
 {
-    gui::Gui gui(tasks, annotation_store);
-
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
@@ -152,7 +144,11 @@ static void run_gui(
     ImGui_ImplGlfw_Shutdown();
 }
 
-int run(const std::vector<models::SwallowTaskInfo>& tasks, SwallowAnnotationStore& annotation_store)
+int run(
+    const std::vector<models::SwallowTaskInfo>& tasks,
+    SwallowAnnotationStore& annotation_store,
+    const std::filesystem::path& data_dir
+)
 {
     if (setup_stop_signal_handler() < 0) {
         return 1;
@@ -200,7 +196,8 @@ int run(const std::vector<models::SwallowTaskInfo>& tasks, SwallowAnnotationStor
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
 
-    run_gui(tasks, annotation_store, glsl_version, window);
+    gui::Gui gui(tasks, annotation_store, data_dir);
+    run_gui(gui, glsl_version, window);
 
     spdlog::debug("Destroying GLFW window...");
     glfwDestroyWindow(window);

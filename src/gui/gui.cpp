@@ -1,6 +1,7 @@
 #include "gui/gui.hpp"
 
 #include "app/annotation-store.hpp"
+#include "app/task-loader.hpp"
 #include "gui/font.hpp"
 #include "gui/icons.h"
 #include "gui/task-list.hpp"
@@ -14,6 +15,7 @@
 #include <nfd.hpp>
 #include <spdlog/spdlog.h>
 
+#include <filesystem>
 #include <memory>
 #include <string>
 
@@ -23,6 +25,7 @@ class Gui::Impl {
     bool m_nfd_available = false;
     bool m_ready_to_stop = false;
     std::string m_ini_path;
+    app::TaskLoader m_task_loader;
 
     TaskList m_task_list;
     SwallowAnnotationStore& m_annotation_store;
@@ -108,9 +111,12 @@ class Gui::Impl {
 
 public:
     Impl(
-        const std::vector<models::SwallowTaskInfo>& tasks, SwallowAnnotationStore& annotation_store
+        const std::vector<models::SwallowTaskInfo>& tasks,
+        SwallowAnnotationStore& annotation_store,
+        const std::filesystem::path& data_dir
     ) :
-        m_task_list(tasks, annotation_store), m_annotation_store(annotation_store)
+        m_task_list(tasks, annotation_store, m_task_loader, data_dir),
+        m_annotation_store(annotation_store)
     {
         if (NFD::Init() != NFD_OKAY) {
             spdlog::error("Error initialising NFD: {}", NFD::GetError());
@@ -156,9 +162,11 @@ public:
 };
 
 Gui::Gui(
-    const std::vector<models::SwallowTaskInfo>& tasks, SwallowAnnotationStore& annotation_store
+    const std::vector<models::SwallowTaskInfo>& tasks,
+    SwallowAnnotationStore& annotation_store,
+    const std::filesystem::path& data_dir
 ) :
-    m_pimpl(std::make_unique<Impl>(tasks, annotation_store))
+    m_pimpl(std::make_unique<Impl>(tasks, annotation_store, data_dir))
 {}
 
 Gui::~Gui() = default;

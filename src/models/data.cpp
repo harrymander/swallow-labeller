@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <vector>
 
-namespace recap::labeller {
+namespace recap::labeller::models {
 
 template <class T> static std::vector<T> get_array(const cnpy::npz_t& data, const std::string& name)
 {
@@ -59,4 +59,4 @@ SwallowTaskData SwallowTaskData::from_numpy(const cnpy::npz_t& data)
     return task;
 }
 
-}; // namespace recap::labeller
+}; // namespace recap::labeller::models

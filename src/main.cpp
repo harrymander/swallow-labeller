@@ -1,5 +1,4 @@
 #include "app/annotation-store.hpp"
-#include "app/app.hpp"
 #include "app/config.hpp"
 #include "models/task-info.hpp"
 #include "platform/platform.hpp"
@@ -408,14 +407,9 @@ int run_main(int argc, const char *argv[])
         spdlog::info("Loaded {} suggested annotation(s)", suggested_annotations->size());
     }
 
-    app::App app(
-        config,
-        *labelling_tasks,
-        std::move(*annotations_store),
-        options.data_dir,
-        std::move(suggested_annotations)
+    return platform::run(
+        *labelling_tasks, *annotations_store, std::filesystem::path(options.data_dir)
     );
-    return platform::run(*labelling_tasks, *annotations_store);
 }
 
 }; // namespace
