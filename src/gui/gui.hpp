@@ -1,15 +1,13 @@
 #ifndef RECAP_LABELLER_GUI_HPP
 #define RECAP_LABELLER_GUI_HPP
 
-#include "app/app.hpp"
-
 #include <memory>
 
 namespace recap::labeller::gui {
 
 class Gui {
 public:
-    explicit Gui(recap::labeller::app::App& app);
+    Gui();
     ~Gui();
 
     Gui(const Gui&) = delete;

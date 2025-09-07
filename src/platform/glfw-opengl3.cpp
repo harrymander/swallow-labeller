@@ -82,7 +82,7 @@ static bool should_stop(GLFWwindow *window)
 
 static void run_gui(app::App& app, const char *glsl_version, GLFWwindow *window)
 {
-    gui::Gui gui(app);
+    gui::Gui gui;
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
