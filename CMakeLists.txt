@@ -90,6 +90,7 @@ add_executable(recap-labeller
     src/app/task-loader.cpp
     src/gui/font.cpp
     src/gui/gui.cpp
+    src/gui/plot.cpp
     src/gui/task-list.cpp
     src/gui/task-view.cpp
     src/gui/widgets/combo-forced.cpp
