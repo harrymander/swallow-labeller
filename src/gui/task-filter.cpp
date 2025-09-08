@@ -52,6 +52,18 @@ private:
     widgets::IntegerRangeInput m_input;
 };
 
+struct TaskEventCountFilter : public IntegerFilter {
+    using IntegerFilter::IntegerFilter;
+
+    bool passes(
+        const models::SwallowTaskInfo& task,
+        [[maybe_unused]] const models::SwallowAnnotation *annotation
+    ) const override
+    {
+        return integer_passes(task.event_times.size());
+    }
+};
+
 template <unsigned int models::SwallowTaskInfo::*IntMember>
 struct TaskIntegerFilter : public IntegerFilter {
     using IntegerFilter::IntegerFilter;
@@ -239,7 +251,8 @@ private:
     Factory m_factory;
 };
 
-constexpr std::array<FilterChoice, 6> FilterChoices = {{
+constexpr std::array<FilterChoice, 7> FilterChoices = {{
+    {"Num. events", FilterFactory<TaskEventCountFilter>},
     {"Has annotation", FilterFactory<HasAnnotationFilter>},
     {"Swallow type", FilterFactory<SwallowTypeFilter>},
     {"Subject#", FilterFactory<TaskIntegerFilter<&models::SwallowTaskInfo::subject>>},
