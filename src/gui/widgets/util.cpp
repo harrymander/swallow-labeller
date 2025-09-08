@@ -92,19 +92,6 @@ ScopedImID::~ScopedImID() noexcept
     ImGui::PopID();
 }
 
-bool ButtonRed(const char *label, const ImVec2& size)
-{
-    constexpr ImU32 Color = 0x993D3DFF;
-    constexpr ImU32 ColorHovered = 0xB33636FF;
-    constexpr ImU32 ColorActive = 0xCC2929FF;
-    ScopedImColor color_scope = {
-        {ImGuiCol_Button, Color},
-        {ImGuiCol_ButtonHovered, ColorHovered},
-        {ImGuiCol_ButtonActive, ColorActive},
-    };
-    return ImGui::Button(label, size);
-}
-
 bool item_disabled() // cppcheck-suppress unusedFunction
 {
     return ImGui::GetItemFlags() & ImGuiItemFlags_Disabled;

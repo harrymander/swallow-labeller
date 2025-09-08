@@ -443,9 +443,15 @@ public:
 private:
     static bool draw_delete_button()
     {
+        widgets::RedButtonColorScope color_scope;
+        return draw_rounded_button(DELETE_ICON);
+    }
+
+    static bool draw_rounded_button(const char *label)
+    {
         constexpr float ButtonCornerRadius = 5;
         widgets::ScopedImStyle style(ImGuiStyleVar_FrameRounding, ButtonCornerRadius);
-        return widgets::ButtonRed(DELETE_ICON);
+        return ImGui::Button(label);
     }
 
     widgets::PlotRange m_temp_range = {NAN, NAN};
