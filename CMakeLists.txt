@@ -93,8 +93,6 @@ add_executable(recap-labeller
     src/gui/plot.cpp
     src/gui/task-list.cpp
     src/gui/task-view.cpp
-    src/gui/widgets/combo-forced.cpp
-    src/gui/widgets/integer-range-input.cpp
     src/gui/widgets/plot-range-dragger.cpp
     src/gui/widgets/plot-range-selector.cpp
     src/gui/widgets/plot-range.cpp
