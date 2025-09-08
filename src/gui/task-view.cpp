@@ -27,6 +27,7 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -66,6 +67,17 @@ public:
     static constexpr double MinSelectionDuration = 0.001;
 
     RangesAnnotator() = default;
+
+    explicit RangesAnnotator(std::vector<Annotation> annotations) :
+        m_annotations(std::move(annotations))
+    {}
+
+    template <std::ranges::range R> explicit RangesAnnotator(const R& range)
+    {
+        for (const auto& annotation : range) {
+            m_annotations.push_back(annotation); // cppcheck-suppress useStlAlgorithm
+        }
+    }
 
     // Call in the BeginPlot/EndPlot block of the plot(s) where the annotations can be edited.
     void edit(const char *id)
@@ -260,6 +272,20 @@ public:
 
     explicit ApneaAnnotation(widgets::PlotRange range) : m_range(range) {}
 
+    static ApneaAnnotation from_nrf_label(const models::TimeRange& time_range)
+    {
+        return ApneaAnnotation({time_range.start, time_range.end}, LabelChoice::Nrf, false);
+    }
+
+    static ApneaAnnotation from_apnea_annotation(const models::SwallowApneaAnnotation& annotation)
+    {
+        return ApneaAnnotation(
+            {annotation.time.start, annotation.time.end},
+            src_pattern_to_choice(annotation.pattern),
+            annotation.is_ambiguous
+        );
+    }
+
     const widgets::PlotRange& range() const { return m_range; }
 
     void set_range(widgets::PlotRange range) { m_range = range; }
@@ -347,6 +373,17 @@ private:
         Nrf,
     };
 
+    ApneaAnnotation(widgets::PlotRange range, LabelChoice choice, bool is_ambiguous) :
+        m_range(range), m_choice(choice), m_is_ambiguous(is_ambiguous)
+    {}
+
+    static LabelChoice src_pattern_to_choice(models::SrcPattern pattern)
+    {
+        std::optional<LabelChoice> choice =
+            magic_enum::enum_cast<LabelChoice>(magic_enum::enum_name(pattern));
+        return choice.value();
+    }
+
     models::SrcPattern choice_to_src_pattern() const
     {
         switch (m_choice) {
@@ -397,11 +434,65 @@ private:
     bool m_is_ambiguous = false;
 };
 
+class ApneaRangesAnnotator : public RangesAnnotator<ApneaAnnotation> {
+public:
+    using RangesAnnotator::RangesAnnotator;
+
+    static ApneaRangesAnnotator from_existing(const models::SwallowAnnotation *existing)
+    {
+        if (existing == nullptr) {
+            return {};
+        }
+
+        // TODO: could use std::views::concat when available
+        std::vector<ApneaAnnotation> annotations;
+        annotations.reserve(
+            existing->swallow_apneas.size() + existing->non_respiratory_flow_events.size()
+        );
+        for (const auto& apnea_annotation : existing->swallow_apneas) {
+            annotations.push_back( // cppcheck-suppress useStlAlgorithm
+                ApneaAnnotation::from_apnea_annotation(apnea_annotation)
+            );
+        }
+        for (const auto& nrf : existing->non_respiratory_flow_events) {
+            annotations.push_back( // cppcheck-suppress useStlAlgorithm
+                ApneaAnnotation::from_nrf_label(nrf)
+            );
+        }
+
+        std::ranges::sort(annotations, [](const auto& a, const auto& b) {
+            const auto& range_a = a.range();
+            const auto& range_b = b.range();
+            return std::tie(range_a.start, range_a.end) < std::tie(range_a.start, range_b.end);
+        });
+        return ApneaRangesAnnotator{annotations};
+    }
+};
+
+class EarClickRangesAnnotator : public RangesAnnotator<EarClickAnnotation> {
+public:
+    using RangesAnnotator::RangesAnnotator;
+
+    static EarClickRangesAnnotator from_existing(const models::SwallowAnnotation *existing)
+    {
+        if (existing == nullptr) {
+            return {};
+        }
+
+        return EarClickRangesAnnotator{
+            existing->ear_clicks | std::views::transform([](const models::TimeRange& range) {
+                return EarClickAnnotation({range.start, range.end});
+            })
+        };
+    }
+};
+
 class TaskLabellingView : public TaskView {
 public:
     TaskLabellingView(
         models::SwallowTaskData&& data,
         models::SwallowTaskInfo info,
+        const models::SwallowAnnotation *existing_annotation,
         SaveAnnotationCallback save_annotation_callback
     ) :
         m_data(std::move(data)),
@@ -409,7 +500,9 @@ public:
         m_plot_x_range(m_data.flow_time.front(), m_data.flow_time.back()),
         m_flow_plot(m_data.flow_time, m_data.flow, m_plot_x_range, "Flow (L/min)", "{:g} L/min"),
         m_audio_plot(m_data.audio_time, m_data.audio, m_plot_x_range, "Audio (V)", "{:g} V"),
-        m_save_annotation(std::move(save_annotation_callback))
+        m_save_annotation(std::move(save_annotation_callback)),
+        m_ear_clicks_annotator(EarClickRangesAnnotator::from_existing(existing_annotation)),
+        m_apnea_annotator(ApneaRangesAnnotator::from_existing(existing_annotation))
     {}
 
     void draw() override
@@ -638,10 +731,6 @@ private:
 
     widgets::PlotRangeDragger m_plot_summary_dragger;
     widgets::PlotRangeSelector m_plot_summary_selector;
-
-    // TODO: pass in existing ear click labels if there is a saved annotation
-    RangesAnnotator<EarClickAnnotation> m_ear_clicks_annotator;
-    RangesAnnotator<ApneaAnnotation> m_apnea_annotator;
     std::string m_note;
 
     models::SwallowTaskData m_data;
@@ -650,6 +739,8 @@ private:
     Plot m_flow_plot;
     Plot m_audio_plot;
     SaveAnnotationCallback m_save_annotation;
+    EarClickRangesAnnotator m_ear_clicks_annotator;
+    ApneaRangesAnnotator m_apnea_annotator;
 };
 
 class TaskLoadErrorView : public TaskView {
@@ -676,6 +767,7 @@ std::unique_ptr<TaskView> load_task_view(
     app::TaskLoader& loader,
     const std::filesystem::path& data_dir,
     const models::SwallowTaskInfo& task,
+    const models::SwallowAnnotation *existing_annotation,
     const SaveAnnotationCallback& save_annotation_callback
 )
 {
@@ -684,7 +776,7 @@ std::unique_ptr<TaskView> load_task_view(
     auto task_data = loader.load_task_data(path);
     if (task_data.has_value()) {
         return std::make_unique<TaskLabellingView>(
-            std::move(*task_data), task, save_annotation_callback
+            std::move(*task_data), task, existing_annotation, save_annotation_callback
         );
     }
 

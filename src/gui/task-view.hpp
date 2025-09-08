@@ -22,6 +22,7 @@ std::unique_ptr<TaskView> load_task_view(
     app::TaskLoader& loader,
     const std::filesystem::path& data_dir,
     const models::SwallowTaskInfo& task,
+    const models::SwallowAnnotation *existing_annotation,
     const SaveAnnotationCallback& save_annotation_callback
 );
 

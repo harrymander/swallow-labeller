@@ -176,10 +176,13 @@ class Gui::Impl {
 
     std::unique_ptr<TaskView> load_task_view(const models::SwallowTaskInfo& task)
     {
+        const auto *existing_annotation = m_annotation_store.get_annotation(task.get_id());
         return ::recap::labeller::gui::load_task_view(
-            m_task_loader, m_data_dir, task, [this, task](const auto& annotation) {
-                save_annotation(task, annotation);
-            }
+            m_task_loader,
+            m_data_dir,
+            task,
+            existing_annotation,
+            [this, task](const auto& annotation) { save_annotation(task, annotation); }
         );
     }
 
