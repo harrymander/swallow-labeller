@@ -120,7 +120,10 @@ public:
                     m_temp_range, LabelColor.with_alpha(SelectedLabelAlpha), height
                 );
             } else {
-                const uint8_t alpha = is_active ? SelectedLabelAlpha : UnselectedLabelAlpha;
+                const bool is_hovered = m_hovered_id == i;
+                const uint8_t alpha = is_active ?
+                    SelectedLabelAlpha :
+                    (is_hovered ? HoveredLabelAlpha : UnselectedLabelAlpha);
                 widgets::draw_plot_range(range, LabelColor.with_alpha(alpha), height);
             }
         }
@@ -133,11 +136,37 @@ public:
         }
     }
 
+    void draw_task_list_box()
+    {
+        ImGui::SeparatorText("Ear clicks");
+        const float height = 4 * ImGui::GetTextLineHeightWithSpacing();
+        m_hovered_id.reset();
+
+        if (!ImGui::BeginListBox("##ear_clicks_labels_listbox", {-1, height})) {
+            return;
+        }
+
+        for (std::size_t i = 0; i < m_ranges.size(); i++) {
+            const auto& range = m_ranges[i];
+            const bool is_active = m_active_id == i;
+
+            std::string str = fmt::format("{:g}, {:g}", range.start, range.end);
+            if (ImGui::Selectable(str.c_str(), is_active)) {
+                m_active_id = i;
+            }
+            if (ImGui::IsItemHovered()) {
+                m_hovered_id = i;
+            }
+        }
+        ImGui::EndListBox();
+    }
+
 private:
     widgets::PlotRange m_temp_range = {NAN, NAN};
     std::vector<widgets::PlotRange> m_ranges;
 
     std::optional<std::size_t> m_active_id = std::nullopt;
+    std::optional<std::size_t> m_hovered_id = std::nullopt;
     widgets::PlotRangeDragger m_range_dragger;
     widgets::PlotRangeSelector m_range_selector;
 };
@@ -161,7 +190,9 @@ public:
         }
         ImGui::End();
 
-        if (ImGui::Begin("Labels")) {}
+        if (ImGui::Begin("Labels")) {
+            m_ear_clicks_annotator.draw_task_list_box();
+        }
         ImGui::End();
     }
 
