@@ -8,9 +8,24 @@
 
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <optional>
 
 namespace recap::labeller::app {
+
+namespace {
+
+models::SwallowTaskData load_task_data_from_path(const std::filesystem::path& path)
+{
+    // cnpz doesn't support loading from std::filesystem::path directly
+    std::ifstream stream(path, std::ios::binary | std::ios::in);
+    if (!stream) {
+        throw std::runtime_error("error opening file");
+    }
+    return models::SwallowTaskData::from_numpy(cnpy::npz_load(stream));
+}
+
+}; // namespace
 
 std::optional<models::SwallowTaskData> TaskLoader::load_task_data(const std::filesystem::path& path)
 {
@@ -27,7 +42,7 @@ std::optional<models::SwallowTaskData> TaskLoader::load_task_data(const std::fil
     }
 
     try {
-        auto data = models::SwallowTaskData::from_numpy(cnpy::npz_load(path));
+        auto data = load_task_data_from_path(path);
         m_status[path] = Status::Ok;
         return data;
     } catch (const std::exception& error) {
