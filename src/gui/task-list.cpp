@@ -4,6 +4,7 @@
 #include "app/task-loader.hpp"
 #include "fmt/core.h"
 #include "gui/icons.h"
+#include "gui/task-filter.hpp"
 #include "gui/windows.hpp"
 #include "models/task-info.hpp"
 
@@ -48,18 +49,53 @@ public:
 
     const models::SwallowTaskInfo *draw()
     {
+        m_task_filter.draw("##task-list-filter");
+
+        const ImVec2 task_counts_pos = ImGui::GetCursorPos();
+        ImGui::SetCursorPos({
+            task_counts_pos.x,
+            task_counts_pos.y
+                + ImGui::GetTextLineHeightWithSpacing() * (m_task_filter.enabled() ? 2 : 1),
+        });
+
+        std::size_t num_filtered = 0;
+        std::size_t num_annotated = 0;
         const models::SwallowTaskInfo *new_task = nullptr;
         if (ImGui::BeginListBox("##task-list", {-1, -1})) {
             for (std::size_t i = 0; i < m_tasks.size(); i++) {
                 const auto& task = m_tasks[i];
-                if (draw_task_selectable(task, m_active_idx == i)) {
-                    if (m_active_idx != i) {
-                        new_task = &task;
+                const auto *annotation = m_annotation_store.get_annotation(task.get_id());
+                if (annotation) {
+                    num_annotated += 1;
+                }
+                if (!m_task_filter.enabled() || m_task_filter.passes(task, annotation)) {
+                    num_filtered += 1;
+                    if (draw_task_selectable(task, annotation != nullptr, m_active_idx == i)) {
+                        if (m_active_idx != i) {
+                            new_task = &task;
+                        }
+                        m_active_idx = i;
                     }
-                    m_active_idx = i;
                 }
             }
+            ImGui::EndListBox();
         }
+
+        ImGui::SetCursorPos(task_counts_pos);
+        if (m_task_filter.enabled()) {
+            ImGui::Text(
+                FILTER_ICON ICON_TEXT_SPACE "Showing %zu task%s out of %zu",
+                num_filtered,
+                num_filtered == 1 ? "" : "s",
+                m_tasks.size()
+            );
+        }
+        ImGui::Text(
+            ANNOTATED_TASK_ICON ICON_TEXT_SPACE "Annotated: %zu task%s out of %zu",
+            num_annotated,
+            num_annotated == 1 ? "" : "s",
+            m_tasks.size()
+        );
 
         return new_task;
     }
@@ -67,6 +103,8 @@ public:
     const models::SwallowTaskInfo& current_task() const { return m_tasks[m_active_idx]; }
 
 private:
+    TaskFilter m_task_filter;
+
     const std::vector<models::SwallowTaskInfo>& m_tasks;
     const SwallowAnnotationStore& m_annotation_store;
     app::TaskLoader& m_task_loader;
@@ -74,9 +112,9 @@ private:
 
     std::size_t m_active_idx = 0;
 
-    bool draw_task_selectable(const models::SwallowTaskInfo& task, bool selected)
+    bool
+    draw_task_selectable(const models::SwallowTaskInfo& task, bool has_annotation, bool selected)
     {
-        const bool has_annotation = m_annotation_store.has_annotation(task.get_id());
         const char *icon = has_annotation ? (ANNOTATED_TASK_ICON " ") : "";
         const char *tooltip = nullptr;
         const auto path = m_data_dir / task.npz_file.path;
