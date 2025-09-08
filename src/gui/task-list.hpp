@@ -26,7 +26,7 @@ public:
     TaskList& operator=(TaskList&&) = delete;
 
     // Return pointer to newly selected task or nullptr if no change
-    [[nodiscard]] const models::SwallowTaskInfo *draw(const char *id);
+    [[nodiscard]] const models::SwallowTaskInfo *draw();
 
     const models::SwallowTaskInfo& currently_selected_task() const;
 

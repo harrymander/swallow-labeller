@@ -7,6 +7,7 @@
 #include "gui/widgets/plot-range-selector.hpp"
 #include "gui/widgets/plot-range.hpp"
 #include "gui/widgets/util.hpp"
+#include "gui/windows.hpp"
 #include "models/annotation.hpp"
 #include "models/data.hpp"
 #include "models/task-info.hpp"
@@ -507,12 +508,12 @@ public:
 
     void draw() override
     {
-        if (ImGui::Begin("Task labelling")) {
+        if (ImGui::Begin(TaskViewDataPlotsWindowId)) {
             draw_plots();
         }
         ImGui::End();
 
-        if (ImGui::Begin("Labels")) {
+        if (ImGui::Begin(TaskViewLabelControlsWindowId)) {
             draw_labels_editor();
         }
         ImGui::End();
@@ -749,7 +750,7 @@ public:
 
     void draw() override
     {
-        if (ImGui::Begin("Task data loading error")) {
+        if (ImGui::Begin(TaskViewDataPlotsWindowId)) {
             ImGui::TextWrapped(
                 ERR_ICON ICON_TEXT_SPACE "Error loading data for path %s", m_path.string().c_str()
             );

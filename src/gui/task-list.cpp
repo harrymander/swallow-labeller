@@ -4,6 +4,7 @@
 #include "app/task-loader.hpp"
 #include "fmt/core.h"
 #include "gui/icons.h"
+#include "gui/windows.hpp"
 #include "models/task-info.hpp"
 
 #include <imgui.h>
@@ -123,10 +124,10 @@ TaskList::TaskList(
 
 TaskList::~TaskList() = default;
 
-const models::SwallowTaskInfo *TaskList::draw(const char *id)
+const models::SwallowTaskInfo *TaskList::draw()
 {
     const models::SwallowTaskInfo *new_task = nullptr;
-    if (ImGui::Begin(id)) {
+    if (ImGui::Begin(TaskListWindowId)) {
         new_task = m_pimpl->draw();
     }
     ImGui::End();

@@ -7,6 +7,7 @@
 #include "gui/task-list.hpp"
 #include "gui/task-view.hpp"
 #include "gui/widgets/util.hpp"
+#include "gui/windows.hpp"
 #include "models/annotation.hpp"
 #include "models/task-info.hpp"
 #include "util/os.hpp"
@@ -70,6 +71,7 @@ class Gui::Impl {
     bool m_show_debug_status_bar = true;
     std::optional<std::string> m_critical_error = std::nullopt;
     bool m_critical_error_modal_open = false;
+    bool m_first_draw = true;
 
     TaskList m_task_list;
     std::filesystem::path m_data_dir;
@@ -211,6 +213,63 @@ class Gui::Impl {
         }
     }
 
+    void setup_dockspace() const
+    {
+        constexpr ImGuiDockNodeFlags DockspaceFlags = ImGuiDockNodeFlags_AutoHideTabBar;
+
+        // Initial widths for sidebars from which we calculate dock node ratios - these are just
+        // approximate sizes since the ratio calculations don't factor in window spacing etc.
+        constexpr float TasklistPx = 250;
+        constexpr float LabelInfoPx = 350;
+        constexpr float MinRatio = 0.1F;
+        constexpr float MaxRatio = 0.25F;
+
+        // If the dockspace ID already exists, the the node sizes are already set in imgui.ini. The
+        // following is adapted from:
+        // https://gist.github.com/AidanSun05/953f1048ffe5699800d2c92b88c36d9f
+        ImGuiID id = ImGui::GetID("##dockspace");
+        const ImGuiViewport *const viewport = ImGui::GetMainViewport();
+        if (m_first_draw) [[unlikely]] {
+            const bool configure = ImGui::DockBuilderGetNode(id) == nullptr;
+            ImGui::DockSpaceOverViewport(id, viewport, DockspaceFlags);
+            if (configure) {
+                spdlog::debug("Setting up dockspace");
+                ImGui::DockBuilderRemoveNode(id);
+                ImGui::DockBuilderAddNode(id);
+
+                ImGuiID task_list_id;
+                ImGuiID task_view_data_plots_id;
+                ImGuiID task_view_label_controls_id;
+                const float viewport_width = viewport->Size.x;
+                ImGui::DockBuilderSplitNode(
+                    id,
+                    ImGuiDir_Left,
+                    std::clamp(TasklistPx / viewport_width, MinRatio, MaxRatio),
+                    &task_list_id,
+                    &task_view_data_plots_id
+                );
+                ImGui::DockBuilderSplitNode(
+                    task_view_data_plots_id,
+                    ImGuiDir_Right,
+                    std::clamp(LabelInfoPx / (viewport_width - TasklistPx), MinRatio, MaxRatio),
+                    &task_view_label_controls_id,
+                    &task_view_data_plots_id
+                );
+
+                ImGui::DockBuilderDockWindow(TaskListWindowId, task_list_id);
+                ImGui::DockBuilderDockWindow(TaskViewDataPlotsWindowId, task_view_data_plots_id);
+                ImGui::DockBuilderDockWindow(
+                    TaskViewLabelControlsWindowId, task_view_label_controls_id
+                );
+                ImGui::DockBuilderFinish(id);
+            } else {
+                spdlog::debug("Not setting up dockspace since sizes already set in imgui.ini");
+            }
+        } else {
+            ImGui::DockSpaceOverViewport(id, viewport, DockspaceFlags);
+        }
+    }
+
 public:
     Impl(
         const std::vector<models::SwallowTaskInfo>& tasks,
@@ -271,11 +330,13 @@ public:
             draw_status_bar();
         }
 
+        setup_dockspace();
+
         if (m_critical_error.has_value()) {
             draw_critical_error(*m_critical_error);
         }
 
-        const models::SwallowTaskInfo *new_task = m_task_list.draw("Labelling tasks");
+        const models::SwallowTaskInfo *new_task = m_task_list.draw();
         if (new_task) {
             m_task_view = load_task_view(*new_task);
         }
@@ -289,6 +350,8 @@ public:
         for (auto& window : m_menu_item_windows) {
             window.draw_window();
         }
+
+        m_first_draw = false;
     }
 
     void stop() { m_ready_to_stop = true; }
