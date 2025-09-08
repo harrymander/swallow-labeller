@@ -80,8 +80,6 @@ public:
     ScopedImID& operator=(ScopedImID&&) = delete;
 };
 
-bool ButtonRed(const char *label, const ImVec2& size = {0, 0});
-
 [[nodiscard]] bool item_disabled();
 
 inline float plot_xaxis_to_pixels(double x)
@@ -107,6 +105,21 @@ inline bool global_shortcut_toggle(ImGuiKeyChord chord, bool& val)
     }
     return false;
 }
+
+class RedButtonColorScope : public ScopedImColor {
+public:
+    static constexpr ImU32 Color = 0x993D3DFF;
+    static constexpr ImU32 ColorHovered = 0xB33636FF;
+    static constexpr ImU32 ColorActive = 0xCC2929FF;
+
+    RedButtonColorScope() :
+        ScopedImColor({
+            {ImGuiCol_Button, Color},
+            {ImGuiCol_ButtonHovered, ColorHovered},
+            {ImGuiCol_ButtonActive, ColorActive},
+        })
+    {}
+};
 
 }; // namespace recap::labeller::gui::widgets
 
