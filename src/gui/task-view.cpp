@@ -3,27 +3,46 @@
 #include "gui/icons.h"
 #include "gui/plot.hpp"
 #include "gui/widgets/plot-range-dragger.hpp"
+#include "gui/widgets/plot-range-selector.hpp"
 #include "gui/widgets/plot-range.hpp"
 #include "gui/widgets/util.hpp"
 #include "imgui.h"
 #include "implot.h"
 #include "models/data.hpp"
 #include "models/task-info.hpp"
+#include "models/time-range.hpp"
 
 #include <fmt/std.h>
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
+#include <concepts>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <utility>
 
 namespace recap::labeller::gui {
 
 namespace {
 
-constexpr ImU32 EventLabelColor = IM_COL32(0xFC, 0x65, 0x5A, 0xFF);
+struct RgbColor {
+    uint8_t red;
+    uint8_t green;
+    uint8_t blue;
+
+    constexpr ImU32 with_alpha(uint8_t alpha) const { return IM_COL32(red, green, blue, alpha); }
+};
+
+constexpr RgbColor EventLabelColor{0xFC, 0x65, 0x5A};
 constexpr float LabelSummaryHeight = 8; // Same as default ImPlotStyle::DigitalBitHeight
+
+// Alpha values for different label region states
+constexpr uint8_t UnselectedLabelAlpha = 0x33;
+constexpr uint8_t HoveredLabelAlpha = 0x44;
+constexpr uint8_t SelectedLabelAlpha = 0x66;
 
 widgets::PlotRange initial_plot_range(double t0, double t1, const models::SwallowTaskInfo& info)
 {
@@ -36,6 +55,92 @@ widgets::PlotRange initial_plot_range(double t0, double t1, const models::Swallo
     }
     return {t0, t1};
 }
+
+class EarClicksAnnotator {
+public:
+    static constexpr RgbColor LabelColor{0xFC, 0x5A, 0xE1};
+    static constexpr double MinSelectionRange = 0.001;
+
+    EarClicksAnnotator() = default;
+
+    explicit EarClicksAnnotator(const std::vector<models::TimeRange>& time_ranges)
+    {
+        m_ranges.reserve(time_ranges.size());
+        for (const auto& range : time_ranges) {
+            m_ranges.emplace_back( // cppcheck-suppress useStlAlgorithm
+                range.start, range.end
+            );
+        }
+    }
+
+    // Call in the plot where the ranges can be edited
+    void draw_range_editing()
+    {
+        auto new_range = m_range_selector.update(
+            "##ear_clicks_new_range_selector",
+            0,
+            ImGuiMouseButton_Left,
+            ImGuiKey_LeftCtrl,
+            MinSelectionRange
+        );
+        if (new_range) {
+            spdlog::info("Ear click label created: [{:g}, {:g}]", new_range->start, new_range->end);
+            m_ranges.push_back(*new_range);
+            m_active_id = m_ranges.size() - 1;
+        }
+
+        if (m_active_id.has_value()) {
+            auto& active_range = m_ranges[*m_active_id];
+            if (!m_range_dragger.is_editing()) {
+                m_temp_range = active_range;
+            }
+
+            const bool updated = m_range_dragger.update(
+                "##ear_clicks_active_range_dragger", m_temp_range, MinSelectionRange
+            );
+            if (updated) {
+                spdlog::info(
+                    "Ear click label {} updated to [{:g}, {:g}]",
+                    *m_active_id,
+                    m_temp_range.start,
+                    m_temp_range.end
+                );
+                active_range = m_temp_range;
+            }
+        }
+    }
+
+    void draw_ranges(float height = 0) const
+    {
+        for (std::size_t i = 0; i < m_ranges.size(); i++) {
+            const auto& range = m_ranges[i];
+            const bool is_active = m_active_id == i;
+            if (is_active && m_range_dragger.is_editing()) {
+                widgets::draw_plot_range(
+                    m_temp_range, LabelColor.with_alpha(SelectedLabelAlpha), height
+                );
+            } else {
+                const uint8_t alpha = is_active ? SelectedLabelAlpha : UnselectedLabelAlpha;
+                widgets::draw_plot_range(range, LabelColor.with_alpha(alpha), height);
+            }
+        }
+
+        const auto *selecting_range = m_range_selector.range();
+        if (selecting_range) {
+            widgets::draw_plot_range(
+                *selecting_range, LabelColor.with_alpha(SelectedLabelAlpha), height
+            );
+        }
+    }
+
+private:
+    widgets::PlotRange m_temp_range = {NAN, NAN};
+    std::vector<widgets::PlotRange> m_ranges;
+
+    std::optional<std::size_t> m_active_id = std::nullopt;
+    widgets::PlotRangeDragger m_range_dragger;
+    widgets::PlotRangeSelector m_range_selector;
+};
 
 class TaskLabellingView : public TaskView {
 public:
@@ -55,6 +160,9 @@ public:
             draw_plots();
         }
         ImGui::End();
+
+        if (ImGui::Begin("Labels")) {}
+        ImGui::End();
     }
 
 private:
@@ -67,19 +175,27 @@ private:
             - ImGui::GetStyle().ItemSpacing.y;
 
         if (ImPlot::BeginAlignedPlots("##aligned_plots")) {
-            draw_plot("##flow_plot", m_flow_plot, data_plot_height);
-            draw_plot("##audio_plot", m_audio_plot, data_plot_height);
+            draw_plot("##flow_plot", m_flow_plot, data_plot_height, [this]() {
+                m_ear_clicks_annotator.draw_ranges(LabelSummaryHeight);
+            });
+            draw_plot("##audio_plot", m_audio_plot, data_plot_height, [this]() {
+                m_ear_clicks_annotator.draw_range_editing();
+                m_ear_clicks_annotator.draw_ranges();
+            });
             ImPlot::EndAlignedPlots();
         }
 
         if (ImPlot::BeginPlot("##summary_plot", {-1, SummaryPlotHeight}, ImPlotFlags_CanvasOnly)) {
             draw_plot_summary_selector();
             draw_event_labels();
+            m_ear_clicks_annotator.draw_ranges(LabelSummaryHeight);
             ImPlot::EndPlot();
         }
     }
 
-    void draw_plot(const char *id, Plot& plot, float height) const
+    template <typename Func>
+        requires std::invocable<Func>
+    void draw_plot(const char *id, Plot& plot, float height, const Func& extra_draw) const
     {
         constexpr ImPlotFlags Flags =
             ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus;
@@ -87,6 +203,7 @@ private:
         if (ImPlot::BeginPlot("##plot", {-1, height}, Flags)) {
             plot.draw();
             draw_event_labels();
+            extra_draw();
             ImPlot::EndPlot();
         }
     }
@@ -94,7 +211,9 @@ private:
     void draw_event_labels() const
     {
         for (const auto& event : m_task_info.event_times) {
-            widgets::draw_plot_range(event.start, event.end, EventLabelColor, -LabelSummaryHeight);
+            widgets::draw_plot_range(
+                event.start, event.end, EventLabelColor.with_alpha(0xFF), -LabelSummaryHeight
+            );
         }
     }
 
@@ -124,6 +243,9 @@ private:
 
     widgets::PlotRangeDragger m_plot_summary_dragger;
     widgets::PlotRangeSelector m_plot_summary_selector;
+
+    // TODO: pass in existing ear click labels if there is a saved annotation
+    EarClicksAnnotator m_ear_clicks_annotator;
 
     models::SwallowTaskData m_data;
     models::SwallowTaskInfo m_task_info;
