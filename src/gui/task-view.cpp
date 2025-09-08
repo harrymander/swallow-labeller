@@ -10,7 +10,6 @@
 #include "imgui.h"
 #include "implot.h"
 #include "magic_enum.hpp"
-#include "models/annotation.hpp"
 #include "models/data.hpp"
 #include "models/task-info.hpp"
 #include "models/time-range.hpp"
@@ -261,15 +260,6 @@ private:
     widgets::PlotRange m_range;
 };
 
-bool shortcut_toggle(ImGuiKeyChord chord, bool& val)
-{
-    if (widgets::global_shortcut(chord)) {
-        val = !val;
-        return true;
-    }
-    return false;
-}
-
 class ApneaAnnotation {
 public:
     static constexpr RgbColor DefaultAnnotationColor = {128, 128, 128};
@@ -310,7 +300,7 @@ public:
             if (selected && choice != Nrf) {
                 ImGui::SameLine();
                 if (ImGui::Checkbox("Ambiguous [a]", &m_is_ambiguous)
-                    || shortcut_toggle(ImGuiKey_A, m_is_ambiguous))
+                    || widgets::global_shortcut_toggle(ImGuiKey_A, m_is_ambiguous))
                 {
                     spdlog::debug("Swallow apnea ambiguity changed: {}", m_is_ambiguous);
                 }

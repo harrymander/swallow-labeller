@@ -99,6 +99,15 @@ inline bool global_shortcut(ImGuiKeyChord chord)
     return !ImGui::GetIO().WantTextInput && ImGui::Shortcut(chord, ImGuiInputFlags_RouteGlobal);
 }
 
+inline bool global_shortcut_toggle(ImGuiKeyChord chord, bool& val)
+{
+    if (global_shortcut(chord)) {
+        val = !val;
+        return true;
+    }
+    return false;
+}
+
 }; // namespace recap::labeller::gui::widgets
 
 #endif // RECAP_LABELLER_IMGUI_UTIL_HPP_INCLUDE
