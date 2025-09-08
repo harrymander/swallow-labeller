@@ -47,18 +47,6 @@ constexpr uint8_t UnselectedLabelAlpha = 0x33;
 constexpr uint8_t HoveredLabelAlpha = 0x44;
 constexpr uint8_t SelectedLabelAlpha = 0x66;
 
-widgets::PlotRange initial_plot_range(double t0, double t1, const models::SwallowTaskInfo& info)
-{
-    constexpr double Margin = 3;
-
-    if (info.event_times.size() > 0) {
-        const auto first_event = info.event_times[0];
-        t0 = std::max(t0, first_event.start - Margin);
-        t1 = std::min(t1, first_event.end + Margin);
-    }
-    return {t0, t1};
-}
-
 template <typename T>
 concept RangeAnnotation = requires(T annotation, widgets::PlotRange range) {
     { T(range) };
@@ -371,9 +359,7 @@ public:
     TaskLabellingView(models::SwallowTaskData&& data, models::SwallowTaskInfo info) :
         m_data(std::move(data)),
         m_task_info(std::move(info)),
-        m_plot_x_range(
-            initial_plot_range(m_data.flow_time.front(), m_data.flow_time.back(), m_task_info)
-        ),
+        m_plot_x_range(m_data.flow_time.front(), m_data.flow_time.back()),
         m_flow_plot(m_data.flow_time, m_data.flow, m_plot_x_range, "Flow (L/min)", "{:g} L/min"),
         m_audio_plot(m_data.audio_time, m_data.audio, m_plot_x_range, "Audio (V)", "{:g} V")
     {}
@@ -394,6 +380,9 @@ public:
 private:
     void draw_labels_editor()
     {
+        ImGui::SeparatorText("Events");
+        draw_event_list();
+
         ImGui::SeparatorText("Note");
         draw_note_input();
 
@@ -422,6 +411,36 @@ private:
         } else {
             m_ear_clicks_annotator.draw_labels_list_box("##ear_clicks_labels_listbox");
         }
+    }
+
+    void draw_event_list()
+    {
+        constexpr double Margin = 3;
+
+        const auto& events = m_task_info.event_times;
+        if (events.empty()) {
+            ImGui::TextWrapped("No events defined for this task.");
+            return;
+        }
+
+        ImGui::TextWrapped(HINT_ICON ICON_TEXT_SPACE "Click on event to zoom into it in plot");
+        const float list_height = ImGui::GetTextLineHeightWithSpacing() * 4;
+        if (!ImGui::BeginListBox("##events_listbox", {-1, list_height})) {
+            return;
+        }
+
+        for (std::size_t i = 0; i < events.size(); i++) {
+            const auto& event = events[i];
+            std::string label = fmt::format("{}: [{:g}, {:g}]", i + 1, event.start, event.end);
+            if (ImGui::Selectable(label.c_str())) {
+                const auto& time = m_data.flow_time;
+                m_plot_x_range = {
+                    std::max(time.front(), event.start - Margin),
+                    std::min(time.back(), event.end + Margin),
+                };
+            }
+        }
+        ImGui::EndListBox();
     }
 
     void draw_note_input()
