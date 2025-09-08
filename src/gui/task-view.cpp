@@ -146,7 +146,7 @@ public:
         }
     }
 
-    void draw_task_list_box(const char *id)
+    void draw_labels_list_box(const char *id)
     {
         widgets::ScopedImID id_scope(id);
 
@@ -273,6 +273,7 @@ bool shortcut_toggle(ImGuiKeyChord chord, bool& val)
 class ApneaAnnotation {
 public:
     static constexpr RgbColor DefaultAnnotationColor = {128, 128, 128};
+    static constexpr double MaxSnrfTime = 0.246; // TODO: get this from config
 
     explicit ApneaAnnotation(widgets::PlotRange range) : m_range(range) {}
 
@@ -320,13 +321,22 @@ public:
     std::string description() const
     {
         return fmt::format(
-            "{}{}, [{:g}, {:g}] Δ={:g} s",
+            "{}{}{}, [{:g}, {:g}] Δ={:g} s",
+            error_description() == nullptr ? "" : ERR_ICON ICON_TEXT_SPACE,
             magic_enum::enum_name(m_choice),
             m_choice != LabelChoice::Nrf && m_is_ambiguous ? "?" : "",
             m_range.start,
             m_range.end,
             m_range.range()
         );
+    }
+
+    const char *error_description() const
+    {
+        if (m_choice == LabelChoice::Nrf && m_range.range() > MaxSnrfTime) {
+            return "Non-resp. flow label too long";
+        }
+        return nullptr;
     }
 
 private:
@@ -399,10 +409,14 @@ private:
                 "No swallow labels: Ctrl + click and drag in the flow plot to create one."
             );
         } else {
-            m_apnea_annotator.draw_task_list_box("##apnea_labels_listbox");
+            m_apnea_annotator.draw_labels_list_box("##apnea_labels_listbox");
             auto *active = m_apnea_annotator.active_annotation();
             if (active) {
                 active->draw_pattern_selector();
+                const char *error = active->error_description();
+                if (error) {
+                    ImGui::TextWrapped(ERR_ICON ICON_TEXT_SPACE "%s", error);
+                }
             }
         }
 
@@ -412,7 +426,7 @@ private:
                 "No ear click labels: Ctrl + click and drag in the audio plot to create one."
             );
         } else {
-            m_ear_clicks_annotator.draw_task_list_box("##ear_clicks_labels_listbox");
+            m_ear_clicks_annotator.draw_labels_list_box("##ear_clicks_labels_listbox");
         }
     }
 
