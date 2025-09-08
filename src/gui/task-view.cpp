@@ -15,6 +15,7 @@
 #include "models/time-range.hpp"
 #include "util/variant-visitor.hpp"
 
+#include <IconsFontAwesome6.h>
 #include <fmt/std.h>
 #include <imgui.h>
 #include <imgui_stdlib.h>
@@ -152,11 +153,15 @@ public:
         }
     }
 
-    void draw_labels_list_box(const char *id)
+    template <typename JumpToLabel>
+        requires std::invocable<JumpToLabel, const widgets::PlotRange&>
+    void draw_labels_list_box(const char *id, const JumpToLabel& jump_to_label)
     {
         widgets::ScopedImID id_scope(id);
 
         static const char *remove_button_str = DELETE_ICON;
+        static const char *jump_to_label_button_str = ICON_FA_MAGNIFYING_GLASS;
+
         const float line_height = ImGui::GetTextLineHeightWithSpacing();
         const float list_height = 4 * line_height;
         m_hovered_idx.reset();
@@ -166,7 +171,8 @@ public:
 
         const float x_padding = 2 * ImGui::GetStyle().ItemSpacing.x;
         const float label_width = ImGui::GetContentRegionAvail().x
-            - (ImGui::CalcTextSize(remove_button_str).x + x_padding);
+            - ImGui::CalcTextSize(remove_button_str).x
+            - ImGui::CalcTextSize(jump_to_label_button_str).x - x_padding * 2;
 
         std::optional<std::size_t> delete_idx;
         for (std::size_t i = 0; i < m_annotations.size(); i++) {
@@ -184,6 +190,11 @@ public:
                 m_hovered_idx = i;
             }
 
+            ImGui::SameLine();
+            if (draw_rounded_button(jump_to_label_button_str)) {
+                jump_to_label(m_annotations[i].range());
+            }
+            ImGui::SetItemTooltip("Jump to label");
             ImGui::SameLine();
             if (draw_delete_button()) {
                 delete_idx = i;
@@ -529,6 +540,10 @@ public:
 private:
     void draw_labels_editor()
     {
+        const auto jump_to_label = [this](const widgets::PlotRange& range) {
+            zoom_to_range(range);
+        };
+
         draw_save_button();
 
         ImGui::SeparatorText("Events");
@@ -537,13 +552,14 @@ private:
         ImGui::SeparatorText("Note");
         draw_note_input();
 
-        ImGui::SeparatorText("Swallow apnea");
-        if (m_apnea_annotator.annotations().empty()) {
+        auto num_swallow_apneas = m_apnea_annotator.annotations().size();
+        ImGui::SeparatorText(fmt::format("Swallow apnea [{}]", num_swallow_apneas).c_str());
+        if (num_swallow_apneas == 0) {
             ImGui::TextWrapped(
                 "No swallow labels: Ctrl + click and drag in the flow plot to create one."
             );
         } else {
-            m_apnea_annotator.draw_labels_list_box("##apnea_labels_listbox");
+            m_apnea_annotator.draw_labels_list_box("##apnea_labels_listbox", jump_to_label);
             auto *active = m_apnea_annotator.active_annotation();
             if (active) {
                 active->draw_pattern_selector();
@@ -554,13 +570,16 @@ private:
             }
         }
 
-        ImGui::SeparatorText("Ear clicks");
-        if (m_ear_clicks_annotator.annotations().empty()) {
+        auto num_ear_clicks = m_ear_clicks_annotator.annotations().size();
+        ImGui::SeparatorText(fmt::format("Ear clicks [{}]", num_ear_clicks).c_str());
+        if (num_ear_clicks == 0) {
             ImGui::TextWrapped(
                 "No ear click labels: Ctrl + click and drag in the audio plot to create one."
             );
         } else {
-            m_ear_clicks_annotator.draw_labels_list_box("##ear_clicks_labels_listbox");
+            m_ear_clicks_annotator.draw_labels_list_box(
+                "##ear_clicks_labels_listbox", jump_to_label
+            );
         }
     }
 
@@ -615,10 +634,15 @@ private:
         return swallow_annotation;
     }
 
+    template <typename Range> void zoom_to_range(const Range& range, double margin = 3)
+    {
+        const auto& time = m_data.flow_time;
+        m_plot_x_range.start = std::max(time.front(), range.start - margin);
+        m_plot_x_range.end = std::min(time.back(), range.end + margin);
+    }
+
     void draw_event_list()
     {
-        constexpr double Margin = 3;
-
         const auto& events = m_task_info.event_times;
         if (events.empty()) {
             ImGui::TextWrapped("No events defined for this task.");
@@ -635,11 +659,7 @@ private:
             const auto& event = events[i];
             std::string label = fmt::format("{}: [{:g}, {:g}]", i + 1, event.start, event.end);
             if (ImGui::Selectable(label.c_str())) {
-                const auto& time = m_data.flow_time;
-                m_plot_x_range = {
-                    std::max(time.front(), event.start - Margin),
-                    std::min(time.back(), event.end + Margin),
-                };
+                zoom_to_range(event);
             }
         }
         ImGui::EndListBox();
