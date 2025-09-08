@@ -7,9 +7,11 @@
 #include "gui/widgets/plot-range-selector.hpp"
 #include "gui/widgets/plot-range.hpp"
 #include "gui/widgets/util.hpp"
+#include "models/annotation.hpp"
 #include "models/data.hpp"
 #include "models/task-info.hpp"
 #include "models/time-range.hpp"
+#include "util/variant-visitor.hpp"
 
 #include <fmt/std.h>
 #include <imgui.h>
@@ -25,7 +27,9 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <utility>
+#include <variant>
 
 namespace recap::labeller::gui {
 
@@ -310,12 +314,28 @@ public:
         );
     }
 
+    bool valid() const { return error_description() == nullptr; }
+
     const char *error_description() const
     {
         if (m_choice == LabelChoice::Nrf && m_range.range() > MaxSnrfTime) {
             return "Non-resp. flow label too long";
         }
         return nullptr;
+    }
+
+    std::variant<models::SwallowApneaAnnotation, models::TimeRange> to_annotation() const
+    {
+        models::TimeRange time{m_range.start, m_range.end};
+        if (m_choice == LabelChoice::Nrf) {
+            return time;
+        }
+
+        return models::SwallowApneaAnnotation{
+            .is_ambiguous = m_is_ambiguous,
+            .pattern = choice_to_src_pattern(),
+            .time = time,
+        };
     }
 
 private:
@@ -326,6 +346,29 @@ private:
         InIn,
         Nrf,
     };
+
+    models::SrcPattern choice_to_src_pattern() const
+    {
+        switch (m_choice) {
+        case LabelChoice::ExEx:
+            return models::SrcPattern::ExEx;
+        case LabelChoice::ExIn:
+            return models::SrcPattern::ExIn;
+        case LabelChoice::InEx:
+            return models::SrcPattern::InEx;
+        case LabelChoice::InIn:
+            return models::SrcPattern::InIn;
+        default:
+            break;
+        }
+
+        std::string msg = fmt::format(
+            "cannot convert apnea annotation choice '{}' to SrcPattern",
+            magic_enum::enum_name(m_choice)
+        );
+        spdlog::critical(msg);
+        throw std::runtime_error(msg);
+    }
 
     static RgbColor label_color(LabelChoice pattern)
     {
@@ -356,12 +399,17 @@ private:
 
 class TaskLabellingView : public TaskView {
 public:
-    TaskLabellingView(models::SwallowTaskData&& data, models::SwallowTaskInfo info) :
+    TaskLabellingView(
+        models::SwallowTaskData&& data,
+        models::SwallowTaskInfo info,
+        SaveAnnotationCallback save_annotation_callback
+    ) :
         m_data(std::move(data)),
         m_task_info(std::move(info)),
         m_plot_x_range(m_data.flow_time.front(), m_data.flow_time.back()),
         m_flow_plot(m_data.flow_time, m_data.flow, m_plot_x_range, "Flow (L/min)", "{:g} L/min"),
-        m_audio_plot(m_data.audio_time, m_data.audio, m_plot_x_range, "Audio (V)", "{:g} V")
+        m_audio_plot(m_data.audio_time, m_data.audio, m_plot_x_range, "Audio (V)", "{:g} V"),
+        m_save_annotation(std::move(save_annotation_callback))
     {}
 
     void draw() override
@@ -380,6 +428,8 @@ public:
 private:
     void draw_labels_editor()
     {
+        draw_save_button();
+
         ImGui::SeparatorText("Events");
         draw_event_list();
 
@@ -411,6 +461,57 @@ private:
         } else {
             m_ear_clicks_annotator.draw_labels_list_box("##ear_clicks_labels_listbox");
         }
+    }
+
+    bool can_save() const
+    {
+        return std::ranges::all_of(m_apnea_annotator.annotations(), [](const auto& annotation) {
+            return annotation.valid();
+        });
+    }
+
+    void draw_save_button()
+    {
+        const float height = ImGui::GetTextLineHeightWithSpacing() * 2;
+        constexpr ImGuiKeyChord Shortcut = ImGuiMod_Ctrl | ImGuiKey_S;
+        const bool disabled = !can_save();
+        ImGui::BeginDisabled(disabled);
+        if (ImGui::Button("Submit [Ctrl+S]", {-1, height})
+            || (!disabled && widgets::global_shortcut(Shortcut)))
+        {
+            spdlog::info("Saving annotation");
+            m_save_annotation(labels_to_swallow_annotation());
+        }
+
+        ImGui::EndDisabled();
+    }
+
+    [[nodiscard]] models::SwallowAnnotation labels_to_swallow_annotation() const
+    {
+        models::SwallowAnnotation swallow_annotation;
+        swallow_annotation.note = m_note;
+        for (const auto& ear_click_annotation : m_ear_clicks_annotator.annotations()) {
+            const auto& range = ear_click_annotation.range();
+            swallow_annotation.ear_clicks.emplace_back(range.start, range.end);
+        }
+
+        for (const auto& apnea_annotation : m_apnea_annotator.annotations()) {
+            VariantVisitor{
+                [&](const models::SwallowApneaAnnotation& apnea) {
+                    swallow_annotation.swallow_apneas.push_back(apnea);
+                },
+                [&](const models::TimeRange& nrf) {
+                    swallow_annotation.non_respiratory_flow_events.push_back(nrf);
+                },
+            }(apnea_annotation.to_annotation());
+        }
+
+        std::ranges::sort(swallow_annotation.ear_clicks);
+        std::ranges::sort(swallow_annotation.non_respiratory_flow_events);
+        std::ranges::sort(swallow_annotation.swallow_apneas, [](const auto& a, const auto& b) {
+            return a.time < b.time;
+        });
+        return swallow_annotation;
     }
 
     void draw_event_list()
@@ -548,6 +649,7 @@ private:
     widgets::PlotRange m_plot_x_range;
     Plot m_flow_plot;
     Plot m_audio_plot;
+    SaveAnnotationCallback m_save_annotation;
 };
 
 class TaskLoadErrorView : public TaskView {
@@ -573,14 +675,17 @@ private:
 std::unique_ptr<TaskView> load_task_view(
     app::TaskLoader& loader,
     const std::filesystem::path& data_dir,
-    const models::SwallowTaskInfo& task
+    const models::SwallowTaskInfo& task,
+    const SaveAnnotationCallback& save_annotation_callback
 )
 {
     std::filesystem::path path = data_dir / task.npz_file.path;
     spdlog::debug("Loading task data {}...", path);
     auto task_data = loader.load_task_data(path);
     if (task_data.has_value()) {
-        return std::make_unique<TaskLabellingView>(std::move(*task_data), task);
+        return std::make_unique<TaskLabellingView>(
+            std::move(*task_data), task, save_annotation_callback
+        );
     }
 
     return std::make_unique<TaskLoadErrorView>(path);

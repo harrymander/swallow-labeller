@@ -2,11 +2,15 @@
 #define RECAP_LABELLER_GUI_TASK_VIEW_HPP_INCLUDE
 
 #include "app/task-loader.hpp"
+#include "models/annotation.hpp"
 #include "models/task-info.hpp"
 
+#include <functional>
 #include <memory>
 
 namespace recap::labeller::gui {
+
+using SaveAnnotationCallback = std::function<void(const models::SwallowAnnotation&)>;
 
 class TaskView {
 public:
@@ -17,7 +21,8 @@ public:
 std::unique_ptr<TaskView> load_task_view(
     app::TaskLoader& loader,
     const std::filesystem::path& data_dir,
-    const models::SwallowTaskInfo& task
+    const models::SwallowTaskInfo& task,
+    const SaveAnnotationCallback& save_annotation_callback
 );
 
 }; // namespace recap::labeller::gui

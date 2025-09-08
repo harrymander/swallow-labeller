@@ -7,6 +7,7 @@
 #include "gui/task-list.hpp"
 #include "gui/task-view.hpp"
 #include "gui/widgets/util.hpp"
+#include "models/annotation.hpp"
 #include "models/task-info.hpp"
 #include "util/os.hpp"
 
@@ -19,6 +20,7 @@
 #include <array>
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace recap::labeller::gui {
@@ -66,11 +68,14 @@ class Gui::Impl {
         {"ImGui metrics/debugger...", ImGui::ShowMetricsWindow},
     }};
     bool m_show_debug_status_bar = true;
+    std::optional<std::string> m_critical_error = std::nullopt;
+    bool m_critical_error_modal_open = false;
 
     TaskList m_task_list;
     std::filesystem::path m_data_dir;
     SwallowAnnotationStore& m_annotation_store;
     std::unique_ptr<TaskView> m_task_view;
+    SwallowAnnotationStore::ErrorObservable::Observer m_annotation_store_error_obs;
 
     static bool is_valid_ini_path(const std::filesystem::path& path)
     {
@@ -162,6 +167,47 @@ class Gui::Impl {
         }
     }
 
+    void save_annotation(
+        const models::SwallowTaskInfo& task, const models::SwallowAnnotation& annotation
+    )
+    {
+        m_annotation_store.add_annotation(task.get_id(), annotation);
+    }
+
+    std::unique_ptr<TaskView> load_task_view(const models::SwallowTaskInfo& task)
+    {
+        return ::recap::labeller::gui::load_task_view(
+            m_task_loader, m_data_dir, task, [this, task](const auto& annotation) {
+                save_annotation(task, annotation);
+            }
+        );
+    }
+
+    void draw_critical_error(const std::string& error)
+    {
+        constexpr ImU32 TitleColor = 0xCC2929FF;
+        constexpr ImVec2 CentrePos = {0.5F, 0.5F};
+        widgets::ScopedImColor color_scope(ImGuiCol_TitleBgActive, TitleColor);
+
+        static const char *modal_title = ERR_ICON ICON_TEXT_SPACE "Critical error##crit_err_modal";
+
+        if (!m_critical_error_modal_open) {
+            m_critical_error_modal_open = true;
+            ImGui::OpenPopup(modal_title);
+            ImGui::SetNextWindowPos(
+                ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, CentrePos
+            );
+        }
+
+        if (ImGui::BeginPopupModal(modal_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text("%s\n(Please email Harry!)", error.c_str());
+            if (widgets::ButtonRed(EXIT_ICON ICON_TEXT_SPACE "Quit")) {
+                stop();
+            }
+            ImGui::EndPopup();
+        }
+    }
+
 public:
     Impl(
         const std::vector<models::SwallowTaskInfo>& tasks,
@@ -171,8 +217,12 @@ public:
         m_task_list(tasks, annotation_store, m_task_loader, data_dir),
         m_data_dir(data_dir),
         m_annotation_store(annotation_store),
-        m_task_view(
-            load_task_view(m_task_loader, m_data_dir, m_task_list.currently_selected_task())
+        m_task_view(load_task_view(m_task_list.currently_selected_task())),
+        m_annotation_store_error_obs(
+            m_annotation_store.subscribe_sync_error([this](const auto& msg) {
+                spdlog::critical("Error saving annotation: {}", msg);
+                m_critical_error = msg;
+            })
         )
     {
         if (NFD::Init() != NFD_OKAY) {
@@ -218,9 +268,13 @@ public:
             draw_status_bar();
         }
 
+        if (m_critical_error.has_value()) {
+            draw_critical_error(*m_critical_error);
+        }
+
         const models::SwallowTaskInfo *new_task = m_task_list.draw("Labelling tasks");
         if (new_task) {
-            m_task_view = load_task_view(m_task_loader, m_data_dir, *new_task);
+            m_task_view = load_task_view(*new_task);
         }
 
         if (m_task_view) {
