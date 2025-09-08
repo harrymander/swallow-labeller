@@ -238,7 +238,6 @@ def gen_random_annotation(task: SwallowTask) -> Annotation:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--tasks-json', required=True)
-    parser.add_argument('--suggestions-json', required=True)
     parser.add_argument('--data-dir', required=True)
     args = parser.parse_args()
 
@@ -271,15 +270,6 @@ def main():
     tasks_json = [dataclasses.asdict(t) for t in tasks]
     with open(args.tasks_json, 'w') as f:
         json.dump(tasks_json, f, indent=2)
-        f.write('\n')
-
-    # Generate a suggestion for every second task
-    suggestions = {
-        task.annotation_id(): dataclasses.asdict(gen_random_annotation(task))
-        for task in tasks[::2]
-    }
-    with open(args.suggestions_json, 'w') as f:
-        json.dump(suggestions, f, indent=2)
         f.write('\n')
 
 
