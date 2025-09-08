@@ -86,11 +86,11 @@ public:
         if (new_range) {
             spdlog::info("Ear click label created: [{:g}, {:g}]", new_range->start, new_range->end);
             m_ranges.push_back(*new_range);
-            m_active_id = m_ranges.size() - 1;
+            m_active_idx = m_ranges.size() - 1;
         }
 
-        if (m_active_id.has_value()) {
-            auto& active_range = m_ranges[*m_active_id];
+        if (m_active_idx.has_value()) {
+            auto& active_range = m_ranges[*m_active_idx];
             if (!m_range_dragger.is_editing()) {
                 m_temp_range = active_range;
             }
@@ -101,7 +101,7 @@ public:
             if (updated) {
                 spdlog::info(
                     "Ear click label {} updated to [{:g}, {:g}]",
-                    *m_active_id,
+                    *m_active_idx,
                     m_temp_range.start,
                     m_temp_range.end
                 );
@@ -114,13 +114,13 @@ public:
     {
         for (std::size_t i = 0; i < m_ranges.size(); i++) {
             const auto& range = m_ranges[i];
-            const bool is_active = m_active_id == i;
+            const bool is_active = m_active_idx == i;
             if (is_active && m_range_dragger.is_editing()) {
                 widgets::draw_plot_range(
                     m_temp_range, LabelColor.with_alpha(SelectedLabelAlpha), height
                 );
             } else {
-                const bool is_hovered = m_hovered_id == i;
+                const bool is_hovered = m_hovered_idx == i;
                 const uint8_t alpha = is_active ?
                     SelectedLabelAlpha :
                     (is_hovered ? HoveredLabelAlpha : UnselectedLabelAlpha);
@@ -136,37 +136,96 @@ public:
         }
     }
 
+    static bool draw_delete_button()
+    {
+        constexpr float ButtonCornerRadius = 5;
+        widgets::ScopedImStyle style(ImGuiStyleVar_FrameRounding, ButtonCornerRadius);
+        return widgets::ButtonRed(DELETE_ICON);
+    }
+
     void draw_task_list_box()
     {
-        ImGui::SeparatorText("Ear clicks");
-        const float height = 4 * ImGui::GetTextLineHeightWithSpacing();
-        m_hovered_id.reset();
+        static const char *remove_button_str = DELETE_ICON;
 
-        if (!ImGui::BeginListBox("##ear_clicks_labels_listbox", {-1, height})) {
+        ImGui::SeparatorText("Ear clicks");
+        if (m_ranges.empty()) {
+            ImGui::TextWrapped(
+                "No ear click ranges: use Ctrl + left mouse button to add to audio plot"
+            );
             return;
         }
 
-        for (std::size_t i = 0; i < m_ranges.size(); i++) {
-            const auto& range = m_ranges[i];
-            const bool is_active = m_active_id == i;
+        const float line_height = ImGui::GetTextLineHeightWithSpacing();
+        const float list_height = 4 * line_height;
+        m_hovered_idx.reset();
+        if (!ImGui::BeginListBox("##ear_clicks_labels_listbox", {-1, list_height})) {
+            return;
+        }
 
-            std::string str = fmt::format("{:g}, {:g}", range.start, range.end);
-            if (ImGui::Selectable(str.c_str(), is_active)) {
-                m_active_id = i;
+        const float x_padding = 2 * ImGui::GetStyle().ItemSpacing.x;
+        const float label_width = ImGui::GetContentRegionAvail().x
+            - (ImGui::CalcTextSize(remove_button_str).x + x_padding);
+
+        std::optional<std::size_t> delete_idx;
+        for (std::size_t i = 0; i < m_ranges.size(); i++) {
+            widgets::ScopedImID scoped_id(static_cast<int>(i));
+
+            const bool is_active = m_active_idx == i;
+            const auto& range =
+                is_active && m_range_dragger.is_editing() ? m_temp_range : m_ranges[i];
+
+            std::string str =
+                fmt::format("{:g}, {:g} Δ = {:g} s", range.start, range.end, range.range());
+            if (ImGui::Selectable(str.c_str(), is_active, 0, {label_width, line_height})) {
+                if (is_active) {
+                    m_active_idx.reset();
+                } else {
+                    m_active_idx = i;
+                }
             }
             if (ImGui::IsItemHovered()) {
-                m_hovered_id = i;
+                m_hovered_idx = i;
+            }
+
+            ImGui::SameLine();
+            if (draw_delete_button()) {
+                delete_idx = i;
+            }
+            ImGui::SetItemTooltip("Delete label");
+            if (ImGui::IsItemHovered()) {
+                m_hovered_idx = i;
             }
         }
         ImGui::EndListBox();
+
+        if (delete_idx.has_value()) {
+            delete_label(*delete_idx);
+        }
     }
 
 private:
+    void delete_label(std::size_t idx)
+    {
+        const auto& range = m_ranges[idx];
+        spdlog::info("Deleting task [{:g}, {:g}] (idx = {})", range.start, range.end, idx);
+        if (m_active_idx.has_value()) {
+            if (*m_active_idx > idx) {
+                *m_active_idx -= 1;
+            }
+            m_range_selector.reset();
+        }
+        if (m_hovered_idx.has_value() && *m_hovered_idx > idx) {
+            *m_hovered_idx -= 1;
+        }
+
+        m_ranges.erase(m_ranges.begin() + static_cast<decltype(m_ranges)::difference_type>(idx));
+    }
+
     widgets::PlotRange m_temp_range = {NAN, NAN};
     std::vector<widgets::PlotRange> m_ranges;
 
-    std::optional<std::size_t> m_active_id = std::nullopt;
-    std::optional<std::size_t> m_hovered_id = std::nullopt;
+    std::optional<std::size_t> m_active_idx = std::nullopt;
+    std::optional<std::size_t> m_hovered_idx = std::nullopt;
     widgets::PlotRangeDragger m_range_dragger;
     widgets::PlotRangeSelector m_range_selector;
 };
