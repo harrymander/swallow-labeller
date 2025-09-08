@@ -49,7 +49,13 @@ public:
         m_audio_plot(m_data.audio_time, m_data.audio, m_plot_x_range, "Audio (V)", "{:g} V")
     {}
 
-    void draw() override { draw_plots(); }
+    void draw() override
+    {
+        if (ImGui::Begin("Task labelling")) {
+            draw_plots();
+        }
+        ImGui::End();
+    }
 
 private:
     void draw_plots()
@@ -132,9 +138,12 @@ public:
 
     void draw() override
     {
-        ImGui::TextWrapped(
-            ERR_ICON ICON_TEXT_SPACE "Error loading data for path %s", m_path.string().c_str()
-        );
+        if (ImGui::Begin("Task data loading error")) {
+            ImGui::TextWrapped(
+                ERR_ICON ICON_TEXT_SPACE "Error loading data for path %s", m_path.string().c_str()
+            );
+        }
+        ImGui::End();
     }
 
 private:
