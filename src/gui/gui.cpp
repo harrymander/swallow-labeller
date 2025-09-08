@@ -70,6 +70,7 @@ class Gui::Impl {
         {"ImGui metrics/debugger...", ImGui::ShowMetricsWindow},
     }};
     widgets::ColorSchemeSelector m_color_scheme_selector;
+    std::future<os::OsOpenStatus> m_open_annotations_path_future;
     bool m_show_debug_status_bar = true;
     std::optional<std::string> m_critical_error = std::nullopt;
     bool m_critical_error_modal_open = false;
@@ -160,8 +161,74 @@ class Gui::Impl {
         ImGui::End();
     }
 
+    void annotations_save_copy()
+    {
+        static const std::array<nfdfilteritem_t, 1> save_filters = {{
+            {"JSON", "json"},
+        }};
+
+        spdlog::info("Selecting annotations file save copy path...");
+        NFD::UniquePath save_path;
+        nfdresult_t res = NFD::SaveDialog(
+            save_path,
+            save_filters.data(),
+            static_cast<nfdfiltersize_t>(save_filters.size()),
+            nullptr,
+            "annotations.json"
+        );
+        if (res == NFD_OKAY) {
+            if (save_path) {
+                try {
+                    m_annotation_store.sync_to_file(std::filesystem::path(save_path.get()));
+                } catch (const std::exception& error) {
+                    std::string msg = fmt::format("Error saving annotations: {}", error.what());
+                    spdlog::critical(msg);
+                    m_critical_error = msg;
+                }
+            } else {
+                spdlog::error("NFD::SaveDialog returned okay, but path string is null");
+            }
+        } else if (res == NFD_CANCEL) {
+            spdlog::info("Annotations file save copy cancelled");
+        } else {
+            spdlog::error("Error picking annotations save path: {}", NFD::GetError());
+        }
+    }
+
+    void annotations_path_open()
+    {
+        if (m_open_annotations_path_future.valid()) {
+            if (m_open_annotations_path_future.wait_for(std::chrono::seconds(0))
+                == std::future_status::ready)
+            {
+                m_open_annotations_path_future.get();
+            }
+        }
+        bool can_open = !m_open_annotations_path_future.valid();
+        ImGui::BeginDisabled(!can_open);
+        if (ImGui::MenuItem("Open annotations file in explorer...") && can_open) {
+            m_open_annotations_path_future =
+                os::open_path_in_file_explorer(m_annotation_store.path());
+        }
+        ImGui::EndDisabled();
+    }
+
     void draw_menu_bar()
     {
+        if (ImGui::BeginMenu("File")) {
+            ImGui::BeginDisabled(!m_nfd_available);
+            if (ImGui::MenuItem("Save a copy of annotations file...") && m_nfd_available) {
+                annotations_save_copy();
+            }
+            ImGui::EndDisabled();
+            annotations_path_open();
+
+            ImGui::Separator();
+            if (ImGui::MenuItem("Quit", "Alt+F4")) {
+                stop();
+            }
+            ImGui::EndMenu();
+        }
         if (ImGui::BeginMenu("Tools")) {
             for (auto& window : m_menu_item_windows) {
                 window.draw_menu_item();
