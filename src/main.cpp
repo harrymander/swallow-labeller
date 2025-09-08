@@ -185,9 +185,6 @@ struct ProgramOptions {
                 "provided, they will be set relative to the user app data dir. If this is\n"
                 "passed, then all paths must be explicitly provided."
             );
-        parser.add_argument("--suggestions", "-s")
-            .help("path to annotations file to use as suggestions")
-            .action(regular_file_action);
 
         auto print_usage_error = [&](const std::exception& exc) {
             std::cerr << "Error: " << exc.what() << '\n';
@@ -256,7 +253,6 @@ struct ProgramOptions {
                 .tasks_file = get_data_path("--tasks", "tasks.json"),
                 .annotations_file =
                     get_data_path("--annotations", "annotations.json").make_preferred(),
-                .suggested_annotations_file = parser.present<std::string>("--suggestions"),
                 .config_file = get_config_file_path(),
             };
         } catch (const std::invalid_argument& error) {
@@ -269,7 +265,6 @@ struct ProgramOptions {
     std::filesystem::path data_dir;
     std::filesystem::path tasks_file;
     std::filesystem::path annotations_file;
-    std::optional<std::filesystem::path> suggested_annotations_file;
     std::optional<std::filesystem::path> config_file;
 };
 
@@ -341,24 +336,6 @@ std::optional<SwallowAnnotationStore> make_annotations_store(const std::filesyst
     return std::nullopt;
 }
 
-std::optional<SwallowAnnotationResultMap>
-load_suggested_annotations(const std::filesystem::path& path)
-{
-    std::ifstream stream(path);
-    if (stream.fail()) {
-        spdlog::critical("Error opening suggested annotations file");
-        return std::nullopt;
-    }
-
-    try {
-        return load_swallow_annotation_result_map_json(stream);
-    } catch (const std::runtime_error& e) {
-        spdlog::critical("Error parsing suggested annotations file: {}", e.what());
-    }
-
-    return std::nullopt;
-}
-
 int run_main(int argc, const char *argv[])
 {
     setup_console_logging();
@@ -402,15 +379,6 @@ int run_main(int argc, const char *argv[])
     } catch (const std::runtime_error& e) {
         spdlog::critical("Error writing to annotations file: {}", e.what());
         return 1;
-    }
-
-    std::optional<SwallowAnnotationResultMap> suggested_annotations;
-    if (options.suggested_annotations_file) {
-        suggested_annotations = load_suggested_annotations(*options.suggested_annotations_file);
-        if (!suggested_annotations.has_value()) {
-            return 1;
-        }
-        spdlog::info("Loaded {} suggested annotation(s)", suggested_annotations->size());
     }
 
     return platform::run(
