@@ -6,6 +6,7 @@
 #include "gui/icons.h"
 #include "gui/task-list.hpp"
 #include "gui/task-view.hpp"
+#include "gui/widgets/color-scheme-selector.hpp"
 #include "gui/widgets/util.hpp"
 #include "gui/windows.hpp"
 #include "models/annotation.hpp"
@@ -68,6 +69,7 @@ class Gui::Impl {
         {"ImPlot demo...", ImPlot::ShowDemoWindow},
         {"ImGui metrics/debugger...", ImGui::ShowMetricsWindow},
     }};
+    widgets::ColorSchemeSelector m_color_scheme_selector;
     bool m_show_debug_status_bar = true;
     std::optional<std::string> m_critical_error = std::nullopt;
     bool m_critical_error_modal_open = false;
@@ -165,6 +167,10 @@ class Gui::Impl {
                 window.draw_menu_item();
             }
             ImGui::MenuItem("Show debug info", nullptr, &m_show_debug_status_bar);
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("View")) {
+            m_color_scheme_selector.draw();
             ImGui::EndMenu();
         }
     }
