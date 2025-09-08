@@ -7,14 +7,15 @@
 #include "gui/widgets/plot-range-selector.hpp"
 #include "gui/widgets/plot-range.hpp"
 #include "gui/widgets/util.hpp"
-#include "imgui.h"
-#include "implot.h"
-#include "magic_enum.hpp"
 #include "models/data.hpp"
 #include "models/task-info.hpp"
 #include "models/time-range.hpp"
 
 #include <fmt/std.h>
+#include <imgui.h>
+#include <imgui_stdlib.h>
+#include <implot.h>
+#include <magic_enum.hpp>
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
@@ -393,6 +394,9 @@ public:
 private:
     void draw_labels_editor()
     {
+        ImGui::SeparatorText("Note");
+        draw_note_input();
+
         ImGui::SeparatorText("Swallow apnea");
         if (m_apnea_annotator.annotations().empty()) {
             ImGui::TextWrapped(
@@ -417,6 +421,19 @@ private:
             );
         } else {
             m_ear_clicks_annotator.draw_labels_list_box("##ear_clicks_labels_listbox");
+        }
+    }
+
+    void draw_note_input()
+    {
+        constexpr float HeightNumLines = 3;
+
+        const float height = (HeightNumLines - 1) * ImGui::GetTextLineHeightWithSpacing()
+            + ImGui::GetTextLineHeight();
+
+        ImGui::InputTextMultiline("##annotation_note_input", &m_note, {-1, height});
+        if (ImGui::SmallButton("Clear##clear_note_text")) {
+            m_note.clear();
         }
     }
 
@@ -505,6 +522,7 @@ private:
     // TODO: pass in existing ear click labels if there is a saved annotation
     RangesAnnotator<EarClickAnnotation> m_ear_clicks_annotator;
     RangesAnnotator<ApneaAnnotation> m_apnea_annotator;
+    std::string m_note;
 
     models::SwallowTaskData m_data;
     models::SwallowTaskInfo m_task_info;
