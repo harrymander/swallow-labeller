@@ -280,31 +280,33 @@ public:
 
     void set_range(widgets::PlotRange range) { m_range = range; }
 
-    RgbColor color() const { return pattern_label_color(m_pattern); }
+    RgbColor color() const { return label_color(m_choice); }
 
     void draw_pattern_selector()
     {
-        using enum models::SrcPattern;
-        using Option = widgets::RadioButtonField<models::SrcPattern>;
+        using enum LabelChoice;
+        using Option = widgets::RadioButtonField<LabelChoice>;
         constexpr std::array Options = {
             Option("ex-ex [1]", ExEx, ImGuiKey_1),
             Option("ex-in [2]", ExIn, ImGuiKey_2),
             Option("in-ex [3]", InEx, ImGuiKey_3),
             Option("in-in [4]", InIn, ImGuiKey_4),
+            Option("non-resp. flow [5]", Nrf, ImGuiKey_5),
         };
         for (const auto& opt : Options) {
-            bool selected = opt.value == m_pattern;
+            LabelChoice choice = opt.value;
+            bool selected = choice == m_choice;
             const bool radio_clicked = widgets::colored_radio_button(
-                opt.label, selected, pattern_label_color(opt.value).with_alpha(0xFF)
+                opt.label, selected, label_color(choice).with_alpha(0xFF)
             );
             if (radio_clicked || widgets::global_shortcut(opt.key)) {
                 if (!selected) {
-                    m_pattern = opt.value;
+                    m_choice = choice;
                     selected = true;
                     spdlog::debug("Apnea SRC selection changed to {}", opt.label);
                 }
             }
-            if (selected) {
+            if (selected && choice != Nrf) {
                 ImGui::SameLine();
                 if (ImGui::Checkbox("Ambiguous [a]", &m_is_ambiguous)
                     || shortcut_toggle(ImGuiKey_A, m_is_ambiguous))
@@ -319,8 +321,8 @@ public:
     {
         return fmt::format(
             "{}{}, [{:g}, {:g}] Δ={:g} s",
-            magic_enum::enum_name(m_pattern),
-            m_is_ambiguous ? "?" : "",
+            magic_enum::enum_name(m_choice),
+            m_choice != LabelChoice::Nrf && m_is_ambiguous ? "?" : "",
             m_range.start,
             m_range.end,
             m_range.range()
@@ -328,9 +330,17 @@ public:
     }
 
 private:
-    static RgbColor pattern_label_color(models::SrcPattern pattern)
+    enum class LabelChoice {
+        ExEx,
+        ExIn,
+        InEx,
+        InIn,
+        Nrf,
+    };
+
+    static RgbColor label_color(LabelChoice pattern)
     {
-        using enum models::SrcPattern;
+        using enum LabelChoice;
         switch (pattern) {
         case ExEx:
             return {0xFC, 0xEE, 0x5A};
@@ -339,16 +349,19 @@ private:
         case InEx:
             return {0x5A, 0xFC, 0xBE};
         case InIn:
+            return {0x5A, 0xB0, 0xFC};
+        case Nrf:
             break;
         default:
-            spdlog::error("apnea_label_color: invalid SwallowApneaAnnotationStatus!");
+            spdlog::error("apnea_label_color: invalid SrcPattern!");
             break;
         }
-        return {0x5A, 0xB0, 0xFC};
+
+        return {0x8D, 0x5A, 0xFC};
     }
 
     widgets::PlotRange m_range;
-    models::SrcPattern m_pattern = models::SrcPattern::ExEx;
+    LabelChoice m_choice = LabelChoice::ExEx;
     bool m_is_ambiguous = false;
 };
 
