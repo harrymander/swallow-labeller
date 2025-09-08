@@ -13,6 +13,7 @@
 #include "models/data.hpp"
 #include "models/task-info.hpp"
 #include "models/time-range.hpp"
+#include "util/strutil.hpp"
 #include "util/variant-visitor.hpp"
 
 #include <fmt/std.h>
@@ -26,17 +27,433 @@
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <execution>
 #include <filesystem>
+#include <iterator>
+#include <list>
 #include <memory>
 #include <optional>
 #include <ranges>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
 namespace recap::labeller::gui {
 
 namespace {
+
+template <std::ranges::range R, typename Op> auto transform_to_vector(const R& range, const Op& op)
+{
+    using T = std::decay_t<std::invoke_result_t<Op, std::ranges::range_value_t<R>>>;
+    std::vector<T> result;
+    if constexpr (std::ranges::sized_range<R>) {
+        result.reserve(std::ranges::distance(range));
+    }
+    std::transform(
+        std::ranges::begin(range), std::ranges::end(range), std::back_inserter(result), op
+    );
+    return result;
+}
+
+class FlowAnnotation {
+public:
+    enum class Choice : unsigned char {
+        ExEx,
+        ExIn,
+        InEx,
+        InIn,
+        Nrf,
+    };
+
+    explicit FlowAnnotation(const models::TimeRange range) :
+        m_plot_range(range.start, range.end), m_choice(Choice::Nrf), m_is_ambiguous(false)
+    {}
+
+    explicit FlowAnnotation(const models::SwallowApneaAnnotation& apnea_annotation) :
+        m_plot_range(apnea_annotation.time.start, apnea_annotation.time.end),
+        m_choice(src_pattern_to_choice(apnea_annotation.pattern)),
+        m_is_ambiguous(apnea_annotation.is_ambiguous)
+    {}
+
+    const widgets::PlotRange& range() const { return m_plot_range; }
+
+    std::variant<models::SwallowApneaAnnotation, models::TimeRange> to_annotation_model() const
+    {
+        if (m_choice == Choice::Nrf) {
+            return models::TimeRange{m_plot_range.start, m_plot_range.end};
+        }
+
+        return models::SwallowApneaAnnotation{
+            .is_ambiguous = m_is_ambiguous,
+            .pattern = choice_to_src_pattern(m_choice),
+            .time = models::TimeRange{m_plot_range.start, m_plot_range.end},
+        };
+    }
+
+private:
+    static models::SrcPattern choice_to_src_pattern(Choice choice)
+    {
+        auto pattern = magic_enum::enum_cast<models::SrcPattern>(magic_enum::enum_name(choice));
+        return pattern.value();
+    }
+
+    static Choice src_pattern_to_choice(models::SrcPattern pattern)
+    {
+        auto choice = magic_enum::enum_cast<Choice>(magic_enum::enum_name(pattern));
+        return choice.value();
+    }
+
+    widgets::PlotRange m_plot_range;
+    Choice m_choice;
+    bool m_is_ambiguous;
+};
+
+// Adapter for models::SwallowAnnotation
+struct Annotation {
+    explicit Annotation(const models::SwallowAnnotation& annotation) :
+        note(annotation.note.value_or("")),
+        ear_clicks(transform_to_vector(annotation.ear_clicks, [](const auto& click) {
+            return widgets::PlotRange{click.start, click.end};
+        }))
+    {
+        std::ranges::transform(
+            annotation.swallow_apneas, std::back_inserter(flow_annotations), [](const auto& a) {
+                return FlowAnnotation(a);
+            }
+        );
+        std::ranges::transform(
+            annotation.non_respiratory_flow_events,
+            std::back_inserter(flow_annotations),
+            [](const auto& a) { return FlowAnnotation(a); }
+        );
+        std::ranges::sort(flow_annotations, [](const auto& a, const auto& b) {
+            const auto& range_a = a.range();
+            const auto& range_b = b.range();
+            return std::tie(range_a.start, range_a.end) < std::tie(range_b.start, range_b.end);
+        });
+    }
+
+    models::SwallowAnnotation to_annotation_model() const
+    {
+        auto trimmed_note = strutil::trimmed(note);
+        models::SwallowAnnotation annotation = {
+            .swallow_apneas = {},
+            .ear_clicks = transform_to_vector(
+                ear_clicks,
+                [](const auto& click) { return models::TimeRange{click.start, click.end}; }
+            ),
+            .non_respiratory_flow_events = {},
+            .note =
+                trimmed_note.empty() ? std::nullopt : std::make_optional<std::string>(trimmed_note),
+        };
+
+        for (const auto& flow_annotation : flow_annotations) {
+            VariantVisitor{
+                [&](const models::SwallowApneaAnnotation& apnea) {
+                    annotation.swallow_apneas.push_back(apnea);
+                },
+                [&](const models::TimeRange& nrf) {
+                    annotation.non_respiratory_flow_events.push_back(nrf);
+                },
+            }(flow_annotation.to_annotation_model());
+        }
+
+        std::ranges::sort(annotation.ear_clicks);
+        std::ranges::sort(annotation.non_respiratory_flow_events);
+        std::ranges::sort(annotation.swallow_apneas, [](const auto& a, const auto& b) {
+            return a.time < b.time;
+        });
+
+        return annotation;
+    }
+
+    std::string note;
+    std::vector<widgets::PlotRange> ear_clicks;
+    std::vector<FlowAnnotation> flow_annotations;
+};
+
+class AnnotationCommand {
+public:
+    virtual ~AnnotationCommand() = default;
+    virtual void execute(Annotation& annotation) = 0;
+    virtual void undo(Annotation& annotation) = 0;
+};
+
+template <typename T, std::vector<T> Annotation::*Member>
+class AnnotationEditCommand : public AnnotationCommand {
+public:
+    AnnotationEditCommand(std::size_t idx, const Annotation& annotation) :
+        m_idx_to_edit(idx), m_new_value((annotation.*Member)[idx])
+    {}
+
+    void execute(Annotation& annotation) override
+    {
+        auto& item = (annotation.*Member)[m_idx_to_edit];
+        m_old_value = item;
+        item = m_new_value;
+    }
+
+    void undo(Annotation& annotation) override
+    {
+        (annotation.*Member)[m_idx_to_edit] = *m_old_value;
+    }
+
+private:
+    std::optional<T> m_old_value = std::nullopt;
+    std::size_t m_idx_to_edit;
+    T m_new_value;
+};
+
+using EarClickAnnotationEditCommand =
+    AnnotationEditCommand<widgets::PlotRange, &Annotation::ear_clicks>;
+using FlowAnnotationEditCommand =
+    AnnotationEditCommand<FlowAnnotation, &Annotation::flow_annotations>;
+
+template <typename T, std::vector<T> Annotation::*Member>
+class AddAnnotationCommand : public AnnotationCommand {
+public:
+    explicit AddAnnotationCommand(const T& value) : m_value(value) {}
+
+    void execute(Annotation& annotation) override
+    {
+        auto& vec = annotation.*Member;
+        vec.push_back(m_value);
+    }
+
+    void undo(Annotation& annotation) override
+    {
+        auto& vec = annotation.*Member;
+        vec.pop_back();
+    }
+
+private:
+    T m_value;
+};
+
+using EarClickAnnotationAddCommand =
+    AddAnnotationCommand<widgets::PlotRange, &Annotation::ear_clicks>;
+using FlowAnnotationAddCommand =
+    AddAnnotationCommand<FlowAnnotation, &Annotation::flow_annotations>;
+
+class Annotator {
+public:
+    explicit Annotator(Annotation annotation) :
+        m_next_command_it(m_executed_commands.end()), m_annotation(std::move(annotation))
+    {}
+
+    const Annotation& annotation() const { return m_annotation; }
+
+    void execute_command(std::unique_ptr<AnnotationCommand>&& command)
+    {
+        // Clear any undone commands
+        m_executed_commands.erase(m_next_command_it, m_executed_commands.end());
+
+        command->execute(m_annotation);
+        m_executed_commands.push_back(std::move(command));
+        m_next_command_it = m_executed_commands.end();
+    }
+
+    bool can_undo_last_command() const { return m_next_command_it != m_executed_commands.begin(); }
+
+    void undo_last_command()
+    {
+        if (can_undo_last_command()) {
+            --m_next_command_it;
+            (*m_next_command_it)->undo(m_annotation);
+        }
+    }
+
+    bool can_redo_last_undone_command() const
+    {
+        return m_next_command_it != m_executed_commands.end();
+    }
+
+    void redo_last_undone_command()
+    {
+        if (can_redo_last_undone_command()) {
+            (*m_next_command_it)->execute(m_annotation);
+            ++m_next_command_it;
+        }
+    }
+
+private:
+    using CommandList = std::list<std::unique_ptr<AnnotationCommand>>;
+
+    CommandList m_executed_commands;
+    CommandList::iterator m_next_command_it;
+    Annotation m_annotation;
+};
+
+class PlotRangesAnnotator {
+public:
+    static constexpr double MinSelectionDuration = 0.001;
+
+    template <std::ranges::range R>
+    explicit PlotRangesAnnotator(const R& r) : m_ranges(r.begin(), r.end())
+    {}
+
+    // Call in the BeginPlot/EndPlot block of the plot(s) where the annotations can be edited.
+    // Returns
+    void edit(const char *id)
+    {
+        widgets::ScopedImID id_scope(id);
+        auto new_range = m_range_selector.update(
+            "##new_range_selector",
+            0,
+            ImGuiMouseButton_Left,
+            ImGuiKey_LeftCtrl,
+            MinSelectionDuration
+        );
+        if (new_range) {
+            spdlog::info(
+                "{}: new label created: [{:g}, {:g}]", id, new_range->start, new_range->end
+            );
+            m_ranges.emplace_back(*new_range);
+            m_active_idx = m_ranges.size() - 1;
+        }
+
+        if (m_active_idx.has_value()) {
+            auto& range = m_ranges[*m_active_idx];
+            if (!m_range_dragger.is_editing()) {
+                m_temp_range = range;
+            }
+
+            const bool updated = m_range_dragger.update(
+                "##active_range_dragger", m_temp_range, MinSelectionDuration
+            );
+            if (updated) {
+                spdlog::info(
+                    "{}: label {} updated to [{:g}, {:g}]",
+                    id,
+                    *m_active_idx,
+                    m_temp_range.start,
+                    m_temp_range.end
+                );
+                range = m_temp_range;
+            }
+        }
+    }
+
+    struct PlotRangeInfo {
+        std::size_t idx;
+        const widgets::PlotRange& range;
+        bool is_hovered;
+        bool is_active;
+    };
+
+    template <typename Function>
+        requires std::invocable<Function, const PlotRangeInfo&>
+    void for_each_range(const Function& function) const
+    {
+        for (std::size_t i = 0; i < m_ranges.size(); i++) {
+            bool is_active = m_active_idx == i;
+            const widgets::PlotRange& range =
+                is_active && m_range_dragger.is_editing() ? m_temp_range : m_ranges[i];
+            function({
+                .idx = i,
+                .range = range,
+                .is_hovered = m_hovered_idx == i,
+                .is_active = is_active,
+            });
+        }
+    }
+
+    template <typename Function>
+        requires std::convertible_to<
+            std::invoke_result_t<Function, std::size_t, const widgets::PlotRange&>,
+            std::string>
+    std::optional<std::size_t> draw_list_box(const char *id, const Function& function)
+    {
+        widgets::ScopedImID id_scope(id);
+
+        static const char *remove_button_str = DELETE_ICON;
+        const float line_height = ImGui::GetTextLineHeightWithSpacing();
+        const float list_height = 4 * line_height;
+        m_hovered_idx.reset();
+
+        if (!ImGui::BeginListBox("##ear_clicks_labels_listbox", {-1, list_height})) {
+            return std::nullopt;
+        }
+
+        const float x_padding = 2 * ImGui::GetStyle().ItemSpacing.x;
+        const float label_width = ImGui::GetContentRegionAvail().x
+            - (ImGui::CalcTextSize(remove_button_str).x + x_padding);
+
+        std::optional<std::size_t> delete_idx = std::nullopt;
+        for (std::size_t i = 0; i < m_ranges.size(); i++) {
+            widgets::ScopedImID idx_id_scope(static_cast<int>(i));
+            std::string description = function(i, m_ranges[i]);
+            const bool is_active = m_active_idx == i;
+            if (ImGui::Selectable(description.c_str(), is_active, 0, {label_width, line_height})) {
+                if (is_active) {
+                    m_active_idx.reset();
+                } else {
+                    m_active_idx = i;
+                }
+            }
+            if (ImGui::IsItemHovered()) {
+                m_hovered_idx = i;
+            }
+
+            ImGui::SameLine();
+            if (draw_delete_button()) {
+                delete_idx = i;
+            }
+            ImGui::SetItemTooltip("Delete label");
+            if (ImGui::IsItemHovered()) {
+                m_hovered_idx = i;
+            }
+        }
+
+        return delete_idx;
+    }
+
+    template <typename Function>
+        requires std::invocable<Function, widgets::PlotRange>
+    void for_new_range(const Function& function) const
+    {
+        const auto *selecting_range = m_range_selector.range();
+        if (selecting_range) {
+            function(*selecting_range);
+        }
+    }
+
+private:
+    static bool draw_delete_button()
+    {
+        constexpr float ButtonCornerRadius = 5;
+        widgets::ScopedImStyle style(ImGuiStyleVar_FrameRounding, ButtonCornerRadius);
+        return widgets::ButtonRed(DELETE_ICON);
+    }
+
+    widgets::PlotRange m_temp_range = {NAN, NAN};
+    std::optional<std::size_t> m_active_idx = std::nullopt;
+    std::optional<std::size_t> m_hovered_idx = std::nullopt;
+    widgets::PlotRangeDragger m_range_dragger;
+    widgets::PlotRangeSelector m_range_selector;
+
+    std::vector<widgets::PlotRange> m_ranges;
+};
+
+class FlowAnnotator {
+private:
+    explicit FlowAnnotator(Annotator& annotator) :
+        m_annotator(annotator),
+        m_ranges_annotator(
+            std::views::transform(
+                m_annotator.annotation().flow_annotations,
+                [](const auto& annotation) { return annotation.range(); }
+            )
+        )
+    {}
+
+    void edit() { m_ranges_annotator.edit("##flow_plot_label_editing"); }
+
+private:
+    Annotator& m_annotator;
+    PlotRangesAnnotator m_ranges_annotator;
+};
 
 struct RgbColor {
     uint8_t red;
