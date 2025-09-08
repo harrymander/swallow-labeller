@@ -349,10 +349,9 @@ int run_main(int argc, const char *argv[])
     }
     spdlog::debug("Command line arguments:\n  {}", fmt::join(argv, argv + argc, "\n  "));
 
-    app::AppConfig config;
     if (options.config_file) {
         try {
-            config = app::load_config(*options.config_file);
+            app::load_config(*options.config_file);
         } catch (const std::invalid_argument& err) {
             spdlog::critical(
                 "Error parsing config file from {}: {}", *options.config_file, err.what()
@@ -363,7 +362,7 @@ int run_main(int argc, const char *argv[])
     } else {
         spdlog::info("No config file, using default settings:");
     }
-    app::log_config(config, spdlog::level::info);
+    app::log_config(app::get_global_app_config(), spdlog::level::info);
 
     auto labelling_tasks = load_labelling_tasks(options.tasks_file);
     if (!labelling_tasks.has_value()) {

@@ -11,6 +11,8 @@ namespace recap::labeller::app {
 
 namespace {
 
+AppConfig GlobalAppConfig{};
+
 template <typename T>
 void get_json_field(const nlohmann::json& json, std::string_view key, T& value)
 {
@@ -72,11 +74,16 @@ void validate_config(const AppConfig& config)
 
 }; // namespace
 
-AppConfig load_config(const std::filesystem::path& path)
+void load_config(const std::filesystem::path& path)
 {
     auto config = load_raw_config(path);
     validate_config(config);
-    return config;
+    GlobalAppConfig = config;
+}
+
+const AppConfig& get_global_app_config()
+{
+    return GlobalAppConfig;
 }
 
 }; // namespace recap::labeller::app

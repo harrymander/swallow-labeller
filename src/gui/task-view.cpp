@@ -1,5 +1,6 @@
 #include "gui/task-view.hpp"
 
+#include "app/config.hpp"
 #include "gui/icons.h"
 #include "gui/plot.hpp"
 #include "gui/widgets/enum-radio-button.hpp"
@@ -269,7 +270,6 @@ private:
 class ApneaAnnotation {
 public:
     static constexpr RgbColor DefaultAnnotationColor = {128, 128, 128};
-    static constexpr double MaxSnrfTime = 0.246; // TODO: get this from config
 
     explicit ApneaAnnotation(widgets::PlotRange range) : m_range(range) {}
 
@@ -345,7 +345,8 @@ public:
 
     const char *error_description() const
     {
-        if (m_choice == LabelChoice::Nrf && m_range.range() > MaxSnrfTime) {
+        const double max_nrf_time = app::get_global_app_config().max_snrf_time;
+        if (m_choice == LabelChoice::Nrf && m_range.range() > max_nrf_time) {
             return "Non-resp. flow label too long";
         }
         return nullptr;

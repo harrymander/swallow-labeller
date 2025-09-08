@@ -2,6 +2,7 @@
 #define RECAP_LABELLER_GUI_HPP
 
 #include "app/annotation-store.hpp"
+#include "app/config.hpp"
 #include "models/task-info.hpp"
 
 #include <memory>

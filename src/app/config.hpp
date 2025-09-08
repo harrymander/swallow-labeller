@@ -25,7 +25,9 @@ inline void log_config(const AppConfig& c, spdlog::level::level_enum level)
 }
 
 // Throws std::invalid_argument on error
-AppConfig load_config(const std::filesystem::path& path);
+void load_config(const std::filesystem::path& path);
+
+const AppConfig& get_global_app_config();
 
 }; // namespace recap::labeller::app
 
