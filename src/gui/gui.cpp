@@ -16,17 +16,56 @@
 #include <nfd.hpp>
 #include <spdlog/spdlog.h>
 
+#include <array>
 #include <filesystem>
 #include <memory>
 #include <string>
 
 namespace recap::labeller::gui {
 
+namespace {
+
+class WindowMenuItem {
+public:
+    using DrawFunction = void (*)(bool *);
+
+    WindowMenuItem(const char *name, DrawFunction draw_func, bool active = false) :
+        m_name(name), m_draw_func(draw_func), m_active(active)
+    {}
+
+    void draw_window()
+    {
+        if (m_active) {
+            m_draw_func(&m_active);
+        }
+    }
+
+    void draw_menu_item()
+    {
+        if (ImGui::MenuItem(m_name, nullptr, m_active)) {
+            m_active = !m_active;
+        }
+    }
+
+private:
+    const char *m_name;
+    DrawFunction m_draw_func;
+    bool m_active;
+};
+
+}; // namespace
+
 class Gui::Impl {
     bool m_nfd_available = false;
     bool m_ready_to_stop = false;
     std::string m_ini_path;
     app::TaskLoader m_task_loader;
+    std::array<WindowMenuItem, 3> m_menu_item_windows = {{
+        {"ImGui demo...", ImGui::ShowDemoWindow},
+        {"ImPlot demo...", ImPlot::ShowDemoWindow},
+        {"ImGui metrics/debugger...", ImGui::ShowMetricsWindow},
+    }};
+    bool m_show_debug_status_bar = true;
 
     TaskList m_task_list;
     std::filesystem::path m_data_dir;
@@ -112,6 +151,17 @@ class Gui::Impl {
         ImGui::End();
     }
 
+    void draw_menu_bar()
+    {
+        if (ImGui::BeginMenu("Tools")) {
+            for (auto& window : m_menu_item_windows) {
+                window.draw_menu_item();
+            }
+            ImGui::MenuItem("Show debug info", nullptr, &m_show_debug_status_bar);
+            ImGui::EndMenu();
+        }
+    }
+
 public:
     Impl(
         const std::vector<models::SwallowTaskInfo>& tasks,
@@ -159,7 +209,15 @@ public:
 
     void draw()
     {
-        draw_status_bar();
+        if (ImGui::BeginMainMenuBar()) {
+            draw_menu_bar();
+            ImGui::EndMainMenuBar();
+        }
+
+        if (m_show_debug_status_bar) {
+            draw_status_bar();
+        }
+
         const models::SwallowTaskInfo *new_task = m_task_list.draw("Labelling tasks");
         if (new_task) {
             m_task_view = load_task_view(m_task_loader, m_data_dir, *new_task);
@@ -170,6 +228,10 @@ public:
                 m_task_view->draw();
             }
             ImGui::End();
+        }
+
+        for (auto& window : m_menu_item_windows) {
+            window.draw_window();
         }
     }
 
