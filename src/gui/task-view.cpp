@@ -110,6 +110,19 @@ struct FlowAnnotation {
         return choice.value();
     }
 
+    const char *error_description() const
+    {
+        if (choice == Choice::Nrf) {
+            const double duration = plot_range.end - plot_range.start;
+            if (duration > app::get_global_app_config().max_snrf_time) {
+                return "Non-resp. flow label too long";
+            }
+        }
+        return nullptr;
+    }
+
+    bool valid() const { return error_description() == nullptr; }
+
     // TODO
     widgets::PlotRange plot_range = {NAN, NAN};
     Choice choice = Choice::ExEx;
@@ -175,6 +188,11 @@ struct Annotation {
         });
 
         return annotation;
+    }
+
+    bool valid() const
+    {
+        return std::ranges::all_of(flow_annotations, [](const auto& a) { return a.valid(); });
     }
 
     std::string note;
@@ -546,6 +564,14 @@ private:
         }
         ImGui::EndListBox();
 
+        if (m_active_idx.has_value()) {
+            const auto& annotation = flow_annotations()[*m_active_idx];
+            const char *err = annotation.error_description();
+            if (err) {
+                ImGui::TextWrapped(ERR_ICON ICON_TEXT_SPACE "%s", err);
+            }
+        }
+
         if (delete_idx.has_value()) {
             if (m_active_idx.has_value() && *m_active_idx == *delete_idx) {
                 m_active_idx.reset();
@@ -558,7 +584,8 @@ private:
     {
         const auto& range = annotation.plot_range;
         return fmt::format(
-            "{}{}, [{:g}, {:g}], Δ = {:g}",
+            "{}{}{}, [{:g}, {:g}], Δ = {:g}",
+            annotation.valid() ? "" : ERR_ICON ICON_TEXT_SPACE,
             magic_enum::enum_name(annotation.choice),
             annotation.choice != FlowAnnotation::Choice::Nrf && annotation.is_ambiguous ? "?" : "",
             range.start,
@@ -674,7 +701,10 @@ private:
         ImGui::EndDisabled();
     }
 
-    bool can_save() const { return m_annotator.modified_since_last_save(); }
+    bool can_save() const
+    {
+        return m_annotator.modified_since_last_save() && m_annotator.annotation().valid();
+    }
 
     void draw_save_button()
     {
