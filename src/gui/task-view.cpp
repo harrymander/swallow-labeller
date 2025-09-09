@@ -796,7 +796,7 @@ public:
         m_plot_x_range(m_data.flow_time.front(), m_data.flow_time.back()),
         m_flow_plot(m_data.flow_time, m_data.flow, m_plot_x_range, "Flow (L/min)", "{:g} L/min"),
         m_audio_plot(m_data.audio_time, m_data.audio, m_plot_x_range, "Audio (V)", "{:g} V"),
-        m_save_annotation(std::move(save_annotation_callback)),
+        m_save_annotation_callback(std::move(save_annotation_callback)),
         m_annotator(existing_annotation ? Annotation(*existing_annotation) : Annotation{})
     {}
 
@@ -814,6 +814,17 @@ public:
     }
 
     bool has_unsaved_changes() const override { return m_annotator.modified_since_last_save(); }
+
+    bool can_save_annotation() const override { return m_annotator.annotation().valid(); }
+
+    void save_annotation() const override
+    {
+        if (can_save_annotation()) {
+            m_save_annotation_callback(m_annotator.annotation().to_annotation_model());
+        } else {
+            spdlog::error("Cannot save annotation");
+        }
+    }
 
 private:
     void draw_labels_editor()
@@ -846,22 +857,17 @@ private:
         ImGui::EndDisabled();
     }
 
-    bool can_save() const
-    {
-        return m_annotator.modified_since_last_save() && m_annotator.annotation().valid();
-    }
-
     void draw_save_button()
     {
         const float height = ImGui::GetTextLineHeightWithSpacing() * 2;
         constexpr ImGuiKeyChord Shortcut = ImGuiMod_Ctrl | ImGuiKey_S;
-        const bool disabled = !can_save();
-        ImGui::BeginDisabled(disabled);
+        const bool can_save = m_annotator.modified_since_last_save() && can_save_annotation();
+        ImGui::BeginDisabled(!can_save);
         if (ImGui::Button("Submit [Ctrl+S]", {-1, height})
-            || (!disabled && widgets::global_shortcut(Shortcut)))
+            || (can_save && widgets::global_shortcut(Shortcut)))
         {
             spdlog::info("Saving annotation");
-            m_annotator.save_annotation(m_save_annotation);
+            m_annotator.save_annotation(m_save_annotation_callback);
         }
 
         ImGui::EndDisabled();
@@ -1005,7 +1011,7 @@ private:
     widgets::PlotRange m_plot_x_range;
     Plot m_flow_plot;
     Plot m_audio_plot;
-    SaveAnnotationCallback m_save_annotation;
+    SaveAnnotationCallback m_save_annotation_callback;
     Annotator m_annotator;
     FlowAnnotator m_flow_annotator{m_annotator};
     AudioAnnotator m_audio_annotator{m_annotator};

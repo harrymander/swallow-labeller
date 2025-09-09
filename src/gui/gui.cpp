@@ -106,12 +106,13 @@ public:
     using Continue = std::function<void()>;
     using Cancel = std::function<void()>;
 
-    void set(Continue continue_func, Cancel cancel_func)
+    void set(Continue continue_func, Cancel cancel_func, const TaskView *task_view)
     {
         if (m_actions.has_value()) {
             // TODO
             spdlog::warn("Unsaved task handler already has action, ignoring");
         } else {
+            m_task_view = task_view;
             m_actions.emplace(std::move(continue_func), std::move(cancel_func));
         }
     }
@@ -121,36 +122,72 @@ public:
         if (!m_actions.has_value()) {
             return;
         }
-
-        // TODO: make this look nicer, allow saving and continuing, different messages depending on
-        // the task etc.
-        bool status = m_modal.draw("Unsaved task", ImGuiWindowFlags_AlwaysAutoResize, [this]() {
-            ImGui::Text("There are unsaved annotations.");
-            ImGui::Separator();
-            widgets::RedButtonColorScope button_color_scope;
-            if (ImGui::Button(EXIT_ICON ICON_TEXT_SPACE "Cancel")) {
-                m_actions->cancel_func();
-                return false;
-            }
-            ImGui::SameLine();
-            if (ImGui::Button(ICON_TEXT_SPACE "Continue without saving")) {
-                m_actions->continue_func();
-                m_actions = std::nullopt;
-            }
-            return true;
-        });
+        bool status = m_modal.draw(
+            ERR_ICON ICON_TEXT_SPACE "Unsaved annotation",
+            ImGuiWindowFlags_AlwaysAutoResize,
+            [this]() { return draw_modal_contents(); }
+        );
         if (!status) {
             m_actions = std::nullopt;
         }
     }
 
 private:
+    bool draw_modal_contents()
+    {
+        static const char *const dont_save_str = "Discard changes"; // Longest string
+        const ImVec2 size = {
+            ImGui::CalcTextSize(dont_save_str).x + 2 * ImGui::GetStyle().ItemInnerSpacing.x,
+            0,
+        };
+
+        ImGui::Text("There are unsaved annotation changes!");
+        if (m_task_view && !m_task_view->can_save_annotation()) {
+            ImGui::TextWrapped(
+                "Annotation is in an invalid state. "
+                "To save, click \"Cancel\", fix errors, and save"
+            );
+        }
+
+        ImGui::Spacing();
+
+        {
+            widgets::RedButtonColorScope red_button;
+            if (ImGui::Button(dont_save_str, size)) {
+                spdlog::info("Discarding unsaved changes");
+                m_actions->continue_func();
+                return false;
+            }
+        }
+
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", size) || widgets::global_shortcut(ImGuiKey_Escape)) {
+            spdlog::info("Cancelling task close");
+            m_actions->cancel_func();
+            return false;
+        }
+
+        if (m_task_view && m_task_view->can_save_annotation()) {
+            ImGui::SameLine();
+            if (ImGui::Button("Save changes", size)) {
+                spdlog::info("Saving task changes");
+                m_task_view->save_annotation();
+                m_actions->continue_func();
+                return false;
+            }
+        }
+        ImGui::SetItemDefaultFocus();
+
+        return true;
+    }
+
     struct Actions {
         Continue continue_func;
         Cancel cancel_func;
     };
 
     std::optional<Actions> m_actions = std::nullopt;
+    const TaskView *m_task_view = nullptr;
     ModalWindow m_modal;
 };
 
@@ -526,18 +563,13 @@ public:
                 spdlog::warn("Task {} has unsaved changes", m_active_task_idx);
                 m_unsaved_task_handler.set(
                     [this, old_idx = m_active_task_idx, new_idx = new_task_idx]() {
-                        spdlog::info(
-                            "Switching task {} -> {}, discarding changes", old_idx, new_idx
-                        );
+                        spdlog::info("Switching task {} -> {}", old_idx, new_idx);
                         set_active_task(new_idx);
                     },
                     [old_idx = m_active_task_idx, new_idx = new_task_idx]() {
-                        spdlog::info(
-                            "Cancelling task switch ({} -/-> {}) due to unsaved changes",
-                            old_idx,
-                            new_idx
-                        );
-                    }
+                        spdlog::info("Cancelling task switch ({} -/-> {})", old_idx, new_idx);
+                    },
+                    m_task_view.get()
                 );
             } else {
                 set_active_task(new_task_idx);
@@ -564,7 +596,8 @@ public:
                     spdlog::info("Discarding unsaved changes and exiting");
                     m_ready_to_stop = true;
                 },
-                []() { spdlog::info("Cancelling exit due to unsaved changes"); }
+                []() { spdlog::info("Cancelling exit due to unsaved changes"); },
+                m_task_view.get()
             );
         } else {
             m_ready_to_stop = true;
