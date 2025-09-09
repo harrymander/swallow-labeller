@@ -4,6 +4,7 @@
 #include "app/task-loader.hpp"
 #include "gui/font.hpp"
 #include "gui/icons.h"
+#include "gui/options.hpp"
 #include "gui/task-list.hpp"
 #include "gui/task-view.hpp"
 #include "gui/widgets/color-scheme-selector.hpp"
@@ -71,7 +72,7 @@ class Gui::Impl {
     }};
     widgets::ColorSchemeSelector m_color_scheme_selector;
     std::future<os::OsOpenStatus> m_open_annotations_path_future;
-    bool m_show_debug_status_bar = true;
+    bool m_show_debug_status_bar = DefaultShowDebugInfo;
     std::optional<std::string> m_critical_error = std::nullopt;
     bool m_critical_error_modal_open = false;
     bool m_first_draw = true;

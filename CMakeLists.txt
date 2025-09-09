@@ -84,6 +84,14 @@ imgui_compressed_c_array(
 set(OPTIONS_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/gen/include)
 configure_file(src/options.h.in ${OPTIONS_INCLUDE_DIR}/options.h)
 
+option(
+    DEFAULT_SHOW_DEBUG_INFO
+    "Whether to show debug info by default in GUI"
+    OFF
+)
+
+configure_file(src/gui/options.hpp.in ${OPTIONS_INCLUDE_DIR}/gui/options.hpp)
+
 add_executable(recap-labeller
     src/app/annotation-store.cpp
     src/app/config.cpp
