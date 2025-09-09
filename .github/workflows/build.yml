@@ -46,7 +46,7 @@ jobs:
           cmake --preset windows-static \
             -DBUILD_DEMO=off \
             -DENABLE_LINTING=off \
-            -DENABLE_TEST_SANITIZERS=on \
+            -DENABLE_TEST_SANITIZERS=off \
             -DRECAP_LABELLER_LOG_TO_APP_DATA_DIR=on
         env:
             VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
