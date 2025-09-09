@@ -145,7 +145,7 @@ private:
         if (m_task_view && !m_task_view->can_save_annotation()) {
             ImGui::TextWrapped(
                 "Annotation is in an invalid state. "
-                "To save, click \"Cancel\", fix errors, and save"
+                "To save, click \"Cancel\", fix errors, and save."
             );
         }
 
