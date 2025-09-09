@@ -56,8 +56,7 @@ template <std::ranges::range R, typename Op> auto transform_to_vector(const R& r
     return result;
 }
 
-class FlowAnnotation {
-public:
+struct FlowAnnotation {
     enum class Choice : unsigned char {
         ExEx,
         ExIn,
@@ -67,33 +66,28 @@ public:
     };
 
     explicit FlowAnnotation(const models::TimeRange range) :
-        m_plot_range(range.start, range.end), m_choice(Choice::Nrf), m_is_ambiguous(false)
+        plot_range(range.start, range.end), choice(Choice::Nrf), is_ambiguous(false)
     {}
 
     explicit FlowAnnotation(const models::SwallowApneaAnnotation& apnea_annotation) :
-        m_plot_range(apnea_annotation.time.start, apnea_annotation.time.end),
-        m_choice(src_pattern_to_choice(apnea_annotation.pattern)),
-        m_is_ambiguous(apnea_annotation.is_ambiguous)
+        plot_range(apnea_annotation.time.start, apnea_annotation.time.end),
+        choice(src_pattern_to_choice(apnea_annotation.pattern)),
+        is_ambiguous(apnea_annotation.is_ambiguous)
     {}
-
-    const widgets::PlotRange& range() const { return m_plot_range; }
-
-    void set_range(widgets::PlotRange range) { m_plot_range = range; }
 
     std::variant<models::SwallowApneaAnnotation, models::TimeRange> to_annotation_model() const
     {
-        if (m_choice == Choice::Nrf) {
-            return models::TimeRange{m_plot_range.start, m_plot_range.end};
+        if (choice == Choice::Nrf) {
+            return models::TimeRange{plot_range.start, plot_range.end};
         }
 
         return models::SwallowApneaAnnotation{
-            .is_ambiguous = m_is_ambiguous,
-            .pattern = choice_to_src_pattern(m_choice),
-            .time = models::TimeRange{m_plot_range.start, m_plot_range.end},
+            .is_ambiguous = is_ambiguous,
+            .pattern = choice_to_src_pattern(choice),
+            .time = models::TimeRange{plot_range.start, plot_range.end},
         };
     }
 
-private:
     static models::SrcPattern choice_to_src_pattern(Choice choice)
     {
         auto pattern = magic_enum::enum_cast<models::SrcPattern>(magic_enum::enum_name(choice));
@@ -106,9 +100,9 @@ private:
         return choice.value();
     }
 
-    widgets::PlotRange m_plot_range;
-    Choice m_choice;
-    bool m_is_ambiguous;
+    widgets::PlotRange plot_range;
+    Choice choice;
+    bool is_ambiguous;
 };
 
 // Adapter for models::SwallowAnnotation
@@ -132,8 +126,8 @@ struct Annotation {
             [](const auto& a) { return FlowAnnotation(a); }
         );
         std::ranges::sort(flow_annotations, [](const auto& a, const auto& b) {
-            const auto& range_a = a.range();
-            const auto& range_b = b.range();
+            const auto& range_a = a.plot_range;
+            const auto& range_b = b.plot_range;
             return std::tie(range_a.start, range_a.end) < std::tie(range_b.start, range_b.end);
         });
     }
@@ -470,7 +464,7 @@ public:
         m_ranges_annotator(
             std::views::transform(
                 m_annotator.annotation().flow_annotations,
-                [](const auto& annotation) { return annotation.range(); }
+                [](const auto& annotation) { return annotation.plot_range; }
             )
         )
     {}
@@ -485,7 +479,7 @@ public:
             },
             [this](std::size_t idx, const widgets::PlotRange& new_range) {
                 auto new_annotation = m_annotator.annotation().flow_annotations[idx];
-                new_annotation.set_range(new_range);
+                new_annotation.plot_range = new_range;
                 m_annotator.execute_command<FlowAnnotationEditCommand>(idx, new_annotation);
             }
         );
