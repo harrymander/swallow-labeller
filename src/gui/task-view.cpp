@@ -230,11 +230,6 @@ private:
     T m_new_value;
 };
 
-using EarClickAnnotationEditCommand =
-    AnnotationEditCommand<widgets::PlotRange, &Annotation::ear_clicks>;
-using FlowAnnotationEditCommand =
-    AnnotationEditCommand<FlowAnnotation, &Annotation::flow_annotations>;
-
 template <typename T, std::vector<T> Annotation::*Member>
 class AddAnnotationCommand : public AnnotationCommand {
 public:
@@ -255,11 +250,6 @@ public:
 private:
     T m_value;
 };
-
-using EarClickAnnotationAddCommand =
-    AddAnnotationCommand<widgets::PlotRange, &Annotation::ear_clicks>;
-using FlowAnnotationAddCommand =
-    AddAnnotationCommand<FlowAnnotation, &Annotation::flow_annotations>;
 
 template <typename T, std::vector<T> Annotation::*Member>
 class DeleteAnnotationCommand : public AnnotationCommand {
@@ -287,11 +277,6 @@ private:
     std::optional<T> m_deleted_value;
     difference_type m_idx_to_delete;
 };
-
-using EarClickAnnotationDeleteCommand =
-    DeleteAnnotationCommand<widgets::PlotRange, &Annotation::ear_clicks>;
-using FlowAnnotationDeleteCommand =
-    DeleteAnnotationCommand<FlowAnnotation, &Annotation::flow_annotations>;
 
 class Annotator {
 public:
@@ -539,11 +524,11 @@ public:
             id,
             [this](auto idx) { return ear_clicks()[idx]; },
             [this](const widgets::PlotRange& range) {
-                m_annotator.execute_command<EarClickAnnotationAddCommand>(range);
+                m_annotator.execute_command<AddCommand>(range);
                 return ear_clicks().size() - 1;
             },
             [this](auto idx, const auto& range) {
-                m_annotator.execute_command<EarClickAnnotationEditCommand>(idx, range);
+                m_annotator.execute_command<EditCommand>(idx, range);
             }
         );
     }
@@ -578,6 +563,10 @@ public:
     }
 
 private:
+    using EditCommand = AnnotationEditCommand<widgets::PlotRange, &Annotation::ear_clicks>;
+    using AddCommand = AddAnnotationCommand<widgets::PlotRange, &Annotation::ear_clicks>;
+    using DeleteCommand = DeleteAnnotationCommand<widgets::PlotRange, &Annotation::ear_clicks>;
+
     void draw_list_box()
     {
         const float height = 4 * ImGui::GetTextLineHeightWithSpacing();
@@ -587,9 +576,7 @@ private:
                 [](const auto& r) {
                     return fmt::format("[{:g}, {:g}], Δ = {:g} s", r.start, r.end, r.end - r.start);
                 },
-                [this](auto idx) {
-                    m_annotator.execute_command<EarClickAnnotationDeleteCommand>(idx);
-                }
+                [this](auto idx) { m_annotator.execute_command<DeleteCommand>(idx); }
             );
 
             ImGui::EndListBox();
@@ -621,13 +608,13 @@ public:
             [this](const auto& range) {
                 FlowAnnotation new_annotation = m_temp_annotation;
                 new_annotation.plot_range = range;
-                m_annotator.execute_command<FlowAnnotationAddCommand>(new_annotation);
+                m_annotator.execute_command<AddCommand>(new_annotation);
                 return flow_annotations().size() - 1;
             },
             [this](auto idx, const auto& range) {
                 FlowAnnotation new_annotation = flow_annotations()[idx];
                 new_annotation.plot_range = range;
-                m_annotator.execute_command<FlowAnnotationEditCommand>(idx, new_annotation);
+                m_annotator.execute_command<EditCommand>(idx, new_annotation);
             }
         );
     }
@@ -663,6 +650,10 @@ public:
     }
 
 private:
+    using EditCommand = AnnotationEditCommand<FlowAnnotation, &Annotation::flow_annotations>;
+    using AddCommand = AddAnnotationCommand<FlowAnnotation, &Annotation::flow_annotations>;
+    using DeleteCommand = DeleteAnnotationCommand<FlowAnnotation, &Annotation::flow_annotations>;
+
     void draw_annotation_editor()
     {
         // TODO: should there be separate controls for creating a new label vs editing an existing
@@ -712,9 +703,7 @@ private:
 
         if (changed) {
             if (active_idx.has_value()) {
-                m_annotator.execute_command<FlowAnnotationEditCommand>(
-                    *active_idx, current_annotation
-                );
+                m_annotator.execute_command<EditCommand>(*active_idx, current_annotation);
 
                 // Maintain the current label choice for new annotation, but without ambiguity
                 m_temp_annotation.choice = current_annotation.choice;
@@ -731,7 +720,7 @@ private:
         if (ImGui::BeginListBox("##flow-labels-list-box", {-1, list_height})) {
             m_ranges_editor.draw_list_box_items(
                 flow_annotations(), annotation_description, [this](std::size_t i) {
-                    m_annotator.execute_command<FlowAnnotationDeleteCommand>(i);
+                    m_annotator.execute_command<DeleteCommand>(i);
                 }
             );
             ImGui::EndListBox();
