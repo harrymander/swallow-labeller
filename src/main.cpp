@@ -1,6 +1,7 @@
 #include "app/annotation-store.hpp"
 #include "app/config.hpp"
 #include "models/task-info.hpp"
+#include "options.h"
 #include "platform/platform.hpp"
 #include "util/os.hpp"
 
@@ -134,7 +135,7 @@ std::optional<std::filesystem::path> get_app_data_dir()
 {
     auto dir = os::get_user_data_dir();
     if (dir) {
-        dir->append(PROGRAM_NAME);
+        dir->append(PROJECT_NAME);
         spdlog::debug("App data dir: {}", *dir);
         return dir;
     }
@@ -339,7 +340,8 @@ std::optional<SwallowAnnotationStore> make_annotations_store(const std::filesyst
 int run_main(int argc, const char *argv[])
 {
     setup_console_logging();
-    auto parse_options = ProgramOptions::from_cli_arguments(PROGRAM_NAME, VERSION_STR, argc, argv);
+    auto parse_options =
+        ProgramOptions::from_cli_arguments(PROJECT_NAME, PROJECT_VERSION, argc, argv);
     if (!parse_options) {
         return 2;
     }

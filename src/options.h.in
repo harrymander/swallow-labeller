@@ -1,6 +1,17 @@
 #ifndef RECAP_LABELLER_OPTIONS_H_INCLUDE
 #define RECAP_LABELLER_OPTIONS_H_INCLUDE
 
+#cmakedefine PROJECT_NAME "${PROJECT_NAME}"
+#cmakedefine PROJECT_VERSION "${PROJECT_VERSION} (complete recordings)"
+
+#ifndef PROJECT_NAME
+#error PROJECT_NAME undefined
+#endif
+
+#ifndef PROJECT_VERSION
+#error PROJECT_VERSION undefined
+#endif
+
 #cmakedefine RECAP_LABELLER_LOG_TO_APP_DATA_DIR
 
 #endif // RECAP_LABELLER_OPTIONS_H_INCLUDE

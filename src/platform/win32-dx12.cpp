@@ -8,6 +8,7 @@
 // to be replicated in your app or by adding it to your imconfig.h file.
 
 #include "gui/gui.hpp"
+#include "options.h"
 #include "platform.hpp"
 
 #include <backends/imgui_impl_dx12.h>
@@ -70,8 +71,8 @@ static float GetDPIScalingFactor();
 static recap::labeller::gui::Gui *g_gui;
 
 #define WINDOW_NAME                                                                                \
-    L"" PROGRAM_NAME L" v"                                                                         \
-    L"" VERSION_STR
+    L"" PROJECT_NAME L" v"                                                                         \
+    L"" PROJECT_VERSION
 
 // Main code
 int recap::labeller::platform::run(

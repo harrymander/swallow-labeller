@@ -7,6 +7,7 @@
 #include "app/annotation-store.hpp"
 #include "gui/gui.hpp"
 #include "models/task-info.hpp"
+#include "options.h"
 #include "platform.hpp"
 
 #include <backends/imgui_impl_glfw.h>
@@ -187,7 +188,7 @@ int run(
     glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
 
     // Create window with graphics context
-    GLFWwindow *window = glfwCreateWindow(1280, 720, PROGRAM_NAME " v" VERSION_STR, NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(1280, 720, PROJECT_NAME " v" PROJECT_VERSION, NULL, NULL);
     if (window == NULL) {
         spdlog::critical("Error creating GLFW window");
         return 1;

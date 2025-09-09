@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
 # Select MSVC runtime library via CMAKE_MSVC_RUNTIME_LIBRARY
 cmake_policy(SET CMP0091 NEW)
 
-project(recap-labeller LANGUAGES CXX VERSION 0.3.0)
+project(recap-labeller LANGUAGES CXX VERSION 0.4.0)
 
 # Program options
 option(RECAP_LABELLER_LOG_TO_APP_DATA_DIR "Log to app data directory" OFF)
@@ -141,8 +141,6 @@ target_link_libraries(recap-labeller PRIVATE
     spdlog::spdlog
 )
 target_compile_definitions(recap-labeller PRIVATE
-    PROGRAM_NAME="${PROJECT_NAME}"
-    VERSION_STR="${PROJECT_VERSION}"
     IMGUI_USER_CONFIG="${IMCONFIG_PATH}"
 )
 if(NOT MSVC)
