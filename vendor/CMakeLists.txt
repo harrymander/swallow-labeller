@@ -91,7 +91,7 @@ if(USE_HOWARDHINNANT_DATE)
     message("Using Howard Hinnant date library for chrono utils")
     fetchcontent_declare(howardhinnant_date
       GIT_REPOSITORY https://github.com/HowardHinnant/date.git
-      GIT_TAG 6e921e1b1d21e84a5c82416ba7ecd98e33a436d0 # v3.0.1
+      GIT_TAG f94b8f36c6180be0021876c4a397a054fe50c6f2 # v3.0.4
     )
     if(NOT howardhinnant_date_POPULATED)
         fetchcontent_populate(howardhinnant_date)
