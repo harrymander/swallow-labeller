@@ -1,5 +1,6 @@
 #include "gui/task-view.hpp"
 
+#include "IconsFontAwesome6.h"
 #include "app/config.hpp"
 #include "gui/icons.h"
 #include "gui/plot.hpp"
@@ -632,9 +633,8 @@ public:
 private:
     void draw_labels_editor()
     {
-        draw_undo_redo();
-
         draw_save_button();
+        draw_undo_redo();
 
         ImGui::SeparatorText("Events");
         draw_event_list();
@@ -648,15 +648,14 @@ private:
 
     void draw_undo_redo()
     {
-        // TODO: icons
         ImGui::BeginDisabled(!m_annotator.can_undo_last_command());
-        if (ImGui::Button("Undo")) {
+        if (ImGui::Button(ICON_FA_ARROW_ROTATE_LEFT ICON_TEXT_SPACE "Undo")) {
             m_annotator.undo_last_command();
         }
         ImGui::EndDisabled();
         ImGui::SameLine();
         ImGui::BeginDisabled(!m_annotator.can_redo_last_undone_command());
-        if (ImGui::Button("Redo")) {
+        if (ImGui::Button("Redo" ICON_TEXT_SPACE ICON_FA_ARROW_ROTATE_RIGHT)) {
             m_annotator.redo_last_undone_command();
         }
         ImGui::EndDisabled();
