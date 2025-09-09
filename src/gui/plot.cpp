@@ -1,7 +1,7 @@
+#include "app/config.hpp"
 #define IMGUI_DEFINE_MATH_OPERATORS
 
 #include "gui/plot.hpp"
-
 #include "gui/widgets/plot-range-selector.hpp"
 #include "gui/widgets/util.hpp"
 #include "util/util.hpp"
@@ -172,14 +172,15 @@ void plot_autostrided_line(
 {
     constexpr ImPlotLineFlags Flags = 0;
     constexpr int Offset = 0;
-    constexpr int MaxNumPoints = 100'000;
 
     auto xlim = ImPlot::GetPlotLimits().X;
     auto start = binary_search_closest(x.begin(), x.end(), xlim.Min);
     auto end = binary_search_closest(x.begin(), x.end(), xlim.Max);
     auto offset = std::distance(x.begin(), start);
     auto num_points = static_cast<int>(std::distance(start, end));
-    int stride_points = std::max(num_points / MaxNumPoints, 1);
+
+    int max_num_points = app::get_global_app_config().max_num_plot_points;
+    int stride_points = std::max(num_points / max_num_points, 1);
     ImPlot::PlotLine(
         id,
         x.data() + offset,

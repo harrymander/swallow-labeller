@@ -968,12 +968,12 @@ private:
         constexpr ImColor SummaryColor = {.5F, .5F, .5F, .6F};
         constexpr ImPlotLineFlags LineFlags = 0;
         constexpr int PlotOffset = 0;
-        constexpr int MaxPoints = 100'000;
 
         ImPlot::SetupAxes(nullptr, nullptr, AxFlags, AxFlags);
 
         auto size = static_cast<int>(m_data.flow_time.size());
-        int stride = std::max(size / MaxPoints, 1);
+        int max_points = app::get_global_app_config().max_num_plot_points;
+        int stride = std::max(size / max_points, 1);
         ImPlot::PlotLine(
             "##summary_flow_plot_line",
             m_data.flow_time.data(),

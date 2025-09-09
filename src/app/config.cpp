@@ -70,6 +70,9 @@ void validate_config(const AppConfig& config)
     if (config.max_snrf_time <= 0) {
         invalid_field("max_snrf_time", "must be greater than 0");
     }
+    if (config.max_num_plot_points <= 0) {
+        invalid_field("max_num_plot_points", "must be greater than 0");
+    }
 }
 
 }; // namespace
