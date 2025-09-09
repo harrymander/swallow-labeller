@@ -428,7 +428,7 @@ public:
     {
         m_hovered_idx.reset();
         static const char *remove_button_str = DELETE_ICON;
-        static const char *center_range_button_str = ICON_FA_MAGNIFYING_GLASS;
+        static const char *center_range_button_str = ICON_FA_LOCATION_CROSSHAIRS;
 
         const float line_height = ImGui::GetTextLineHeightWithSpacing();
         const float x_spacing = ImGui::GetStyle().ItemSpacing.x;
