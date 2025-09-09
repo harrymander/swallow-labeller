@@ -1,6 +1,5 @@
 #include "gui/task-view.hpp"
 
-#include "IconsFontAwesome6.h"
 #include "app/config.hpp"
 #include "gui/icons.h"
 #include "gui/plot.hpp"
@@ -932,10 +931,6 @@ public:
 private:
     void draw_labels_editor()
     {
-        const auto jump_to_label = [this](const widgets::PlotRange& range) {
-            zoom_to_range(range);
-        };
-
         draw_save_button();
         draw_undo_redo();
 
@@ -990,13 +985,6 @@ private:
             std::max(time.front(), range.start - margin),
             std::min(time.back(), range.end + margin),
         };
-    }
-
-    template <typename Range> void zoom_to_range(const Range& range, double margin = 3)
-    {
-        const auto& time = m_data.flow_time;
-        m_plot_x_range.start = std::max(time.front(), range.start - margin);
-        m_plot_x_range.end = std::min(time.back(), range.end + margin);
     }
 
     void draw_event_list()
