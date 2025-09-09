@@ -206,9 +206,9 @@ public:
 };
 
 template <typename T, std::vector<T> Annotation::*Member>
-class AnnotationEditCommand : public AnnotationCommand {
+class EditAnnotationCommand : public AnnotationCommand {
 public:
-    AnnotationEditCommand(std::size_t idx, const T& new_value) :
+    EditAnnotationCommand(std::size_t idx, const T& new_value) :
         m_idx_to_edit(idx), m_new_value(new_value)
     {}
 
@@ -572,7 +572,7 @@ public:
     }
 
 private:
-    using EditCommand = AnnotationEditCommand<widgets::PlotRange, &Annotation::ear_clicks>;
+    using EditCommand = EditAnnotationCommand<widgets::PlotRange, &Annotation::ear_clicks>;
     using AddCommand = AddAnnotationCommand<widgets::PlotRange, &Annotation::ear_clicks>;
     using DeleteCommand = DeleteAnnotationCommand<widgets::PlotRange, &Annotation::ear_clicks>;
 
@@ -659,7 +659,7 @@ public:
     }
 
 private:
-    using EditCommand = AnnotationEditCommand<FlowAnnotation, &Annotation::flow_annotations>;
+    using EditCommand = EditAnnotationCommand<FlowAnnotation, &Annotation::flow_annotations>;
     using AddCommand = AddAnnotationCommand<FlowAnnotation, &Annotation::flow_annotations>;
     using DeleteCommand = DeleteAnnotationCommand<FlowAnnotation, &Annotation::flow_annotations>;
 
