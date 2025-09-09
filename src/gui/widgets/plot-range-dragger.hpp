@@ -28,7 +28,7 @@ public:
      */
     template <class Id> bool update(const Id& id, PlotRange& range, double min_range = 0)
     {
-        assert(min_range >= 0);
+        IM_ASSERT(min_range >= 0);
         recap::labeller::gui::widgets::ScopedImID id_scope(id);
         return update(ImGui::GetID("##plot_range_dragger"), range, min_range);
     }

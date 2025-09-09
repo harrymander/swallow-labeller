@@ -1,0 +1,17 @@
+#ifndef RECAP_LABELLER_GUI_IMCONFIG_H_INCLUDE
+#define RECAP_LABELLER_GUI_IMCONFIG_H_INCLUDE
+
+#cmakedefine01 IMGUI_ALWAYS_ASSERT
+
+#if IMGUI_ALWAYS_ASSERT || (!defined(NDEBUG))
+#include "gui/imassert.hpp"
+
+#define IM_ASSERT(expr)                                                                            \
+    do {                                                                                           \
+        if (!(expr)) {                                                                             \
+            recap::labeller::gui::imgui_assert_failed(#expr);                                      \
+        }                                                                                          \
+    } while (0)
+#endif
+
+#endif // RECAP_LABELLER_GUI_IMCONFIG_H_INCLUDE
