@@ -376,12 +376,20 @@ constexpr uint8_t UnselectedLabelAlpha = 0x33;
 constexpr uint8_t HoveredLabelAlpha = 0x44;
 constexpr uint8_t SelectedLabelAlpha = 0x66;
 
-class FlowAnnotator {
+class PlotRangesEditor {
 public:
-    explicit FlowAnnotator(Annotator& annotator) : m_annotator(annotator) {}
-
     // Call inside BeginPlot/EndPlot
-    void edit(const char *id)
+    template <typename GetRange, typename NewRange, typename EditRange>
+        requires std::
+                     convertible_to<std::invoke_result_t<GetRange, std::size_t>, widgets::PlotRange>
+        && std::same_as<std::invoke_result_t<NewRange, widgets::PlotRange>, std::size_t>
+        && std::invocable<EditRange, std::size_t, widgets::PlotRange>
+    void edit(
+        const char *id,
+        const GetRange& get_range,
+        const NewRange& add_new_range,
+        const EditRange& edit_range
+    )
     {
         widgets::ScopedImID scoped_id(id);
 
@@ -397,15 +405,13 @@ public:
             spdlog::info(
                 "{}: new label created: [{:g}, {:g}]", id, new_range->start, new_range->end
             );
-            m_new_annotation.plot_range = *new_range;
-            m_annotator.execute_command<FlowAnnotationAddCommand>(m_new_annotation);
-            m_active_idx = flow_annotations().size() - 1;
+            m_active_idx = add_new_range(*new_range);
         }
 
         // Edit current active range
         if (m_active_idx.has_value()) {
             if (!m_range_dragger.is_editing()) {
-                m_active_annotation_temp_range = flow_annotations()[*m_active_idx].plot_range;
+                m_active_annotation_temp_range = get_range(*m_active_idx);
             }
 
             const bool updated = m_range_dragger.update(
@@ -419,33 +425,226 @@ public:
                     m_active_annotation_temp_range.start,
                     m_active_annotation_temp_range.end
                 );
-                FlowAnnotation new_annotation = flow_annotations()[*m_active_idx];
-                new_annotation.plot_range = m_active_annotation_temp_range;
-                m_annotator.execute_command<FlowAnnotationEditCommand>(
-                    *m_active_idx, new_annotation
-                );
+                edit_range(*m_active_idx, m_active_annotation_temp_range);
             }
         }
+    }
+
+    // Call inside BeginListBox/EndListBox
+    template <typename T, typename AnnotationDescription, typename Delete>
+        requires std::convertible_to<std::invoke_result_t<AnnotationDescription, T>, std::string>
+        && std::invocable<Delete, std::size_t>
+    void draw_list_box_items(
+        const std::vector<T>& items,
+        const AnnotationDescription& annotation_description,
+        const Delete& delete_func
+    )
+    {
+        m_hovered_idx.reset();
+        static const char *remove_button_str = DELETE_ICON;
+        const float line_height = ImGui::GetTextLineHeightWithSpacing();
+        const float x_padding = 2 * ImGui::GetStyle().ItemSpacing.x;
+        const float label_width = ImGui::GetContentRegionAvail().x
+            - (ImGui::CalcTextSize(remove_button_str).x + x_padding);
+
+        std::optional<std::size_t> delete_idx = std::nullopt;
+        for (std::size_t i = 0; i < items.size(); i++) {
+            widgets::ScopedImID idx_id_scope(static_cast<int>(i));
+
+            const auto& annotation = items[i];
+            std::string description = annotation_description(annotation);
+            const bool is_active = m_active_idx == i;
+            if (ImGui::Selectable(description.c_str(), is_active, 0, {label_width, line_height})) {
+                if (is_active) {
+                    m_active_idx.reset();
+                } else {
+                    m_active_idx = i;
+                }
+            }
+            if (ImGui::IsItemHovered()) {
+                m_hovered_idx = i;
+            }
+
+            ImGui::SameLine();
+            {
+                widgets::RedButtonColorScope red_button;
+                if (draw_rounded_button(remove_button_str)) {
+                    delete_idx = i;
+                }
+            }
+            if (ImGui::IsItemHovered()) {
+                m_hovered_idx = i;
+            }
+            ImGui::SetItemTooltip("Delete annotation");
+        }
+
+        if (delete_idx.has_value()) {
+            delete_func(*delete_idx);
+        }
+    }
+
+    template <typename T, typename GetRange, typename GetColor>
+        requires std::convertible_to<std::invoke_result_t<GetRange, T>, const widgets::PlotRange&>
+        && std::convertible_to<std::invoke_result_t<GetColor, T>, RgbColor>
+    void draw_plot_ranges(
+        const std::vector<T>& annotations,
+        const GetRange& get_range,
+        const GetColor& get_color,
+        float height
+    ) const
+    {
+        for (std::size_t i = 0; i < annotations.size(); i++) {
+            const bool is_active = m_active_idx == i;
+            const uint8_t alpha = is_active ?
+                SelectedLabelAlpha :
+                (m_hovered_idx == i ? HoveredLabelAlpha : UnselectedLabelAlpha);
+
+            const auto& annotation = annotations[i];
+            const widgets::PlotRange& range = is_active && m_range_dragger.is_editing() ?
+                m_active_annotation_temp_range :
+                get_range(annotation);
+            widgets::draw_plot_range(range, get_color(annotation).with_alpha(alpha), height);
+        }
+    }
+
+    const std::optional<std::size_t>& active_idx() const { return m_active_idx; }
+
+    const widgets::PlotRange *creating_range() const { return m_range_selector.range(); }
+
+private:
+    static bool draw_rounded_button(const char *label)
+    {
+        constexpr float ButtonCornerRadius = 5;
+        widgets::ScopedImStyle style(ImGuiStyleVar_FrameRounding, ButtonCornerRadius);
+        return ImGui::Button(label);
+    }
+
+    static constexpr double MinSelectionDuration = 0.001;
+
+    std::optional<std::size_t> m_active_idx = std::nullopt;
+    std::optional<std::size_t> m_hovered_idx = std::nullopt;
+    widgets::PlotRange m_active_annotation_temp_range = {NAN, NAN};
+    widgets::PlotRangeDragger m_range_dragger;
+    widgets::PlotRangeSelector m_range_selector;
+};
+
+class AudioAnnotator {
+public:
+    explicit AudioAnnotator(Annotator& annotator) : m_annotator(annotator) {}
+
+    // Call inside BeginPlot/EndPlot
+    void edit(const char *id)
+    {
+        m_ranges_editor.edit(
+            id,
+            [this](auto idx) { return ear_clicks()[idx]; },
+            [this](const widgets::PlotRange& range) {
+                m_annotator.execute_command<EarClickAnnotationAddCommand>(range);
+                return ear_clicks().size() - 1;
+            },
+            [this](auto idx, const auto& range) {
+                m_annotator.execute_command<EarClickAnnotationEditCommand>(idx, range);
+            }
+        );
+    }
+
+    // Call inside BeginPlot/EndPlot
+    void draw_plot_ranges(float height = 0)
+    {
+        m_ranges_editor.draw_plot_ranges(
+            ear_clicks(),
+            [](const auto& range) { return range; },
+            [](const auto&) { return LabelColor; },
+            height
+        );
+        const auto *new_range = m_ranges_editor.creating_range();
+        if (new_range) {
+            auto color = LabelColor.with_alpha(UnselectedLabelAlpha);
+            widgets::draw_plot_range(*new_range, color, height);
+        }
+    }
+
+    void draw_labels_editor(const char *id)
+    {
+        widgets::ScopedImID scoped_id(id);
+
+        auto num_ear_clicks = ear_clicks().size();
+        ImGui::SeparatorText(fmt::format("Audio labels [{}]", num_ear_clicks).c_str());
+        if (num_ear_clicks == 0) {
+            ImGui::TextWrapped("No audio labels: Ctrl + click on audio plot to add one");
+        } else {
+            draw_list_box();
+        }
+    }
+
+private:
+    void draw_list_box()
+    {
+        const float height = 4 * ImGui::GetTextLineHeightWithSpacing();
+        if (ImGui::BeginListBox("##labels_list_box", {-1, height})) {
+            m_ranges_editor.draw_list_box_items(
+                ear_clicks(),
+                [](const auto& r) {
+                    return fmt::format("[{:g}, {:g}], Δ = {:g} s", r.start, r.end, r.end - r.start);
+                },
+                [this](auto idx) {
+                    m_annotator.execute_command<EarClickAnnotationDeleteCommand>(idx);
+                }
+            );
+
+            ImGui::EndListBox();
+        }
+    }
+
+    const std::vector<widgets::PlotRange>& ear_clicks() const
+    {
+        return m_annotator.annotation().ear_clicks;
+    }
+
+    static constexpr RgbColor LabelColor{0xFC, 0x5A, 0xE1};
+
+    PlotRangesEditor m_ranges_editor;
+
+    Annotator& m_annotator;
+};
+
+class FlowAnnotator {
+public:
+    explicit FlowAnnotator(Annotator& annotator) : m_annotator(annotator) {}
+
+    // Call inside BeginPlot/EndPlot
+    void edit(const char *id)
+    {
+        m_ranges_editor.edit(
+            id,
+            [this](auto idx) { return flow_annotations()[idx].plot_range; },
+            [this](const auto& range) {
+                FlowAnnotation new_annotation = {
+                    .plot_range = range,
+                    .choice = FlowAnnotation::Choice::Nrf,
+                    .is_ambiguous = false,
+                };
+                m_annotator.execute_command<FlowAnnotationAddCommand>(new_annotation);
+                return flow_annotations().size() - 1;
+            },
+            [this](auto idx, const auto& range) {
+                FlowAnnotation new_annotation = flow_annotations()[idx];
+                new_annotation.plot_range = range;
+                m_annotator.execute_command<FlowAnnotationEditCommand>(idx, new_annotation);
+            }
+        );
     }
 
     // Call inside BeginPlot/EndPlot
     void draw_plot_ranges(float height = 0) const
     {
-        const auto& annotations = flow_annotations();
-        for (std::size_t i = 0; i < annotations.size(); i++) {
-            const auto& flow_annotation = annotations[i];
-            const auto color = choice_to_color(flow_annotation.choice);
-            const bool is_active = m_active_idx == i;
-            const uint8_t alpha = is_active ?
-                SelectedLabelAlpha :
-                (m_hovered_idx == i ? HoveredLabelAlpha : UnselectedLabelAlpha);
-            const auto& range = is_active && m_range_dragger.is_editing() ?
-                m_active_annotation_temp_range :
-                flow_annotation.plot_range;
-            widgets::draw_plot_range(range, color.with_alpha(alpha), height);
-        }
-
-        const auto *new_range = m_range_selector.range();
+        m_ranges_editor.draw_plot_ranges(
+            flow_annotations(),
+            [](const auto& annotation) { return annotation.plot_range; },
+            [](const auto& annotation) { return choice_to_color(annotation.choice); },
+            height
+        );
+        const auto *new_range = m_ranges_editor.creating_range();
         if (new_range) {
             auto color = choice_to_color(m_new_annotation.choice);
             widgets::draw_plot_range(*new_range, color.with_alpha(UnselectedLabelAlpha), height);
@@ -455,7 +654,14 @@ public:
     void draw_labels_editor(const char *id)
     {
         widgets::ScopedImID scoped_id(id);
-        draw_list_box();
+
+        auto num_annotations = flow_annotations().size();
+        ImGui::SeparatorText(fmt::format("Flow labels [{}]", num_annotations).c_str());
+        if (num_annotations == 0) {
+            ImGui::TextWrapped("No flow labels: Ctrl + click and drag on flow plot to add one");
+        } else {
+            draw_list_box();
+        }
         draw_annotation_editor();
     }
 
@@ -472,8 +678,9 @@ private:
             Option("non-resp. flow [5]", Nrf, ImGuiKey_5),
         };
 
+        const auto& active_idx = m_ranges_editor.active_idx();
         FlowAnnotation annotation =
-            m_active_idx.has_value() ? flow_annotations()[*m_active_idx] : m_new_annotation;
+            active_idx.has_value() ? flow_annotations()[*active_idx] : m_new_annotation;
         bool changed = false;
         for (const auto& opt : Options) {
             FlowAnnotation::Choice choice = opt.value;
@@ -501,8 +708,8 @@ private:
         }
 
         if (changed) {
-            if (m_active_idx.has_value()) {
-                m_annotator.execute_command<FlowAnnotationEditCommand>(*m_active_idx, annotation);
+            if (active_idx.has_value()) {
+                m_annotator.execute_command<FlowAnnotationEditCommand>(*active_idx, annotation);
             } else {
                 m_new_annotation = annotation;
             }
@@ -511,70 +718,23 @@ private:
 
     void draw_list_box()
     {
-        static const char *remove_button_str = DELETE_ICON;
-        const float line_height = ImGui::GetTextLineHeightWithSpacing();
-        const float list_height = 4 * line_height;
-
-        m_hovered_idx.reset();
-
-        if (flow_annotations().empty()) {
-            ImGui::TextWrapped("No flow labels: Ctrl + click and drag on flow plot to add one");
-            return;
-        }
-
-        if (!ImGui::BeginListBox("##flow-labels-list-box", {-1, list_height})) {
-            return;
-        }
-
-        const float x_padding = 2 * ImGui::GetStyle().ItemSpacing.x;
-        const float label_width = ImGui::GetContentRegionAvail().x
-            - (ImGui::CalcTextSize(remove_button_str).x + x_padding);
-
-        std::optional<std::size_t> delete_idx = std::nullopt;
-        for (std::size_t i = 0; i < flow_annotations().size(); i++) {
-            widgets::ScopedImID idx_id_scope(static_cast<int>(i));
-
-            const auto& annotation = flow_annotations()[i];
-            std::string description = annotation_description(annotation);
-            const bool is_active = m_active_idx == i;
-            if (ImGui::Selectable(description.c_str(), is_active, 0, {label_width, line_height})) {
-                if (is_active) {
-                    m_active_idx.reset();
-                } else {
-                    m_active_idx = i;
+        const float list_height = 4 * ImGui::GetTextLineHeightWithSpacing();
+        if (ImGui::BeginListBox("##flow-labels-list-box", {-1, list_height})) {
+            m_ranges_editor.draw_list_box_items(
+                flow_annotations(), annotation_description, [this](std::size_t i) {
+                    m_annotator.execute_command<FlowAnnotationDeleteCommand>(i);
                 }
-            }
-            if (ImGui::IsItemHovered()) {
-                m_hovered_idx = i;
-            }
-
-            ImGui::SameLine();
-            {
-                widgets::RedButtonColorScope red_button;
-                if (draw_rounded_button(remove_button_str)) {
-                    delete_idx = i;
-                }
-            }
-            if (ImGui::IsItemHovered()) {
-                m_hovered_idx = i;
-            }
-            ImGui::SetItemTooltip("Delete annotation");
+            );
+            ImGui::EndListBox();
         }
-        ImGui::EndListBox();
 
-        if (m_active_idx.has_value()) {
-            const auto& annotation = flow_annotations()[*m_active_idx];
+        const auto& active_idx = m_ranges_editor.active_idx();
+        if (active_idx.has_value()) {
+            const auto& annotation = flow_annotations()[*active_idx];
             const char *err = annotation.error_description();
             if (err) {
                 ImGui::TextWrapped(ERR_ICON ICON_TEXT_SPACE "%s", err);
             }
-        }
-
-        if (delete_idx.has_value()) {
-            if (m_active_idx.has_value() && *m_active_idx == *delete_idx) {
-                m_active_idx.reset();
-            }
-            m_annotator.execute_command<FlowAnnotationDeleteCommand>(*delete_idx);
         }
     }
 
@@ -592,19 +752,10 @@ private:
         );
     }
 
-    static bool draw_rounded_button(const char *label)
-    {
-        constexpr float ButtonCornerRadius = 5;
-        widgets::ScopedImStyle style(ImGuiStyleVar_FrameRounding, ButtonCornerRadius);
-        return ImGui::Button(label);
-    }
-
     const std::vector<FlowAnnotation>& flow_annotations() const
     {
         return m_annotator.annotation().flow_annotations;
     }
-
-    static constexpr double MinSelectionDuration = 0.001;
 
     static RgbColor choice_to_color(FlowAnnotation::Choice choice)
     {
@@ -627,13 +778,8 @@ private:
         return {0x8D, 0x5A, 0xFC};
     }
 
-    std::optional<std::size_t> m_active_idx = std::nullopt;
-    std::optional<std::size_t> m_hovered_idx = std::nullopt;
-    widgets::PlotRange m_active_annotation_temp_range = {NAN, NAN};
-    widgets::PlotRangeDragger m_range_dragger;
-    widgets::PlotRangeSelector m_range_selector;
     FlowAnnotation m_new_annotation;
-
+    PlotRangesEditor m_ranges_editor;
     Annotator& m_annotator;
 };
 
@@ -651,8 +797,7 @@ public:
         m_flow_plot(m_data.flow_time, m_data.flow, m_plot_x_range, "Flow (L/min)", "{:g} L/min"),
         m_audio_plot(m_data.audio_time, m_data.audio, m_plot_x_range, "Audio (V)", "{:g} V"),
         m_save_annotation(std::move(save_annotation_callback)),
-        m_annotator(existing_annotation ? Annotation(*existing_annotation) : Annotation{}),
-        m_flow_annotator(m_annotator)
+        m_annotator(existing_annotation ? Annotation(*existing_annotation) : Annotation{})
     {}
 
     void draw() override
@@ -680,9 +825,8 @@ private:
         ImGui::SeparatorText("Note");
         draw_note_input();
 
-        auto num_flow_labels = m_annotator.annotation().flow_annotations.size();
-        ImGui::SeparatorText(fmt::format("Flow labels [{}]", num_flow_labels).c_str());
         m_flow_annotator.draw_labels_editor("##flow_labels_editor");
+        m_audio_annotator.draw_labels_editor("##audio_labels_editor");
     }
 
     void draw_undo_redo()
@@ -775,10 +919,13 @@ private:
         if (ImPlot::BeginAlignedPlots("##aligned_plots")) {
             draw_plot("##flow_plot", m_flow_plot, data_plot_height, [this]() {
                 m_flow_annotator.edit("##flow_annotator_edit");
+                m_audio_annotator.draw_plot_ranges(LabelSummaryHeight);
                 m_flow_annotator.draw_plot_ranges();
             });
             draw_plot("##audio_plot", m_audio_plot, data_plot_height, [this]() {
                 m_flow_annotator.draw_plot_ranges(LabelSummaryHeight);
+                m_audio_annotator.draw_plot_ranges();
+                m_audio_annotator.edit("##audio_annotator_edit");
             });
             ImPlot::EndAlignedPlots();
         }
@@ -850,7 +997,8 @@ private:
     Plot m_audio_plot;
     SaveAnnotationCallback m_save_annotation;
     Annotator m_annotator;
-    FlowAnnotator m_flow_annotator;
+    FlowAnnotator m_flow_annotator{m_annotator};
+    AudioAnnotator m_audio_annotator{m_annotator};
 };
 
 class TaskLoadErrorView : public TaskView {
