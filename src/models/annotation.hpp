@@ -3,7 +3,6 @@
 
 #include "models/time-range.hpp"
 
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -28,7 +27,7 @@ struct SwallowAnnotation {
     std::vector<SwallowApneaAnnotation> swallow_apneas;
     std::vector<TimeRange> ear_clicks;
     std::vector<TimeRange> non_respiratory_flow_events;
-    std::optional<std::string> note;
+    std::vector<std::string> notes;
 
     bool operator==(const SwallowAnnotation&) const = default;
 };

@@ -121,6 +121,13 @@ public:
     {}
 };
 
+class RoundedButtonStyleScope : public ScopedImColor {
+public:
+    static constexpr float ButtonCornerRadius = 5;
+
+    RoundedButtonStyleScope() : ScopedImColor(ImGuiStyleVar_FrameRounding, ButtonCornerRadius) {}
+};
+
 }; // namespace recap::labeller::gui::widgets
 
 #endif // RECAP_LABELLER_IMGUI_UTIL_HPP_INCLUDE

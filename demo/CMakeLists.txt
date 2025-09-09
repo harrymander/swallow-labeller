@@ -33,6 +33,7 @@ add_custom_command(
         ${Python3_EXECUTABLE} ${DEMO_GEN_PY}
         --tasks-json ${DEMO_TASKS_JSON}
         --data-dir ${DEMO_DATA_DIR}
+        --existing-annotations ${DEMO_ANNOTATIONS_JSON}
     COMMENT "Generating demo tasks"
 )
 
@@ -52,6 +53,7 @@ add_custom_target(
 "\nRunning demo:
   Tasks JSON: ${DEMO_TASKS_JSON}
   Data dir: ${DEMO_DATA_DIR}
+  Annotations JSON: ${DEMO_ANNOTATIONS_JSON}
   Annotations JSON: ${DEMO_ANNOTATIONS_JSON}
   Log file: ${DEMO_LOG_FILE}"
 )

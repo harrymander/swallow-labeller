@@ -3,49 +3,10 @@
 #include "models/annotation.hpp"
 #include "models/time-range.hpp"
 #include "nlohmann/detail/exceptions.hpp"
-#include "util/json-optional.hpp"
-#include "util/variant-visitor.hpp"
 
 #include <nlohmann/json.hpp>
 
 #include <array>
-
-NLOHMANN_JSON_NAMESPACE_BEGIN
-
-/**
- * These converters are adapted from:
- * https://json.nlohmann.me/features/arbitrary_types/#how-do-i-convert-third-party-types
- */
-
-/**
- * JSON parser/serializer for std::variant<T, E>, where T and E can be serialized/deserialized
- * to/from nlohmann::json.
- *
- * E will be serialized as an object with a single field "error" mapping to the serialized object;
- * therefore, T cannot be an object with a single field that is "error".
- */
-template <typename T, typename E> struct adl_serializer<std::variant<T, E>> {
-    using Variant = std::variant<T, E>;
-
-    static void to_json(json& j, const Variant& val)
-    {
-        recap::labeller::VariantVisitor{
-            [&j](const T& val) { j = val; },
-            [&j](const E& err) { j["error"] = err; },
-        }(val);
-    }
-
-    static void from_json(const json& j, Variant& val)
-    {
-        if (j.is_object() && j.contains("error") && j.size() == 1) {
-            val = j.at("error").template get<E>();
-        } else {
-            val = j.template get<T>();
-        }
-    }
-};
-
-NLOHMANN_JSON_NAMESPACE_END
 
 namespace recap::labeller::models {
 
@@ -126,7 +87,7 @@ void to_json(nlohmann::json& j, const SwallowAnnotation& annotation)
         {"swallow_apneas", annotation.swallow_apneas},
         {"ear_clicks", annotation.ear_clicks},
         {"non_respiratory_flow_events", annotation.non_respiratory_flow_events},
-        {"note", annotation.note},
+        {"notes", annotation.notes},
     };
 }
 
@@ -135,7 +96,7 @@ void from_json(const nlohmann::json& j, SwallowAnnotation& annotation)
     j.at("swallow_apneas").get_to(annotation.swallow_apneas);
     j.at("ear_clicks").get_to(annotation.ear_clicks);
     j.at("non_respiratory_flow_events").get_to(annotation.non_respiratory_flow_events);
-    j.at("note").get_to(annotation.note);
+    j.at("notes").get_to(annotation.notes);
 }
 
 }; // namespace recap::labeller::models

@@ -132,7 +132,7 @@ struct Annotation {
     Annotation() = default;
 
     explicit Annotation(const models::SwallowAnnotation& annotation) :
-        note(annotation.note.value_or("")),
+        notes(annotation.notes),
         ear_clicks(transform_to_vector(annotation.ear_clicks, [](const auto& click) {
             return widgets::PlotRange{click.start, click.end};
         }))
@@ -156,16 +156,14 @@ struct Annotation {
 
     models::SwallowAnnotation to_annotation_model() const
     {
-        auto trimmed_note = strutil::trimmed(note);
         models::SwallowAnnotation annotation = {
-            .swallow_apneas = {},
+            .swallow_apneas = {}, // updated below
             .ear_clicks = transform_to_vector(
                 ear_clicks,
                 [](const auto& click) { return models::TimeRange{click.start, click.end}; }
             ),
             .non_respiratory_flow_events = {},
-            .note =
-                trimmed_note.empty() ? std::nullopt : std::make_optional<std::string>(trimmed_note),
+            .notes = notes,
         };
 
         for (const auto& flow_annotation : flow_annotations) {
@@ -193,7 +191,7 @@ struct Annotation {
         return std::ranges::all_of(flow_annotations, [](const auto& a) { return a.valid(); });
     }
 
-    std::string note;
+    std::vector<std::string> notes;
     std::vector<widgets::PlotRange> ear_clicks;
     std::vector<FlowAnnotation> flow_annotations;
 };
@@ -455,7 +453,8 @@ public:
             ImGui::SameLine();
             {
                 widgets::RedButtonColorScope red_button;
-                if (draw_rounded_button(remove_button_str)) {
+                widgets::RoundedButtonStyleScope rounded_button;
+                if (ImGui::Button(remove_button_str)) {
                     delete_idx = i;
                 }
             }
@@ -506,13 +505,6 @@ public:
     const widgets::PlotRange *creating_range() const { return m_range_selector.range(); }
 
 private:
-    static bool draw_rounded_button(const char *label)
-    {
-        constexpr float ButtonCornerRadius = 5;
-        widgets::ScopedImStyle style(ImGuiStyleVar_FrameRounding, ButtonCornerRadius);
-        return ImGui::Button(label);
-    }
-
     static constexpr double MinSelectionDuration = 0.001;
 
     std::optional<std::size_t> m_active_idx = std::nullopt;
@@ -790,6 +782,83 @@ private:
     Annotator& m_annotator;
 };
 
+class NotesEditor {
+public:
+    explicit NotesEditor(Annotator& annotator) : m_annotator(annotator) {}
+
+    void draw(const char *id)
+    {
+        widgets::ScopedImID id_scope(id);
+        ImGui::SeparatorText("Notes");
+
+        draw_new_note_input();
+        draw_notes_list(m_annotator.annotation().notes);
+    }
+
+private:
+    // TODO: command to edit existing notes
+    using AddCommand = AddAnnotationCommand<std::string, &Annotation::notes>;
+    using DeleteCommand = DeleteAnnotationCommand<std::string, &Annotation::notes>;
+
+    void draw_new_note_input()
+    {
+        static const char *btn_text = ICON_FA_PLUS ICON_TEXT_SPACE "Add";
+        float button_width = ImGui::CalcTextSize(btn_text).x + 2 * ImGui::GetStyle().ItemSpacing.x;
+
+        ImGui::PushItemWidth(-button_width);
+        bool submitted = ImGui::InputText(
+            "##new_note_input_text",
+            &m_new_note_val,
+            ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll
+        );
+        ImGui::PopItemWidth();
+
+        ImGui::SameLine();
+        if (ImGui::Button(btn_text)) {
+            submitted = true;
+        }
+
+        if (submitted) {
+            auto trimmed = strutil::trimmed(m_new_note_val);
+            if (!trimmed.empty()) {
+                spdlog::info("Adding new note {:?}", trimmed);
+                m_annotator.execute_command<AddCommand>(std::string(trimmed));
+                m_new_note_val.clear();
+            }
+        }
+    }
+
+    void draw_notes_list(const std::vector<std::string>& notes)
+    {
+        std::optional<std::size_t> delete_idx = std::nullopt;
+        for (std::size_t i = 0; i < notes.size(); i++) {
+            widgets::ScopedImID id_scope(static_cast<int>(i));
+            const auto& note = notes[i];
+            {
+                widgets::RedButtonColorScope red_button;
+                widgets::RoundedButtonStyleScope rounded_button;
+                if (ImGui::Button(DELETE_ICON)) {
+                    delete_idx = i;
+                }
+            }
+
+            // TODO: put the delete button to right of text?
+            // TODO: truncate long note with ellipsis?
+            ImGui::SameLine();
+            ImGui::TextUnformatted(note.c_str());
+            ImGui::SetItemTooltip("%s", note.c_str());
+        }
+
+        if (delete_idx.has_value()) {
+            spdlog::info("Deleting note {:?}", notes[*delete_idx]);
+            m_annotator.execute_command<DeleteCommand>(*delete_idx);
+        }
+    }
+
+    std::string m_new_note_val;
+    Annotator& m_annotator;
+};
+
 class TaskLabellingView : public TaskView {
 public:
     TaskLabellingView(
@@ -842,11 +911,9 @@ private:
         ImGui::SeparatorText("Events");
         draw_event_list();
 
-        ImGui::SeparatorText("Note");
-        draw_note_input();
-
         m_flow_annotator.draw_labels_editor("##flow_labels_editor");
         m_audio_annotator.draw_labels_editor("##audio_labels_editor");
+        m_notes_editor.draw("##notes_editor");
     }
 
     void draw_undo_redo()
@@ -1022,6 +1089,7 @@ private:
     Annotator m_annotator;
     FlowAnnotator m_flow_annotator{m_annotator};
     AudioAnnotator m_audio_annotator{m_annotator};
+    NotesEditor m_notes_editor{m_annotator};
 };
 
 class TaskLoadErrorView : public TaskView {
