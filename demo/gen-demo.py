@@ -13,8 +13,8 @@ from typing import Optional
 import numpy as np
 
 
-FLOW_SAMPLE_RATE = 100
-AUDIO_SAMPLE_RATE = 1000
+FLOW_SAMPLE_RATE = 1000
+AUDIO_SAMPLE_RATE = 10_000
 
 
 def random_md5_hexdigest() -> str:

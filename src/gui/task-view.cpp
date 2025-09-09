@@ -966,14 +966,22 @@ private:
     {
         constexpr ImPlotAxisFlags AxFlags = ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_AutoFit;
         constexpr ImColor SummaryColor = {.5F, .5F, .5F, .6F};
+        constexpr ImPlotLineFlags LineFlags = 0;
+        constexpr int PlotOffset = 0;
+        constexpr int MaxPoints = 100'000;
 
         ImPlot::SetupAxes(nullptr, nullptr, AxFlags, AxFlags);
 
+        auto size = static_cast<int>(m_data.flow_time.size());
+        int stride = std::max(size / MaxPoints, 1);
         ImPlot::PlotLine(
             "##summary_flow_plot_line",
             m_data.flow_time.data(),
             m_data.flow.data(),
-            static_cast<int>(m_data.flow_time.size())
+            size / stride,
+            LineFlags,
+            PlotOffset,
+            stride * sizeof(decltype(m_data.flow_time)::value_type)
         );
 
         m_plot_summary_selector.update("##plot_summary_selector");
