@@ -149,6 +149,24 @@ if(NOT MSVC)
     target_compile_options(recap-labeller PRIVATE -Wall -Wextra -pedantic)
 endif()
 
+option(
+    ENABLE_LABELLER_SANITIZERS
+    "Enable sanitizers (AddressSanitizer etc.) for labeller GUI"
+    OFF
+)
+if(ENABLE_LABELLER_SANITIZERS)
+    if(MSVC)
+        target_compile_options(recap-labeller PRIVATE /fsanitize=address)
+    else()
+        set(
+            sanitizer_flags
+            -fsanitize=address -fsanitize=undefined -fsanitize=leak
+        )
+        target_compile_options(recap-labeller PRIVATE ${sanitizer_flags})
+        target_link_options(recap-labeller PRIVATE ${sanitizer_flags})
+    endif()
+endif()
+
 if(LINUX)
     target_link_libraries(
         recap-labeller

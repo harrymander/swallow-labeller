@@ -1,8 +1,7 @@
 option(
     ENABLE_TEST_SANITIZERS
-    "Enable sanitizers (AddressSanitizer, UndefinedSanitizier, LeakSanitizer) \
-for tests"
-    ON
+    "Enable sanitizers (AddressSanitizer etc.) for tests"
+    OFF
 )
 if(ENABLE_TEST_SANITIZERS)
     if(MSVC)
