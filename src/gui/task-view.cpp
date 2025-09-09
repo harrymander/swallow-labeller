@@ -416,21 +416,25 @@ public:
     }
 
     // Call inside BeginListBox/EndListBox
-    template <typename T, typename AnnotationDescription, typename Delete>
+    template <typename T, typename AnnotationDescription, typename Delete, typename CenterRange>
         requires std::convertible_to<std::invoke_result_t<AnnotationDescription, T>, std::string>
-        && std::invocable<Delete, std::size_t>
+        && std::invocable<Delete, std::size_t> && std::invocable<CenterRange, const T&>
     void draw_list_box_items(
         const std::vector<T>& items,
         const AnnotationDescription& annotation_description,
-        const Delete& delete_func
+        const Delete& delete_func,
+        const CenterRange& center_range
     )
     {
         m_hovered_idx.reset();
         static const char *remove_button_str = DELETE_ICON;
+        static const char *center_range_button_str = ICON_FA_MAGNIFYING_GLASS;
+
         const float line_height = ImGui::GetTextLineHeightWithSpacing();
-        const float x_padding = 2 * ImGui::GetStyle().ItemSpacing.x;
-        const float label_width = ImGui::GetContentRegionAvail().x
-            - (ImGui::CalcTextSize(remove_button_str).x + x_padding);
+        const float x_spacing = ImGui::GetStyle().ItemSpacing.x;
+        const float label_width = ImGui::GetContentRegionAvail().x - 4 * x_spacing
+            - ImGui::CalcTextSize(remove_button_str).x
+            - ImGui::CalcTextSize(center_range_button_str).x;
 
         std::optional<std::size_t> delete_idx = std::nullopt;
         for (std::size_t i = 0; i < items.size(); i++) {
@@ -439,6 +443,8 @@ public:
             const auto& annotation = items[i];
             std::string description = annotation_description(annotation);
             const bool is_active = m_active_idx == i;
+            bool is_hovered = false;
+
             if (ImGui::Selectable(description.c_str(), is_active, 0, {label_width, line_height})) {
                 if (is_active) {
                     m_active_idx.reset();
@@ -447,21 +453,34 @@ public:
                 }
             }
             if (ImGui::IsItemHovered()) {
-                m_hovered_idx = i;
+                is_hovered = true;
+            }
+
+            widgets::RoundedButtonStyleScope rounded_button;
+            ImGui::SameLine();
+            if (ImGui::Button(center_range_button_str)) {
+                center_range(annotation);
+            }
+            ImGui::SetItemTooltip("Centre plot on annotation");
+            if (ImGui::IsItemHovered()) {
+                is_hovered = true;
             }
 
             ImGui::SameLine();
             {
                 widgets::RedButtonColorScope red_button;
-                widgets::RoundedButtonStyleScope rounded_button;
                 if (ImGui::Button(remove_button_str)) {
                     delete_idx = i;
                 }
             }
             if (ImGui::IsItemHovered()) {
-                m_hovered_idx = i;
+                is_hovered = true;
             }
             ImGui::SetItemTooltip("Delete annotation");
+
+            if (is_hovered) {
+                m_hovered_idx = i;
+            }
         }
 
         if (delete_idx.has_value()) {
@@ -550,7 +569,9 @@ public:
         }
     }
 
-    void draw_labels_editor(const char *id)
+    template <typename CenterRange>
+        requires std::invocable<CenterRange, const widgets::PlotRange&>
+    void draw_labels_editor(const char *id, const CenterRange& center_range)
     {
         widgets::ScopedImID scoped_id(id);
 
@@ -559,7 +580,7 @@ public:
         if (num_ear_clicks == 0) {
             ImGui::TextWrapped("No audio labels: Ctrl + click on audio plot to add one");
         } else {
-            draw_list_box();
+            draw_list_box(center_range);
         }
     }
 
@@ -568,7 +589,7 @@ private:
     using AddCommand = AddAnnotationCommand<widgets::PlotRange, &Annotation::ear_clicks>;
     using DeleteCommand = DeleteAnnotationCommand<widgets::PlotRange, &Annotation::ear_clicks>;
 
-    void draw_list_box()
+    template <typename CenterRange> void draw_list_box(const CenterRange& center_range)
     {
         const float height = 4 * ImGui::GetTextLineHeightWithSpacing();
         if (ImGui::BeginListBox("##labels_list_box", {-1, height})) {
@@ -577,7 +598,8 @@ private:
                 [](const auto& r) {
                     return fmt::format("[{:g}, {:g}], Δ = {:g} s", r.start, r.end, r.end - r.start);
                 },
-                [this](auto idx) { m_annotator.execute_command<DeleteCommand>(idx); }
+                [this](auto idx) { m_annotator.execute_command<DeleteCommand>(idx); },
+                center_range
             );
 
             ImGui::EndListBox();
@@ -636,7 +658,9 @@ public:
         }
     }
 
-    void draw_labels_editor(const char *id)
+    template <typename CenterRange>
+        requires std::invocable<CenterRange, const FlowAnnotation&>
+    void draw_labels_editor(const char *id, const CenterRange& center_range)
     {
         widgets::ScopedImID scoped_id(id);
 
@@ -645,7 +669,7 @@ public:
         if (num_annotations == 0) {
             ImGui::TextWrapped("No flow labels: Ctrl + click and drag on flow plot to add one");
         } else {
-            draw_list_box();
+            draw_list_box(center_range);
         }
         draw_annotation_editor();
     }
@@ -715,14 +739,15 @@ private:
         }
     }
 
-    void draw_list_box()
+    template <typename CenterRange> void draw_list_box(const CenterRange& center_range)
     {
         const float list_height = 4 * ImGui::GetTextLineHeightWithSpacing();
         if (ImGui::BeginListBox("##flow-labels-list-box", {-1, list_height})) {
             m_ranges_editor.draw_list_box_items(
-                flow_annotations(), annotation_description, [this](std::size_t i) {
-                    m_annotator.execute_command<DeleteCommand>(i);
-                }
+                flow_annotations(),
+                annotation_description,
+                [this](std::size_t i) { m_annotator.execute_command<DeleteCommand>(i); },
+                center_range
             );
             ImGui::EndListBox();
         }
@@ -912,8 +937,12 @@ private:
         ImGui::SeparatorText("Events");
         draw_event_list();
 
-        m_flow_annotator.draw_labels_editor("##flow_labels_editor");
-        m_audio_annotator.draw_labels_editor("##audio_labels_editor");
+        m_flow_annotator.draw_labels_editor("##flow_labels_editor", [this](const auto& annotation) {
+            center_plots_on_range(annotation.plot_range);
+        });
+        m_audio_annotator.draw_labels_editor("##audio_labels_editor", [this](const auto& range) {
+            center_plots_on_range(range);
+        });
         m_notes_editor.draw("##notes_editor");
     }
 
@@ -948,17 +977,25 @@ private:
         ImGui::EndDisabled();
     }
 
+    // Range must have start/end fields (e.g. widgets::PlotRange, or models::TimeRange)
+    template <typename Range> void center_plots_on_range(const Range& range, double margin = 3.0)
+    {
+        const auto& time = m_data.flow_time;
+        m_plot_x_range = {
+            std::max(time.front(), range.start - margin),
+            std::min(time.back(), range.end + margin),
+        };
+    }
+
     void draw_event_list()
     {
-        constexpr double Margin = 3;
-
         const auto& events = m_task_info.event_times;
         if (events.empty()) {
             ImGui::TextWrapped("No events defined for this task.");
             return;
         }
 
-        ImGui::TextWrapped(HINT_ICON ICON_TEXT_SPACE "Click on event to zoom into it in plot");
+        ImGui::TextWrapped(HINT_ICON ICON_TEXT_SPACE "Click on event to centre it in plot");
         const float list_height = ImGui::GetTextLineHeightWithSpacing() * 4;
         if (!ImGui::BeginListBox("##events_listbox", {-1, list_height})) {
             return;
@@ -968,11 +1005,7 @@ private:
             const auto& event = events[i];
             std::string label = fmt::format("{}: [{:g}, {:g}]", i + 1, event.start, event.end);
             if (ImGui::Selectable(label.c_str())) {
-                const auto& time = m_data.flow_time;
-                m_plot_x_range = {
-                    std::max(time.front(), event.start - Margin),
-                    std::min(time.back(), event.end + Margin),
-                };
+                center_plots_on_range(event);
             }
         }
         ImGui::EndListBox();
