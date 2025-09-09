@@ -279,7 +279,7 @@ class Gui::Impl {
 
         if (ImGui::BeginPopupModal(modal_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             ImGui::Text("%s\n(Please email Harry!)", error.c_str());
-            widgets::RedButtonColorScope color_scope;
+            widgets::RedButtonColorScope button_color_scope;
             if (ImGui::Button(EXIT_ICON ICON_TEXT_SPACE "Quit")) {
                 stop();
             }
