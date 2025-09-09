@@ -419,7 +419,6 @@ public:
         if (m_task_view) {
             widgets::ScopedImID id_scope("##current_task_view");
             m_task_view->draw();
-            ImGui::End();
         }
 
         for (auto& window : m_menu_item_windows) {
