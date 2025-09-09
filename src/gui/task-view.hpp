@@ -16,6 +16,12 @@ class TaskView {
 public:
     virtual ~TaskView() = default;
     virtual void draw() = 0;
+
+    virtual bool has_unsaved_changes() const { return false; };
+
+    virtual bool can_save_annotation() const { return false; };
+
+    virtual void save_annotation() const {}
 };
 
 std::unique_ptr<TaskView> load_task_view(

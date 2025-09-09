@@ -30,7 +30,7 @@ void load_annotation_json(SwallowAnnotation& annotation, std::string_view json_s
     annotation = json.template get<SwallowAnnotation>();
 }
 
-TEST(TestSwallowAnnotationJson, TestParsingSwallowAnnotationsWithoutNote)
+TEST(TestSwallowAnnotationJson, TestParsingSwallowAnnotationsWithoutNotes)
 {
     SwallowAnnotation annotation;
     load_annotation_json(annotation, R"({
@@ -76,7 +76,7 @@ TEST(TestSwallowAnnotationJson, TestParsingSwallowAnnotationsWithoutNote)
           "end": 120.64156868974659
         }
       ],
-      "note": null
+      "notes": []
     })");
 
     std::vector<SwallowApneaAnnotation> expected_apneas = {
@@ -109,24 +109,26 @@ TEST(TestSwallowAnnotationJson, TestParsingSwallowAnnotationsWithoutNote)
     };
     EXPECT_EQ(annotation.non_respiratory_flow_events, expected_snrf_events);
 
-    EXPECT_EQ(annotation.note, std::nullopt);
+    EXPECT_TRUE(annotation.notes.empty());
 }
 
-TEST(TestSwallowAnnotationJson, TestParsingSwallowAnnotationsWithNote)
+TEST(TestSwallowAnnotationJson, TestParsingSwallowAnnotationsWithNotes)
 {
     SwallowAnnotation annotation;
     load_annotation_json(annotation, R"({
       "swallow_apneas": [],
       "ear_clicks": [],
       "non_respiratory_flow_events": [],
-      "note": "hello, world!!!"
+      "notes": ["hello, world!!!", "goodbye"]
     })");
 
     EXPECT_TRUE(annotation.swallow_apneas.empty());
     EXPECT_TRUE(annotation.ear_clicks.empty());
     EXPECT_TRUE(annotation.non_respiratory_flow_events.empty());
-    EXPECT_TRUE(annotation.note.has_value());
-    EXPECT_EQ(*annotation.note, "hello, world!!!");
+
+    EXPECT_EQ(annotation.notes.size(), 2);
+    EXPECT_EQ(annotation.notes[0], "hello, world!!!");
+    EXPECT_EQ(annotation.notes[1], "goodbye");
 }
 
 TEST(TestSwallowAnnotationJson, TestParsingMissingSwallowApneasFails)
@@ -134,7 +136,7 @@ TEST(TestSwallowAnnotationJson, TestParsingMissingSwallowApneasFails)
     const auto json = R"({
         "ear_clicks": [],
         "non_respiratory_flow_events": [],
-        "note": null
+        "notes": []
     })";
 
     SwallowAnnotation annotation;
@@ -146,7 +148,7 @@ TEST(TestSwallowAnnotationJson, TestParsingMissingEarClicksFails)
     const auto json = R"({
         "swallow_apneas": [],
         "non_respiratory_flow_events": [],
-        "note": null
+        "notes": []
     })";
 
     SwallowAnnotation annotation;
@@ -158,14 +160,14 @@ TEST(TestSwallowAnnotationJson, TestParsingMissingSNRFsFails)
     const auto json = R"({
         "swallow_apneas": [],
         "ear_clicks": [],
-        "note": null
+        "notes": []
     })";
 
     SwallowAnnotation annotation;
     EXPECT_THROW(load_annotation_json(annotation, json), nlohmann::json::exception);
 }
 
-TEST(TestSwallowAnnotationJson, TestParsingMissingNoteFails)
+TEST(TestSwallowAnnotationJson, TestParsingMissingNotesFails)
 {
     const auto json = R"({
         "swallow_apneas": [],
@@ -202,7 +204,7 @@ TEST(TestSwallowAnnotationJson, TestSerializing)
             },
         .ear_clicks = std::vector<TimeRange>{{12, 100}, {200, 300}},
         .non_respiratory_flow_events = std::vector<TimeRange>{{150, 200}},
-        .note = "Hello, world! β",
+        .notes = {"Hello, world! α", "Goodbye! β"},
     };
     ASSERT_SERIALIZE_DERIALIZE_EQ(annotation);
 }

@@ -1,7 +1,7 @@
+#include "app/config.hpp"
 #define IMGUI_DEFINE_MATH_OPERATORS
 
 #include "gui/plot.hpp"
-
 #include "gui/widgets/plot-range-selector.hpp"
 #include "gui/widgets/util.hpp"
 #include "util/util.hpp"
@@ -23,11 +23,6 @@ void setup_axis_links(ImAxis axis, double& v1, double& v2)
     } else {
         ImPlot::SetupAxisLinks(axis, &v2, &v1);
     }
-}
-
-void plot_line(const char *id, const std::vector<double>& x, const std::vector<double>& y)
-{
-    ImPlot::PlotLine(id, x.data(), y.data(), static_cast<int>(y.size()));
 }
 
 bool is_mouse_inside_plot()
@@ -171,6 +166,32 @@ void draw_delta_selector(widgets::PlotRangeSelector& selector)
     };
 }
 
+void plot_autostrided_line(
+    const char *id, const std::vector<double>& x, const std::vector<double>& y
+)
+{
+    constexpr ImPlotLineFlags Flags = 0;
+    constexpr int Offset = 0;
+
+    auto xlim = ImPlot::GetPlotLimits().X;
+    auto start = binary_search_closest(x.begin(), x.end(), xlim.Min);
+    auto end = binary_search_closest(x.begin(), x.end(), xlim.Max);
+    auto offset = std::distance(x.begin(), start);
+    auto num_points = static_cast<int>(std::distance(start, end));
+
+    int max_num_points = app::get_global_app_config().max_num_plot_points;
+    int stride_points = std::max(num_points / max_num_points, 1);
+    ImPlot::PlotLine(
+        id,
+        x.data() + offset,
+        y.data() + offset,
+        num_points / stride_points,
+        Flags,
+        Offset,
+        sizeof(double) * stride_points
+    );
+}
+
 }; // namespace
 
 void Plot::draw()
@@ -181,7 +202,7 @@ void Plot::draw()
     );
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, m_xdata[0], m_xdata.back());
 
-    plot_line("##line", m_xdata, m_ydata);
+    plot_autostrided_line("##line", m_xdata, m_ydata);
     if (is_mouse_inside_plot()) {
         draw_plot_hovered(m_xdata.data(), m_xdata.size(), m_ydata.data(), m_cursor_format);
     }

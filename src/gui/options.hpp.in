@@ -1,0 +1,14 @@
+#ifndef RECAP_LABELLER_GUI_OPTIONS_H_INCLUDE
+#define RECAP_LABELLER_GUI_OPTIONS_H_INCLUDE
+
+namespace {
+
+#cmakedefine01 DEFAULT_SHOW_DEBUG_INFO
+
+constexpr inline bool DefaultShowDebugInfo = DEFAULT_SHOW_DEBUG_INFO;
+
+#undef DEFAULT_SHOW_DEBUG_INFO
+
+}; // namespace recap::labeller::gui
+
+#endif // RECAP_LABELLER_GUI_OPTIONS_H_INCLUDE

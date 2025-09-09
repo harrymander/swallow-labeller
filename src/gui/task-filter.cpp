@@ -214,8 +214,12 @@ struct AnnotationNoteFilter : public TextFilter {
         if (annotation == nullptr) {
             return false;
         }
-        const auto& note = annotation->note;
-        return string_passes(note.has_value() ? *note : std::string_view{});
+        const auto& notes = annotation->notes;
+        if (notes.empty()) {
+            return false;
+        }
+
+        return std::ranges::any_of(notes, [this](const auto& note) { return string_passes(note); });
     }
 };
 

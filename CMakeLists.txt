@@ -81,8 +81,23 @@ imgui_compressed_c_array(
     fontawesome_free_solid
 )
 
+option(
+    DEFAULT_SHOW_DEBUG_INFO
+    "Whether to show debug info by default in GUI"
+    OFF
+)
+option(
+    IMGUI_ALWAYS_ASSERT
+    "Enable Dear ImGui assertions, even when not in debug build"
+    OFF
+)
+
 set(OPTIONS_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/gen/include)
 configure_file(src/options.h.in ${OPTIONS_INCLUDE_DIR}/options.h)
+configure_file(src/gui/options.hpp.in ${OPTIONS_INCLUDE_DIR}/gui/options.hpp)
+
+set(IMCONFIG_PATH ${OPTIONS_INCLUDE_DIR}/imgui/imconfig.hpp)
+configure_file(src/gui/imconfig.hpp.in ${IMCONFIG_PATH})
 
 add_executable(recap-labeller
     src/app/annotation-store.cpp
@@ -90,6 +105,7 @@ add_executable(recap-labeller
     src/app/task-loader.cpp
     src/gui/font.cpp
     src/gui/gui.cpp
+    src/gui/imassert.cpp
     src/gui/plot.cpp
     src/gui/task-filter.cpp
     src/gui/task-list.cpp
@@ -127,9 +143,28 @@ target_link_libraries(recap-labeller PRIVATE
 target_compile_definitions(recap-labeller PRIVATE
     PROGRAM_NAME="${PROJECT_NAME}"
     VERSION_STR="${PROJECT_VERSION}"
+    IMGUI_USER_CONFIG="${IMCONFIG_PATH}"
 )
 if(NOT MSVC)
     target_compile_options(recap-labeller PRIVATE -Wall -Wextra -pedantic)
+endif()
+
+option(
+    ENABLE_LABELLER_SANITIZERS
+    "Enable sanitizers (AddressSanitizer etc.) for labeller GUI"
+    OFF
+)
+if(ENABLE_LABELLER_SANITIZERS)
+    if(MSVC)
+        target_compile_options(recap-labeller PRIVATE /fsanitize=address)
+    else()
+        set(
+            sanitizer_flags
+            -fsanitize=address -fsanitize=undefined -fsanitize=leak
+        )
+        target_compile_options(recap-labeller PRIVATE ${sanitizer_flags})
+        target_link_options(recap-labeller PRIVATE ${sanitizer_flags})
+    endif()
 endif()
 
 if(LINUX)

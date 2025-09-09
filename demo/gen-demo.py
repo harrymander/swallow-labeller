@@ -13,8 +13,8 @@ from typing import Optional
 import numpy as np
 
 
-FLOW_SAMPLE_RATE = 100
-AUDIO_SAMPLE_RATE = 1000
+FLOW_SAMPLE_RATE = 1000
+AUDIO_SAMPLE_RATE = 10_000
 
 
 def random_md5_hexdigest() -> str:
@@ -64,7 +64,7 @@ class AnnotationResult:
     swallow_apneas: list[SwallowApneaAnnotation]
     ear_clicks: list[TimeRange]
     non_respiratory_flow_events: list[TimeRange]
-    note: str | None
+    notes: list[str]
 
 
 @dataclasses.dataclass
@@ -206,8 +206,12 @@ def gen_random_annotation(task: SwallowTask) -> Annotation:
             t1 = t0 + random.uniform(0.01, 0.1)
             ear_clicks.append(TimeRange(t0, t1))
 
+    notes = [
+        random_text(random.randint(3, 6))
+        for _ in range(random.randint(0, 3))
+    ]
     result = AnnotationResult(
-        note='\n'.join(textwrap.wrap(random_text(random.randint(6, 12)), 30)),
+        notes=notes,
         ear_clicks=ear_clicks,
         swallow_apneas=swallow_apneas,
         non_respiratory_flow_events=non_respiratory_flow_events,
@@ -239,6 +243,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--tasks-json', required=True)
     parser.add_argument('--data-dir', required=True)
+    parser.add_argument("--existing-annotations")
     args = parser.parse_args()
 
     # First five tasks are normal
@@ -271,6 +276,17 @@ def main():
     with open(args.tasks_json, 'w') as f:
         json.dump(tasks_json, f, indent=2)
         f.write('\n')
+
+    existing_annotations_path = args.existing_annotations
+    if existing_annotations_path is not None:
+        # Generate annotations for every second task
+        existing_annotations = {
+            task.npz_file.path: dataclasses.asdict(gen_random_annotation(task))
+            for task in tasks[1::2]
+        }
+        with open(existing_annotations_path, 'w') as f:
+            json.dump(existing_annotations, f, indent=2)
+            f.write('\n')
 
 
 if __name__ == '__main__':
