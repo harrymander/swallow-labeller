@@ -21,10 +21,13 @@
 #include <spdlog/spdlog.h>
 
 #include <array>
+#include <concepts>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
+#include <type_traits>
 
 namespace recap::labeller::gui {
 
@@ -58,6 +61,99 @@ private:
     bool m_active;
 };
 
+class ModalWindow {
+public:
+    // `draw()` is called inside BeginPopup/EndPopup. Return false to close the modal.
+    template <typename Draw>
+        requires std::same_as<std::invoke_result_t<Draw>, bool>
+    bool draw(const char *name, ImGuiWindowFlags flags, const Draw& draw)
+    {
+        constexpr ImVec2 CentrePos = {0.5F, 0.5F};
+
+        if (!m_opened) {
+            m_opened = true;
+            ImGui::OpenPopup(name);
+            ImGui::SetNextWindowPos(
+                ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, CentrePos
+            );
+        }
+
+        bool open = ImGui::BeginPopupModal(name, nullptr, flags);
+        if (open) {
+            open = draw();
+            m_opened = false;
+            if (!open) {
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+
+        return open;
+    }
+
+    // Same as above with no flags
+    template <typename Draw> bool draw(const char *name, const Draw& draw)
+    {
+        return draw(name, 0, draw);
+    }
+
+private:
+    bool m_opened = false;
+};
+
+class UnsavedTaskHandler {
+public:
+    using Continue = std::function<void()>;
+    using Cancel = std::function<void()>;
+
+    void set(Continue continue_func, Cancel cancel_func)
+    {
+        if (m_actions.has_value()) {
+            // TODO
+            spdlog::warn("Unsaved task handler already has action, ignoring");
+        } else {
+            m_actions.emplace(std::move(continue_func), std::move(cancel_func));
+        }
+    }
+
+    void draw()
+    {
+        if (!m_actions.has_value()) {
+            return;
+        }
+
+        // TODO: make this look nicer, allow saving and continuing, different messages depending on
+        // the task etc.
+        bool status = m_modal.draw("Unsaved task", ImGuiWindowFlags_AlwaysAutoResize, [this]() {
+            ImGui::Text("There are unsaved annotations.");
+            ImGui::Separator();
+            widgets::RedButtonColorScope button_color_scope;
+            if (ImGui::Button(EXIT_ICON ICON_TEXT_SPACE "Cancel")) {
+                m_actions->cancel_func();
+                return false;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button(ICON_TEXT_SPACE "Continue without saving")) {
+                m_actions->continue_func();
+                m_actions = std::nullopt;
+            }
+            return true;
+        });
+        if (!status) {
+            m_actions = std::nullopt;
+        }
+    }
+
+private:
+    struct Actions {
+        Continue continue_func;
+        Cancel cancel_func;
+    };
+
+    std::optional<Actions> m_actions = std::nullopt;
+    ModalWindow m_modal;
+};
+
 }; // namespace
 
 class Gui::Impl {
@@ -76,18 +172,19 @@ class Gui::Impl {
     bool m_show_debug_status_bar = DefaultShowDebugInfo;
 
     std::optional<std::string> m_critical_error = std::nullopt;
-    bool m_critical_error_modal_open = false;
+    ModalWindow m_critical_error_modal;
+    UnsavedTaskHandler m_unsaved_task_handler;
 
     std::future<os::OsOpenStatus> m_open_annotations_path_future;
 
-    std::size_t m_active_task_idx = 0;
     app::TaskLoader m_task_loader;
     TaskList m_task_list;
+    std::size_t m_active_task_idx = 0;
+    std::unique_ptr<TaskView> m_task_view = nullptr;
 
     const std::vector<models::SwallowTaskInfo>& m_tasks;
     std::filesystem::path m_data_dir;
     SwallowAnnotationStore& m_annotation_store;
-    std::unique_ptr<TaskView> m_task_view;
     SwallowAnnotationStore::ErrorObservable::Observer m_annotation_store_error_obs;
 
     static bool is_valid_ini_path(const std::filesystem::path& path)
@@ -272,27 +369,22 @@ class Gui::Impl {
     void draw_critical_error(const std::string& error)
     {
         constexpr ImU32 TitleColor = 0xCC2929FF;
-        constexpr ImVec2 CentrePos = {0.5F, 0.5F};
         widgets::ScopedImColor color_scope(ImGuiCol_TitleBgActive, TitleColor);
 
-        static const char *modal_title = ERR_ICON ICON_TEXT_SPACE "Critical error##crit_err_modal";
+        m_critical_error_modal.draw(
+            ERR_ICON ICON_TEXT_SPACE "Critical error##crit_err_modal",
+            ImGuiWindowFlags_AlwaysAutoResize,
+            [&, this]() {
+                ImGui::Text("%s\n(Please email Harry!)", error.c_str());
+                widgets::RedButtonColorScope button_color_scope;
+                if (ImGui::Button(EXIT_ICON ICON_TEXT_SPACE "Quit")) {
+                    stop();
+                }
 
-        if (!m_critical_error_modal_open) {
-            m_critical_error_modal_open = true;
-            ImGui::OpenPopup(modal_title);
-            ImGui::SetNextWindowPos(
-                ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, CentrePos
-            );
-        }
-
-        if (ImGui::BeginPopupModal(modal_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::Text("%s\n(Please email Harry!)", error.c_str());
-            widgets::RedButtonColorScope button_color_scope;
-            if (ImGui::Button(EXIT_ICON ICON_TEXT_SPACE "Quit")) {
-                stop();
+                // Return true to always keep the window open
+                return true;
             }
-            ImGui::EndPopup();
-        }
+        );
     }
 
     void setup_dockspace() const
@@ -352,6 +444,12 @@ class Gui::Impl {
         }
     }
 
+    void set_active_task(std::size_t idx)
+    {
+        m_active_task_idx = idx;
+        m_task_view = load_task_view(m_tasks[idx]);
+    }
+
 public:
     Impl(
         const std::vector<models::SwallowTaskInfo>& tasks,
@@ -361,7 +459,6 @@ public:
         m_tasks(tasks),
         m_data_dir(data_dir),
         m_annotation_store(annotation_store),
-        m_task_view(load_task_view(m_tasks[0])),
         m_annotation_store_error_obs(
             m_annotation_store.subscribe_sync_error([this](const auto& msg) {
                 spdlog::critical("Error saving annotation: {}", msg);
@@ -384,6 +481,8 @@ public:
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_DockingEnable;
         setup_imgui_ini();
         setup_fonts();
+
+        set_active_task(0);
     }
 
     ~Impl()
@@ -417,14 +516,32 @@ public:
         if (m_critical_error.has_value()) {
             draw_critical_error(*m_critical_error);
         }
+        m_unsaved_task_handler.draw();
 
         std::size_t new_task_idx = m_task_list.draw(
             m_tasks, m_active_task_idx, m_annotation_store, m_task_loader, m_data_dir
         );
         if (new_task_idx != m_active_task_idx) {
-            // TODO: handle unsaved annotation before switching
-            m_active_task_idx = new_task_idx;
-            m_task_view = load_task_view(m_tasks[new_task_idx]);
+            if (m_task_view && m_task_view->has_unsaved_changes()) {
+                spdlog::warn("Task {} has unsaved changes", m_active_task_idx);
+                m_unsaved_task_handler.set(
+                    [this, old_idx = m_active_task_idx, new_idx = new_task_idx]() {
+                        spdlog::info(
+                            "Switching task {} -> {}, discarding changes", old_idx, new_idx
+                        );
+                        set_active_task(new_idx);
+                    },
+                    [old_idx = m_active_task_idx, new_idx = new_task_idx]() {
+                        spdlog::info(
+                            "Cancelling task switch ({} -/-> {}) due to unsaved changes",
+                            old_idx,
+                            new_idx
+                        );
+                    }
+                );
+            } else {
+                set_active_task(new_task_idx);
+            }
         }
 
         if (m_task_view) {
@@ -439,7 +556,20 @@ public:
         m_first_draw = false;
     }
 
-    void stop() { m_ready_to_stop = true; }
+    void stop()
+    {
+        if (m_task_view && m_task_view->has_unsaved_changes()) {
+            m_unsaved_task_handler.set(
+                [this]() {
+                    spdlog::info("Discarding unsaved changes and exiting");
+                    m_ready_to_stop = true;
+                },
+                []() { spdlog::info("Cancelling exit due to unsaved changes"); }
+            );
+        } else {
+            m_ready_to_stop = true;
+        }
+    }
 
     bool ready_to_stop() const { return m_ready_to_stop; }
 };
@@ -473,5 +603,4 @@ bool Gui::ready_to_stop() const
 {
     return m_pimpl->ready_to_stop();
 }
-
 }; // namespace recap::labeller::gui
