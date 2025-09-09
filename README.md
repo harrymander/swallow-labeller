@@ -1,5 +1,10 @@
 # RECAP swallow labeller
 
+**Note:** this branch is for a version of the labeller that only supports
+labelling a single swallow event per recording file. For a version that allows
+labelling multiple swallows per recording, see `complete-swallow-labelling`
+branch.
+
 ![Screenshot](screenshots/screenshot.png)
 
 Application for labelling swallows built with
