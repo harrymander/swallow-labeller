@@ -65,15 +65,24 @@ struct FlowAnnotation {
         Nrf,
     };
 
-    explicit FlowAnnotation(const models::TimeRange range) :
-        plot_range(range.start, range.end), choice(Choice::Nrf), is_ambiguous(false)
-    {}
+    static FlowAnnotation from_nrf_time_range(const models::TimeRange range)
+    {
+        return {
+            .plot_range = {range.start, range.end},
+            .choice = Choice::Nrf,
+            .is_ambiguous = false,
+        };
+    }
 
-    explicit FlowAnnotation(const models::SwallowApneaAnnotation& apnea_annotation) :
-        plot_range(apnea_annotation.time.start, apnea_annotation.time.end),
-        choice(src_pattern_to_choice(apnea_annotation.pattern)),
-        is_ambiguous(apnea_annotation.is_ambiguous)
-    {}
+    static FlowAnnotation
+    from_apnea_annotation(const models::SwallowApneaAnnotation& apnea_annotation)
+    {
+        return {
+            .plot_range = {apnea_annotation.time.start, apnea_annotation.time.end},
+            .choice = src_pattern_to_choice(apnea_annotation.pattern),
+            .is_ambiguous = apnea_annotation.is_ambiguous,
+        };
+    }
 
     std::variant<models::SwallowApneaAnnotation, models::TimeRange> to_annotation_model() const
     {
@@ -100,9 +109,10 @@ struct FlowAnnotation {
         return choice.value();
     }
 
-    widgets::PlotRange plot_range;
-    Choice choice;
-    bool is_ambiguous;
+    // TODO
+    widgets::PlotRange plot_range = {NAN, NAN};
+    Choice choice = Choice::ExEx;
+    bool is_ambiguous = false;
 };
 
 // Adapter for models::SwallowAnnotation
@@ -117,13 +127,13 @@ struct Annotation {
     {
         std::ranges::transform(
             annotation.swallow_apneas, std::back_inserter(flow_annotations), [](const auto& a) {
-                return FlowAnnotation(a);
+                return FlowAnnotation::from_apnea_annotation(a);
             }
         );
         std::ranges::transform(
             annotation.non_respiratory_flow_events,
             std::back_inserter(flow_annotations),
-            [](const auto& a) { return FlowAnnotation(a); }
+            [](const auto& a) { return FlowAnnotation::from_nrf_time_range(a); }
         );
         std::ranges::sort(flow_annotations, [](const auto& a, const auto& b) {
             const auto& range_a = a.plot_range;
@@ -234,6 +244,38 @@ using EarClickAnnotationAddCommand =
 using FlowAnnotationAddCommand =
     AddAnnotationCommand<FlowAnnotation, &Annotation::flow_annotations>;
 
+template <typename T, std::vector<T> Annotation::*Member>
+class DeleteAnnotationCommand : public AnnotationCommand {
+public:
+    explicit DeleteAnnotationCommand(std::size_t idx) :
+        m_idx_to_delete(static_cast<difference_type>(idx))
+    {}
+
+    void execute(Annotation& annotation) override
+    {
+        auto& vec = annotation.*Member;
+        m_deleted_value = vec[m_idx_to_delete];
+        vec.erase(vec.begin() + m_idx_to_delete);
+    }
+
+    void undo(Annotation& annotation) override
+    {
+        auto& vec = annotation.*Member;
+        vec.insert(vec.begin() + m_idx_to_delete, *m_deleted_value);
+    }
+
+private:
+    using difference_type = std::vector<T>::difference_type;
+
+    std::optional<T> m_deleted_value;
+    difference_type m_idx_to_delete;
+};
+
+using EarClickAnnotationDeleteCommand =
+    DeleteAnnotationCommand<widgets::PlotRange, &Annotation::ear_clicks>;
+using FlowAnnotationDeleteCommand =
+    DeleteAnnotationCommand<FlowAnnotation, &Annotation::flow_annotations>;
+
 class Annotator {
 public:
     explicit Annotator(Annotation annotation) :
@@ -288,221 +330,6 @@ private:
     Annotation m_annotation;
 };
 
-// FIXME - we are duplicating state by storing PlotRange objects here that are also kept in
-// Annotation. This won't work with the command queue.
-class PlotRangesAnnotator {
-public:
-    static constexpr double MinSelectionDuration = 0.001;
-
-    template <std::ranges::range R>
-    explicit PlotRangesAnnotator(const R& r) : m_ranges(r.begin(), r.end())
-    {}
-
-    // Call in the BeginPlot/EndPlot block of the plot(s) where the annotations can be edited.
-    // Returns
-    template <typename Add, typename Edit>
-        requires std::invocable<Add, const widgets::PlotRange&>
-        && std::invocable<Edit, std::size_t, const widgets::PlotRange&>
-    void edit(const char *id, const Add& add_func, const Edit& edit_func)
-    {
-        widgets::ScopedImID id_scope(id);
-        auto new_range = m_range_selector.update(
-            "##new_range_selector",
-            0,
-            ImGuiMouseButton_Left,
-            ImGuiKey_LeftCtrl,
-            MinSelectionDuration
-        );
-        if (new_range) {
-            spdlog::info(
-                "{}: new label created: [{:g}, {:g}]", id, new_range->start, new_range->end
-            );
-            m_ranges.emplace_back(*new_range);
-            m_active_idx = m_ranges.size() - 1;
-            add_func(*new_range);
-        }
-
-        if (m_active_idx.has_value()) {
-            auto& range = m_ranges[*m_active_idx];
-            if (!m_range_dragger.is_editing()) {
-                m_temp_range = range;
-            }
-
-            const bool updated = m_range_dragger.update(
-                "##active_range_dragger", m_temp_range, MinSelectionDuration
-            );
-            if (updated) {
-                spdlog::info(
-                    "{}: label {} updated to [{:g}, {:g}]",
-                    id,
-                    *m_active_idx,
-                    m_temp_range.start,
-                    m_temp_range.end
-                );
-                range = m_temp_range;
-                edit_func(*m_active_idx, range);
-            }
-        }
-    }
-
-    struct PlotRangeInfo {
-        std::size_t idx;
-        const widgets::PlotRange& range;
-        bool is_hovered;
-        bool is_active;
-    };
-
-    template <typename Function>
-        requires std::invocable<Function, const PlotRangeInfo&>
-    void for_each_range(const Function& function) const
-    {
-        for (std::size_t i = 0; i < m_ranges.size(); i++) {
-            bool is_active = m_active_idx == i;
-            const widgets::PlotRange& range =
-                is_active && m_range_dragger.is_editing() ? m_temp_range : m_ranges[i];
-            function(
-                PlotRangeInfo{
-                    .idx = i,
-                    .range = range,
-                    .is_hovered = m_hovered_idx == i,
-                    .is_active = is_active,
-                }
-            );
-        }
-    }
-
-    template <typename Describe, typename Delete>
-        requires std::convertible_to<
-                     std::invoke_result_t<Describe, std::size_t, const widgets::PlotRange&>,
-                     std::string>
-        && std::invocable<Delete, std::size_t>
-    void draw_list_box(const char *id, const Describe& describe_func, const Delete& delete_func)
-    {
-        widgets::ScopedImID id_scope(id);
-
-        static const char *remove_button_str = DELETE_ICON;
-        const float line_height = ImGui::GetTextLineHeightWithSpacing();
-        const float list_height = 4 * line_height;
-        m_hovered_idx.reset();
-
-        if (!ImGui::BeginListBox("##ear_clicks_labels_listbox", {-1, list_height})) {
-            return;
-        }
-
-        const float x_padding = 2 * ImGui::GetStyle().ItemSpacing.x;
-        const float label_width = ImGui::GetContentRegionAvail().x
-            - (ImGui::CalcTextSize(remove_button_str).x + x_padding);
-
-        std::optional<std::size_t> delete_idx = std::nullopt;
-        for (std::size_t i = 0; i < m_ranges.size(); i++) {
-            widgets::ScopedImID idx_id_scope(static_cast<int>(i));
-            std::string description = describe_func(i, m_ranges[i]);
-            const bool is_active = m_active_idx == i;
-            if (ImGui::Selectable(description.c_str(), is_active, 0, {label_width, line_height})) {
-                if (is_active) {
-                    m_active_idx.reset();
-                } else {
-                    m_active_idx = i;
-                }
-            }
-            if (ImGui::IsItemHovered()) {
-                m_hovered_idx = i;
-            }
-
-            ImGui::SameLine();
-            if (draw_delete_button()) {
-                delete_idx = i;
-            }
-            ImGui::SetItemTooltip("Delete label");
-            if (ImGui::IsItemHovered()) {
-                m_hovered_idx = i;
-            }
-        }
-
-        if (delete_idx.has_value()) {
-            delete_func(*delete_idx);
-        }
-    }
-
-    template <typename Function>
-        requires std::invocable<Function, widgets::PlotRange>
-    void for_new_range(const Function& function) const
-    {
-        const auto *selecting_range = m_range_selector.range();
-        if (selecting_range) {
-            function(*selecting_range);
-        }
-    }
-
-private:
-    static bool draw_delete_button()
-    {
-        widgets::RedButtonColorScope color_scope;
-        return draw_rounded_button(DELETE_ICON);
-    }
-
-    static bool draw_rounded_button(const char *label)
-    {
-        constexpr float ButtonCornerRadius = 5;
-        widgets::ScopedImStyle style(ImGuiStyleVar_FrameRounding, ButtonCornerRadius);
-        return ImGui::Button(label);
-    }
-
-    widgets::PlotRange m_temp_range = {NAN, NAN};
-    std::optional<std::size_t> m_active_idx = std::nullopt;
-    std::optional<std::size_t> m_hovered_idx = std::nullopt;
-    widgets::PlotRangeDragger m_range_dragger;
-    widgets::PlotRangeSelector m_range_selector;
-
-    std::vector<widgets::PlotRange> m_ranges;
-};
-
-class FlowAnnotator {
-public:
-    explicit FlowAnnotator(Annotator& annotator) :
-        m_annotator(annotator),
-        m_ranges_annotator(
-            std::views::transform(
-                m_annotator.annotation().flow_annotations,
-                [](const auto& annotation) { return annotation.plot_range; }
-            )
-        )
-    {}
-
-    void edit()
-    {
-        m_ranges_annotator.edit(
-            "##flow_plot_label_editing",
-            [this](const widgets::PlotRange& new_range) {
-                // TODO
-                // m_annotator.execute_command<FlowAnnotationAddCommand>(new_range);
-            },
-            [this](std::size_t idx, const widgets::PlotRange& new_range) {
-                auto new_annotation = m_annotator.annotation().flow_annotations[idx];
-                new_annotation.plot_range = new_range;
-                m_annotator.execute_command<FlowAnnotationEditCommand>(idx, new_annotation);
-            }
-        );
-    }
-
-    void draw_ranges(float height = 0) const
-    {
-        m_ranges_annotator.for_each_range([this, height](const auto& info) {
-            const auto& annotation = m_annotator.annotation().flow_annotations[info.idx];
-            // TODO: color
-            widgets::draw_plot_range(info.range, IM_COL32(128, 128, 128, 128), height);
-        });
-
-        m_ranges_annotator.for_new_range([height](const auto& range) {
-            widgets::draw_plot_range(range, IM_COL32(128, 128, 128, 128), height);
-        });
-    }
-
-private:
-    Annotator& m_annotator;
-    PlotRangesAnnotator m_ranges_annotator;
-};
-
 struct RgbColor {
     uint8_t red;
     uint8_t green;
@@ -518,6 +345,258 @@ constexpr float LabelSummaryHeight = 8; // Same as default ImPlotStyle::DigitalB
 constexpr uint8_t UnselectedLabelAlpha = 0x33;
 constexpr uint8_t HoveredLabelAlpha = 0x44;
 constexpr uint8_t SelectedLabelAlpha = 0x66;
+
+class FlowAnnotator {
+public:
+    explicit FlowAnnotator(Annotator& annotator) : m_annotator(annotator) {}
+
+    // Call inside BeginPlot/EndPlot
+    void edit(const char *id)
+    {
+        widgets::ScopedImID scoped_id(id);
+
+        // Add a new range
+        auto new_range = m_range_selector.update(
+            "##new_range_selector",
+            0,
+            ImGuiMouseButton_Left,
+            ImGuiKey_LeftCtrl,
+            MinSelectionDuration
+        );
+        if (new_range) {
+            spdlog::info(
+                "{}: new label created: [{:g}, {:g}]", id, new_range->start, new_range->end
+            );
+            m_new_annotation.plot_range = *new_range;
+            m_annotator.execute_command<FlowAnnotationAddCommand>(m_new_annotation);
+            m_active_idx = flow_annotations().size() - 1;
+        }
+
+        // Edit current active range
+        if (m_active_idx.has_value()) {
+            if (!m_range_dragger.is_editing()) {
+                m_active_annotation_temp_range = flow_annotations()[*m_active_idx].plot_range;
+            }
+
+            const bool updated = m_range_dragger.update(
+                "##active_range_dragger", m_active_annotation_temp_range, MinSelectionDuration
+            );
+            if (updated) {
+                spdlog::info(
+                    "{}: label {} updated to [{:g}, {:g}]",
+                    id,
+                    *m_active_idx,
+                    m_active_annotation_temp_range.start,
+                    m_active_annotation_temp_range.end
+                );
+                FlowAnnotation new_annotation = flow_annotations()[*m_active_idx];
+                new_annotation.plot_range = m_active_annotation_temp_range;
+                m_annotator.execute_command<FlowAnnotationEditCommand>(
+                    *m_active_idx, new_annotation
+                );
+            }
+        }
+    }
+
+    // Call inside BeginPlot/EndPlot
+    void draw_plot_ranges(float height = 0) const
+    {
+        const auto& annotations = flow_annotations();
+        for (std::size_t i = 0; i < annotations.size(); i++) {
+            const auto& flow_annotation = annotations[i];
+            const auto color = choice_to_color(flow_annotation.choice);
+            const bool is_active = m_active_idx == i;
+            const uint8_t alpha = is_active ?
+                SelectedLabelAlpha :
+                (m_hovered_idx == i ? HoveredLabelAlpha : UnselectedLabelAlpha);
+            const auto& range = is_active && m_range_dragger.is_editing() ?
+                m_active_annotation_temp_range :
+                flow_annotation.plot_range;
+            widgets::draw_plot_range(range, color.with_alpha(alpha), height);
+        }
+
+        const auto *new_range = m_range_selector.range();
+        if (new_range) {
+            auto color = choice_to_color(m_new_annotation.choice);
+            widgets::draw_plot_range(*new_range, color.with_alpha(UnselectedLabelAlpha), height);
+        }
+    }
+
+    void draw_labels_editor(const char *id)
+    {
+        widgets::ScopedImID scoped_id(id);
+        draw_list_box();
+        draw_annotation_editor();
+    }
+
+private:
+    void draw_annotation_editor()
+    {
+        using enum FlowAnnotation::Choice;
+        using Option = widgets::RadioButtonField<FlowAnnotation::Choice>;
+        constexpr std::array Options = {
+            Option("ex-ex [1]", ExEx, ImGuiKey_1),
+            Option("ex-in [2]", ExIn, ImGuiKey_2),
+            Option("in-ex [3]", InEx, ImGuiKey_3),
+            Option("in-in [4]", InIn, ImGuiKey_4),
+            Option("non-resp. flow [5]", Nrf, ImGuiKey_5),
+        };
+
+        FlowAnnotation annotation =
+            m_active_idx.has_value() ? flow_annotations()[*m_active_idx] : m_new_annotation;
+        bool changed = false;
+        for (const auto& opt : Options) {
+            FlowAnnotation::Choice choice = opt.value;
+            bool selected = choice == annotation.choice;
+            const bool radio_clicked = widgets::colored_radio_button(
+                opt.label, selected, choice_to_color(choice).with_alpha(0xFF)
+            );
+            if (radio_clicked || widgets::global_shortcut(opt.key)) {
+                if (!selected) {
+                    annotation.choice = choice;
+                    selected = true;
+                    changed = true;
+                    spdlog::debug("Apnea SRC selection changed to {}", opt.label);
+                }
+            }
+            if (selected && choice != Nrf) {
+                ImGui::SameLine();
+                if (ImGui::Checkbox("Ambiguous [a]", &annotation.is_ambiguous)
+                    || widgets::global_shortcut_toggle(ImGuiKey_A, annotation.is_ambiguous))
+                {
+                    spdlog::debug("Swallow apnea ambiguity changed: {}", annotation.is_ambiguous);
+                    changed = true;
+                }
+            }
+        }
+
+        if (changed) {
+            if (m_active_idx.has_value()) {
+                m_annotator.execute_command<FlowAnnotationEditCommand>(*m_active_idx, annotation);
+            } else {
+                m_new_annotation = annotation;
+            }
+        }
+    }
+
+    void draw_list_box()
+    {
+        static const char *remove_button_str = DELETE_ICON;
+        const float line_height = ImGui::GetTextLineHeightWithSpacing();
+        const float list_height = 4 * line_height;
+
+        m_hovered_idx.reset();
+
+        if (flow_annotations().empty()) {
+            ImGui::TextWrapped("No flow labels: Ctrl + click and drag on flow plot to add one");
+            return;
+        }
+
+        if (!ImGui::BeginListBox("##flow-labels-list-box", {-1, list_height})) {
+            return;
+        }
+
+        const float x_padding = 2 * ImGui::GetStyle().ItemSpacing.x;
+        const float label_width = ImGui::GetContentRegionAvail().x
+            - (ImGui::CalcTextSize(remove_button_str).x + x_padding);
+
+        std::optional<std::size_t> delete_idx = std::nullopt;
+        for (std::size_t i = 0; i < flow_annotations().size(); i++) {
+            widgets::ScopedImID idx_id_scope(static_cast<int>(i));
+
+            const auto& annotation = flow_annotations()[i];
+            std::string description = annotation_description(annotation);
+            const bool is_active = m_active_idx == i;
+            if (ImGui::Selectable(description.c_str(), is_active, 0, {label_width, line_height})) {
+                if (is_active) {
+                    m_active_idx.reset();
+                } else {
+                    m_active_idx = i;
+                }
+            }
+            if (ImGui::IsItemHovered()) {
+                m_hovered_idx = i;
+            }
+
+            ImGui::SameLine();
+            {
+                widgets::RedButtonColorScope red_button;
+                if (draw_rounded_button(remove_button_str)) {
+                    delete_idx = i;
+                }
+            }
+            if (ImGui::IsItemHovered()) {
+                m_hovered_idx = i;
+            }
+            ImGui::SetItemTooltip("Delete annotation");
+        }
+        ImGui::EndListBox();
+
+        if (delete_idx.has_value()) {
+            if (m_active_idx.has_value() && *m_active_idx == *delete_idx) {
+                m_active_idx.reset();
+            }
+            m_annotator.execute_command<FlowAnnotationDeleteCommand>(*delete_idx);
+        }
+    }
+
+    static std::string annotation_description(const FlowAnnotation& annotation)
+    {
+        const auto& range = annotation.plot_range;
+        return fmt::format(
+            "{}{}, [{:g}, {:g}], Δ = {:g}",
+            magic_enum::enum_name(annotation.choice),
+            annotation.choice != FlowAnnotation::Choice::Nrf && annotation.is_ambiguous ? "?" : "",
+            range.start,
+            range.end,
+            range.start - range.end
+        );
+    }
+
+    static bool draw_rounded_button(const char *label)
+    {
+        constexpr float ButtonCornerRadius = 5;
+        widgets::ScopedImStyle style(ImGuiStyleVar_FrameRounding, ButtonCornerRadius);
+        return ImGui::Button(label);
+    }
+
+    const std::vector<FlowAnnotation>& flow_annotations() const
+    {
+        return m_annotator.annotation().flow_annotations;
+    }
+
+    static constexpr double MinSelectionDuration = 0.001;
+
+    static RgbColor choice_to_color(FlowAnnotation::Choice choice)
+    {
+        using enum FlowAnnotation::Choice;
+        switch (choice) {
+        case ExEx:
+            return {0xFC, 0xEE, 0x5A};
+        case ExIn:
+            return {0x80, 0xFC, 0x5A};
+        case InEx:
+            return {0x5A, 0xFC, 0xBE};
+        case InIn:
+            return {0x5A, 0xB0, 0xFC};
+        case Nrf:
+            break;
+        default:
+            spdlog::error("apnea_label_color: invalid SrcPattern!");
+            break;
+        }
+        return {0x8D, 0x5A, 0xFC};
+    }
+
+    std::optional<std::size_t> m_active_idx = std::nullopt;
+    std::optional<std::size_t> m_hovered_idx = std::nullopt;
+    widgets::PlotRange m_active_annotation_temp_range = {NAN, NAN};
+    widgets::PlotRangeDragger m_range_dragger;
+    widgets::PlotRangeSelector m_range_selector;
+    FlowAnnotation m_new_annotation;
+
+    Annotator& m_annotator;
+};
 
 class TaskLabellingView : public TaskView {
 public:
@@ -562,6 +641,9 @@ private:
 
         ImGui::SeparatorText("Note");
         draw_note_input();
+
+        ImGui::SeparatorText("Swallows");
+        m_flow_annotator.draw_labels_editor("##flow_labels_editor");
     }
 
     void draw_undo_redo()
@@ -650,11 +732,11 @@ private:
 
         if (ImPlot::BeginAlignedPlots("##aligned_plots")) {
             draw_plot("##flow_plot", m_flow_plot, data_plot_height, [this]() {
-                m_flow_annotator.edit();
-                m_flow_annotator.draw_ranges();
+                m_flow_annotator.edit("##flow_annotator_edit");
+                m_flow_annotator.draw_plot_ranges();
             });
             draw_plot("##audio_plot", m_audio_plot, data_plot_height, [this]() {
-                m_flow_annotator.draw_ranges(LabelSummaryHeight);
+                m_flow_annotator.draw_plot_ranges(LabelSummaryHeight);
             });
             ImPlot::EndAlignedPlots();
         }
@@ -662,7 +744,7 @@ private:
         if (ImPlot::BeginPlot("##summary_plot", {-1, SummaryPlotHeight}, ImPlotFlags_CanvasOnly)) {
             draw_plot_summary_selector();
             draw_event_labels();
-            m_flow_annotator.draw_ranges(LabelSummaryHeight);
+            m_flow_annotator.draw_plot_ranges(LabelSummaryHeight);
             ImPlot::EndPlot();
         }
     }
