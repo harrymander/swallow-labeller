@@ -293,6 +293,7 @@ public:
         command->execute(m_annotation);
         m_executed_commands.push_back(std::move(command));
         m_next_command_it = m_executed_commands.end();
+        m_modified_since_last_save = true;
     }
 
     template <typename Command, typename... Args> void execute_command(Args&&...args)
@@ -307,6 +308,7 @@ public:
         if (can_undo_last_command()) {
             --m_next_command_it;
             (*m_next_command_it)->undo(m_annotation);
+            m_modified_since_last_save = true;
         }
     }
 
@@ -320,11 +322,22 @@ public:
         if (can_redo_last_undone_command()) {
             (*m_next_command_it)->execute(m_annotation);
             ++m_next_command_it;
+            m_modified_since_last_save = true;
         }
     }
 
+    void save_annotation(const SaveAnnotationCallback& callback)
+    {
+        callback(m_annotation.to_annotation_model());
+        m_modified_since_last_save = false;
+    }
+
+    bool modified_since_last_save() const { return m_modified_since_last_save; }
+
 private:
     using CommandList = std::list<std::unique_ptr<AnnotationCommand>>;
+
+    bool m_modified_since_last_save = false;
 
     CommandList m_executed_commands;
     CommandList::iterator m_next_command_it;
@@ -661,7 +674,7 @@ private:
         ImGui::EndDisabled();
     }
 
-    bool can_save() const { return false; }
+    bool can_save() const { return m_annotator.modified_since_last_save(); }
 
     void draw_save_button()
     {
@@ -673,6 +686,7 @@ private:
             || (!disabled && widgets::global_shortcut(Shortcut)))
         {
             spdlog::info("Saving annotation");
+            m_annotator.save_annotation(m_save_annotation);
         }
 
         ImGui::EndDisabled();
