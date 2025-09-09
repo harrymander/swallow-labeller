@@ -61,22 +61,27 @@ private:
 }; // namespace
 
 class Gui::Impl {
+    std::string m_ini_path;
+
+    bool m_first_draw = true;
     bool m_nfd_available = false;
     bool m_ready_to_stop = false;
-    std::string m_ini_path;
-    app::TaskLoader m_task_loader;
+
     std::array<WindowMenuItem, 3> m_menu_item_windows = {{
         {"ImGui demo...", ImGui::ShowDemoWindow},
         {"ImPlot demo...", ImPlot::ShowDemoWindow},
         {"ImGui metrics/debugger...", ImGui::ShowMetricsWindow},
     }};
     widgets::ColorSchemeSelector m_color_scheme_selector;
-    std::future<os::OsOpenStatus> m_open_annotations_path_future;
     bool m_show_debug_status_bar = DefaultShowDebugInfo;
+
     std::optional<std::string> m_critical_error = std::nullopt;
     bool m_critical_error_modal_open = false;
-    bool m_first_draw = true;
+
+    std::future<os::OsOpenStatus> m_open_annotations_path_future;
+
     std::size_t m_active_task_idx = 0;
+    app::TaskLoader m_task_loader;
     TaskList m_task_list;
 
     const std::vector<models::SwallowTaskInfo>& m_tasks;
