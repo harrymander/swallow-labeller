@@ -121,11 +121,11 @@ public:
     {}
 };
 
-class RoundedButtonStyleScope : public ScopedImColor {
+class RoundedButtonStyleScope : public ScopedImStyle {
 public:
     static constexpr float ButtonCornerRadius = 5;
 
-    RoundedButtonStyleScope() : ScopedImColor(ImGuiStyleVar_FrameRounding, ButtonCornerRadius) {}
+    RoundedButtonStyleScope() : ScopedImStyle(ImGuiStyleVar_FrameRounding, ButtonCornerRadius) {}
 };
 
 }; // namespace recap::labeller::gui::widgets
