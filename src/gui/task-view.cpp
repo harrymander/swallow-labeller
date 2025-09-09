@@ -361,6 +361,8 @@ constexpr uint8_t UnselectedLabelAlpha = 0x33;
 constexpr uint8_t HoveredLabelAlpha = 0x44;
 constexpr uint8_t SelectedLabelAlpha = 0x66;
 
+// FIXME: this is a mess... Need to avoid replicating state between the PlotRanges here and in
+// Annotation
 class PlotRangesEditor {
 public:
     // Call inside BeginPlot/EndPlot
