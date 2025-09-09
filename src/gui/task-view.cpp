@@ -682,7 +682,8 @@ private:
         ImGui::SeparatorText("Note");
         draw_note_input();
 
-        ImGui::SeparatorText("Swallows");
+        auto num_flow_labels = m_annotator.annotation().flow_annotations.size();
+        ImGui::SeparatorText(fmt::format("Flow labels [{}]", num_flow_labels).c_str());
         m_flow_annotator.draw_labels_editor("##flow_labels_editor");
     }
 
