@@ -464,8 +464,12 @@ public:
         }
 
         if (delete_idx.has_value()) {
-            if (m_active_idx.has_value() && *delete_idx == *m_active_idx) {
-                m_active_idx.reset();
+            if (m_active_idx.has_value()) {
+                if (*delete_idx < *m_active_idx) {
+                    --(*m_active_idx);
+                } else if (*delete_idx == *m_active_idx) {
+                    m_active_idx.reset();
+                }
             }
             delete_func(*delete_idx);
         }
