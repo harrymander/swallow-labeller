@@ -3,36 +3,28 @@
 
 #include "app/annotation-store.hpp"
 #include "app/task-loader.hpp"
+#include "gui/task-filter.hpp"
 #include "models/task-info.hpp"
 
 #include <filesystem>
-#include <memory>
 #include <vector>
 
 namespace recap::labeller::gui {
 
 class TaskList {
 public:
-    TaskList(
+    // Return index of the selected task (same as active_task_idx if unchanged).
+    // active_task_idx must be a valid index into tasks.
+    std::size_t draw(
         const std::vector<models::SwallowTaskInfo>& tasks,
+        std::size_t active_task_idx,
         const SwallowAnnotationStore& annotation_store,
-        app::TaskLoader& task_loader,
+        app::TaskLoader& m_task_loader,
         const std::filesystem::path& data_dir
     );
-    ~TaskList();
-    TaskList(const TaskList&) = delete;
-    TaskList& operator=(const TaskList&) = delete;
-    TaskList(TaskList&&) = delete;
-    TaskList& operator=(TaskList&&) = delete;
-
-    // Return pointer to newly selected task or nullptr if no change
-    [[nodiscard]] const models::SwallowTaskInfo *draw();
-
-    const models::SwallowTaskInfo& currently_selected_task() const;
 
 private:
-    class Impl;
-    std::unique_ptr<Impl> m_pimpl;
+    TaskFilter m_filter;
 };
 
 }; // namespace recap::labeller::gui

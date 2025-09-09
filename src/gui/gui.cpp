@@ -76,8 +76,10 @@ class Gui::Impl {
     std::optional<std::string> m_critical_error = std::nullopt;
     bool m_critical_error_modal_open = false;
     bool m_first_draw = true;
-
+    std::size_t m_active_task_idx = 0;
     TaskList m_task_list;
+
+    const std::vector<models::SwallowTaskInfo>& m_tasks;
     std::filesystem::path m_data_dir;
     SwallowAnnotationStore& m_annotation_store;
     std::unique_ptr<TaskView> m_task_view;
@@ -351,10 +353,10 @@ public:
         SwallowAnnotationStore& annotation_store,
         const std::filesystem::path& data_dir
     ) :
-        m_task_list(tasks, annotation_store, m_task_loader, data_dir),
+        m_tasks(tasks),
         m_data_dir(data_dir),
         m_annotation_store(annotation_store),
-        m_task_view(load_task_view(m_task_list.currently_selected_task())),
+        m_task_view(load_task_view(m_tasks[0])),
         m_annotation_store_error_obs(
             m_annotation_store.subscribe_sync_error([this](const auto& msg) {
                 spdlog::critical("Error saving annotation: {}", msg);
@@ -411,9 +413,13 @@ public:
             draw_critical_error(*m_critical_error);
         }
 
-        const models::SwallowTaskInfo *new_task = m_task_list.draw();
-        if (new_task) {
-            m_task_view = load_task_view(*new_task);
+        std::size_t new_task_idx = m_task_list.draw(
+            m_tasks, m_active_task_idx, m_annotation_store, m_task_loader, m_data_dir
+        );
+        if (new_task_idx != m_active_task_idx) {
+            // TODO: handle unsaved annotation before switching
+            m_active_task_idx = new_task_idx;
+            m_task_view = load_task_view(m_tasks[new_task_idx]);
         }
 
         if (m_task_view) {

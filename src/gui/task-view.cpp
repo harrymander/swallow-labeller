@@ -813,6 +813,8 @@ public:
         ImGui::End();
     }
 
+    bool has_unsaved_changes() const override { return m_annotator.modified_since_last_save(); }
+
 private:
     void draw_labels_editor()
     {
