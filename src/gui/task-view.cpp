@@ -840,6 +840,7 @@ private:
                 if (ImGui::Button(DELETE_ICON)) {
                     delete_idx = i;
                 }
+                ImGui::SetItemTooltip("Delete");
             }
 
             // TODO: put the delete button to right of text?
