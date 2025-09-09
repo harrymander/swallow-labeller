@@ -693,7 +693,7 @@ private:
                     annotation.choice = choice;
                     selected = true;
                     changed = true;
-                    spdlog::debug("Apnea SRC selection changed to {}", opt.label);
+                    spdlog::info("Apnea SRC selection changed to {}", opt.label);
                 }
             }
             if (selected && choice != Nrf) {
@@ -701,7 +701,7 @@ private:
                 if (ImGui::Checkbox("Ambiguous [a]", &annotation.is_ambiguous)
                     || widgets::global_shortcut_toggle(ImGuiKey_A, annotation.is_ambiguous))
                 {
-                    spdlog::debug("Swallow apnea ambiguity changed: {}", annotation.is_ambiguous);
+                    spdlog::info("Swallow apnea ambiguity changed: {}", annotation.is_ambiguous);
                     changed = true;
                 }
             }
@@ -1046,7 +1046,7 @@ std::unique_ptr<TaskView> load_task_view(
 )
 {
     std::filesystem::path path = data_dir / task.npz_file.path;
-    spdlog::debug("Loading task data {}...", path);
+    spdlog::info("Loading task data {}...", path);
     auto task_data = loader.load_task_data(path);
     if (task_data.has_value()) {
         return std::make_unique<TaskLabellingView>(
