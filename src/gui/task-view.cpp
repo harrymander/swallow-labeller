@@ -619,11 +619,8 @@ public:
             id,
             [this](auto idx) { return flow_annotations()[idx].plot_range; },
             [this](const auto& range) {
-                FlowAnnotation new_annotation = {
-                    .plot_range = range,
-                    .choice = FlowAnnotation::Choice::Nrf,
-                    .is_ambiguous = false,
-                };
+                FlowAnnotation new_annotation = m_temp_annotation;
+                new_annotation.plot_range = range;
                 m_annotator.execute_command<FlowAnnotationAddCommand>(new_annotation);
                 return flow_annotations().size() - 1;
             },
@@ -646,7 +643,7 @@ public:
         );
         const auto *new_range = m_ranges_editor.creating_range();
         if (new_range) {
-            auto color = choice_to_color(m_new_annotation.choice);
+            auto color = choice_to_color(m_temp_annotation.choice);
             widgets::draw_plot_range(*new_range, color.with_alpha(UnselectedLabelAlpha), height);
         }
     }
@@ -668,6 +665,9 @@ public:
 private:
     void draw_annotation_editor()
     {
+        // TODO: should there be separate controls for creating a new label vs editing an existing
+        // one?
+
         using enum FlowAnnotation::Choice;
         using Option = widgets::RadioButtonField<FlowAnnotation::Choice>;
         constexpr std::array Options = {
@@ -679,18 +679,19 @@ private:
         };
 
         const auto& active_idx = m_ranges_editor.active_idx();
-        FlowAnnotation annotation =
-            active_idx.has_value() ? flow_annotations()[*active_idx] : m_new_annotation;
+        FlowAnnotation current_annotation =
+            active_idx.has_value() ? flow_annotations()[*active_idx] : m_temp_annotation;
+
         bool changed = false;
         for (const auto& opt : Options) {
             FlowAnnotation::Choice choice = opt.value;
-            bool selected = choice == annotation.choice;
+            bool selected = choice == current_annotation.choice;
             const bool radio_clicked = widgets::colored_radio_button(
                 opt.label, selected, choice_to_color(choice).with_alpha(0xFF)
             );
             if (radio_clicked || widgets::global_shortcut(opt.key)) {
                 if (!selected) {
-                    annotation.choice = choice;
+                    current_annotation.choice = choice;
                     selected = true;
                     changed = true;
                     spdlog::info("Apnea SRC selection changed to {}", opt.label);
@@ -698,10 +699,12 @@ private:
             }
             if (selected && choice != Nrf) {
                 ImGui::SameLine();
-                if (ImGui::Checkbox("Ambiguous [a]", &annotation.is_ambiguous)
-                    || widgets::global_shortcut_toggle(ImGuiKey_A, annotation.is_ambiguous))
+                if (ImGui::Checkbox("Ambiguous [a]", &current_annotation.is_ambiguous)
+                    || widgets::global_shortcut_toggle(ImGuiKey_A, current_annotation.is_ambiguous))
                 {
-                    spdlog::info("Swallow apnea ambiguity changed: {}", annotation.is_ambiguous);
+                    spdlog::info(
+                        "Swallow apnea ambiguity changed: {}", current_annotation.is_ambiguous
+                    );
                     changed = true;
                 }
             }
@@ -709,9 +712,15 @@ private:
 
         if (changed) {
             if (active_idx.has_value()) {
-                m_annotator.execute_command<FlowAnnotationEditCommand>(*active_idx, annotation);
+                m_annotator.execute_command<FlowAnnotationEditCommand>(
+                    *active_idx, current_annotation
+                );
+
+                // Maintain the current label choice for new annotation, but without ambiguity
+                m_temp_annotation.choice = current_annotation.choice;
+                m_temp_annotation.is_ambiguous = false;
             } else {
-                m_new_annotation = annotation;
+                m_temp_annotation = current_annotation;
             }
         }
     }
@@ -778,7 +787,7 @@ private:
         return {0x8D, 0x5A, 0xFC};
     }
 
-    FlowAnnotation m_new_annotation;
+    FlowAnnotation m_temp_annotation; // values used for new annotation
     PlotRangesEditor m_ranges_editor;
     Annotator& m_annotator;
 };
