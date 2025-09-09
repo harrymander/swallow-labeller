@@ -335,13 +335,34 @@ public:
 
     bool modified_since_last_save() const { return m_modified_since_last_save; }
 
+    void clear_all_annotations() { execute_command<DeleteAllCommand>(); }
+
 private:
+    class DeleteAllCommand : public AnnotationCommand {
+    public:
+        void execute(Annotation& annotation) override
+        {
+            spdlog::info("Deleting all annotations");
+            m_annotation = std::move(annotation);
+            annotation = {};
+        }
+
+        void undo(Annotation& annotation) override
+        {
+            spdlog::info("Undo delete all annotations");
+            annotation = *m_annotation;
+        }
+
+    private:
+        std::optional<Annotation> m_annotation = std::nullopt;
+    };
+
     using CommandList = std::list<std::unique_ptr<AnnotationCommand>>;
 
     bool m_modified_since_last_save = false;
-
     CommandList m_executed_commands;
-    CommandList::iterator m_next_command_it;
+    CommandList::iterator m_next_command_it{m_executed_commands.end()};
+
     Annotation m_annotation;
 };
 
@@ -827,7 +848,7 @@ public:
 private:
     void draw_labels_editor()
     {
-        draw_save_button();
+        draw_save_delete_buttons();
         draw_undo_redo();
 
         ImGui::SeparatorText("Events");
@@ -855,20 +876,30 @@ private:
         ImGui::EndDisabled();
     }
 
-    void draw_save_button()
+    void draw_save_delete_buttons()
     {
+        constexpr ImGuiKeyChord SaveShortcut = ImGuiMod_Ctrl | ImGuiKey_S;
+
         const float height = ImGui::GetTextLineHeightWithSpacing() * 2;
-        constexpr ImGuiKeyChord Shortcut = ImGuiMod_Ctrl | ImGuiKey_S;
         const bool can_save = m_annotator.modified_since_last_save() && can_save_annotation();
+        ImVec2 submit_btn_size = {-height - ImGui::GetStyle().ItemSpacing.x, height};
         ImGui::BeginDisabled(!can_save);
-        if (ImGui::Button("Submit [Ctrl+S]", {-1, height})
-            || (can_save && widgets::global_shortcut(Shortcut)))
+        if (ImGui::Button("Submit [Ctrl+S]", submit_btn_size)
+            || (can_save && widgets::global_shortcut(SaveShortcut)))
         {
             spdlog::info("Saving annotation");
             m_annotator.save_annotation(m_save_annotation_callback);
         }
-
         ImGui::EndDisabled();
+
+        ImGui::SameLine();
+        {
+            widgets::RedButtonColorScope red_button;
+            if (ImGui::Button(ICON_FA_ERASER, {height, height})) {
+                m_annotator.clear_all_annotations();
+            }
+        }
+        ImGui::SetItemTooltip("Clear all annotations");
     }
 
     void draw_event_list()
