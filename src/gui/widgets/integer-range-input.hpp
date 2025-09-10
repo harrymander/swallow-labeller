@@ -22,13 +22,13 @@ public:
     void clear() { m_items.clear(); }
 
 private:
-    using Pair = std::pair<T, T>;
+    using Range = std::pair<T, T>;
 
     void update();
-    static bool parse_pair(std::string_view str, Pair& pair);
+    static bool parse_range(std::string_view str, Range& range);
 
     bool m_error = false;
-    std::vector<Pair> m_items;
+    std::vector<Range> m_items;
     std::string m_input;
 };
 

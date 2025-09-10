@@ -29,16 +29,16 @@ template <std::unsigned_integral T> bool parse_int(std::string_view s, T& val)
 }; // namespace
 
 template <std::unsigned_integral T>
-bool UnsignedIntegerRangeInput<T>::parse_pair(std::string_view str, Pair& pair)
+bool UnsignedIntegerRangeInput<T>::parse_range(std::string_view str, Range& range)
 {
     const auto dash_pos = str.find('-');
 
     // No dash: expect just a single number
     if (dash_pos == std::string_view::npos) {
-        if (!parse_int(str, pair.first)) {
+        if (!parse_int(str, range.first)) {
             return false;
         }
-        pair.second = pair.first;
+        range.second = range.first;
     }
 
     // "-second": rejected since it could be confused for a negative number
@@ -49,16 +49,16 @@ bool UnsignedIntegerRangeInput<T>::parse_pair(std::string_view str, Pair& pair)
 
     const auto second = strutil::trimmed(str.substr(dash_pos + 1));
     if (second.empty()) { // "first-": admit all numbers >= first
-        if (!parse_int(first, pair.first)) {
+        if (!parse_int(first, range.first)) {
             return false;
         }
-        pair.second = std::numeric_limits<T>::max();
+        range.second = std::numeric_limits<T>::max();
     } else { // "first-second": admit all numbers in [first, second]
-        if (!(parse_int(first, pair.first) && parse_int(second, pair.second))) {
+        if (!(parse_int(first, range.first) && parse_int(second, range.second))) {
             return false;
         }
-        if (pair.second < pair.first) {
-            std::swap(pair.first, pair.second);
+        if (range.second < range.first) {
+            std::swap(range.first, range.second);
         }
     }
 
@@ -98,7 +98,7 @@ template <std::unsigned_integral T> void UnsignedIntegerRangeInput<T>::update()
 {
     m_error = true;
     m_items.clear();
-    std::vector<Pair> items;
+    std::vector<Range> items;
 
     std::size_t start = 0;
     while (true) {
@@ -112,11 +112,11 @@ template <std::unsigned_integral T> void UnsignedIntegerRangeInput<T>::update()
             return;
         }
 
-        Pair pair;
-        if (!parse_pair(substr, pair)) {
+        Range range;
+        if (!parse_range(substr, range)) {
             return;
         }
-        items.push_back(pair);
+        items.push_back(range);
 
         if (end == std::string::npos) {
             break;
