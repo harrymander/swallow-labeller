@@ -6,10 +6,12 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
+#include <charconv>
 #include <fstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <system_error>
 
 namespace recap::labeller::app {
 
@@ -87,11 +89,11 @@ void override_config_vals_from_env(AppConfig& config)
         spdlog::debug(
             "config: max_num_plot_points overridden by env var {:?}", *max_plot_points_envvar
         );
-        try {
-            config.max_num_plot_points = std::stoi(*max_plot_points_envvar);
-        } catch (const std::out_of_range&) {
-            invalid_field(MaxPlotPointsEnvVarName, "value of of range");
-        } catch (const std::invalid_argument&) {
+
+        const char *start = max_plot_points_envvar->data();
+        const char *end = start + max_plot_points_envvar->size();
+        auto res = std::from_chars(start, end, config.max_num_plot_points);
+        if (!(res.ec == std::errc{} && res.ptr == end)) {
             invalid_field(MaxPlotPointsEnvVarName, "invalid integer value");
         }
     }
