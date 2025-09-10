@@ -47,6 +47,7 @@ add_custom_target(
         --inline-suppr --suppressions-list=cppcheck-suppressions.txt
         --relative-paths=${CMAKE_SOURCE_DIR}
         src tests
+    USES_TERMINAL
 )
 
 set(
@@ -62,12 +63,14 @@ add_custom_target(
     DEPENDS ${CLANG_FORMAT_EXE}
     COMMENT "Linting source code with clang-format"
     COMMAND ${CLANG_FORMAT_CMD}
+    USES_TERMINAL
 )
 add_custom_target(
     format
     DEPENDS ${CLANG_FORMAT_EXE}
     COMMENT "Formatting source code with clang-format"
     COMMAND ${CLANG_FORMAT_CMD} --in-place
+    USES_TERMINAL
 )
 
 add_custom_target(lint-all DEPENDS check lint)
