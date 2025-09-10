@@ -5,18 +5,21 @@
 #include <imgui.h>
 #include <imgui_stdlib.h>
 
-#include <algorithm>
 #include <charconv>
+#include <concepts>
+#include <cstddef>
 #include <limits>
 #include <string_view>
 #include <system_error>
-#include <utility>
 
 namespace recap::labeller::gui::widgets {
 
+template class UnsignedIntegerRangeInput<std::size_t>;
+template class UnsignedIntegerRangeInput<unsigned int>;
+
 namespace {
 
-bool parse_int(std::string_view s, unsigned int& val)
+template <std::unsigned_integral T> bool parse_int(std::string_view s, T& val)
 {
     const char *const last = s.data() + s.size();
     const auto res = std::from_chars(s.data(), last, val);
@@ -25,7 +28,8 @@ bool parse_int(std::string_view s, unsigned int& val)
 
 }; // namespace
 
-bool IntegerRangeInput::parse_pair(std::string_view str, Pair& pair)
+template <std::unsigned_integral T>
+bool UnsignedIntegerRangeInput<T>::parse_pair(std::string_view str, Pair& pair)
 {
     const auto dash_pos = str.find('-');
 
@@ -48,7 +52,7 @@ bool IntegerRangeInput::parse_pair(std::string_view str, Pair& pair)
         if (!parse_int(first, pair.first)) {
             return false;
         }
-        pair.second = std::numeric_limits<unsigned int>::max();
+        pair.second = std::numeric_limits<T>::max();
     } else { // "first-second": admit all numbers in [first, second]
         if (!(parse_int(first, pair.first) && parse_int(second, pair.second))) {
             return false;
@@ -61,7 +65,8 @@ bool IntegerRangeInput::parse_pair(std::string_view str, Pair& pair)
     return true;
 }
 
-void IntegerRangeInput::draw(const char *id, float width)
+template <std::unsigned_integral T>
+void UnsignedIntegerRangeInput<T>::draw(const char *id, float width)
 {
     if (width != 0) {
         ImGui::SetNextItemWidth(width);
@@ -73,7 +78,7 @@ void IntegerRangeInput::draw(const char *id, float width)
     }
 }
 
-bool IntegerRangeInput::contains(unsigned int val) const
+template <std::unsigned_integral T> bool UnsignedIntegerRangeInput<T>::contains(T val) const
 {
     // m_items is sorted so can return false early if val < start. A linear search is not
     // necessarily efficient but since the vector of items is expected to be fairly small it doesn't
@@ -89,7 +94,7 @@ bool IntegerRangeInput::contains(unsigned int val) const
     return false;
 }
 
-void IntegerRangeInput::update()
+template <std::unsigned_integral T> void UnsignedIntegerRangeInput<T>::update()
 {
     m_error = true;
     m_items.clear();

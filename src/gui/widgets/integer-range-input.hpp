@@ -1,6 +1,7 @@
 #ifndef INCLUDE_RECAP_LABELLER_GUI_WIDGETS_INTEGER_RANGE_INPUT
 #define INCLUDE_RECAP_LABELLER_GUI_WIDGETS_INTEGER_RANGE_INPUT
 
+#include <concepts>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -8,11 +9,11 @@
 
 namespace recap::labeller::gui::widgets {
 
-class IntegerRangeInput {
+template <std::unsigned_integral T> class UnsignedIntegerRangeInput {
 public:
     void draw(const char *id, float width = 0);
 
-    [[nodiscard]] bool contains(unsigned int val) const;
+    [[nodiscard]] bool contains(T val) const;
 
     [[nodiscard]] bool error() const { return !m_input.empty() && m_error; }
 
@@ -21,7 +22,7 @@ public:
     void clear() { m_items.clear(); }
 
 private:
-    using Pair = std::pair<unsigned int, unsigned int>;
+    using Pair = std::pair<T, T>;
 
     void update();
     static bool parse_pair(std::string_view str, Pair& pair);

@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <array>
+#include <concepts>
 #include <optional>
 #include <regex>
 #include <string_view>
@@ -26,7 +27,7 @@ namespace recap::labeller::gui {
 
 namespace {
 
-class IntegerFilter : public TaskFilter::Filter {
+template <std::unsigned_integral T> class IntegerFilter : public TaskFilter::Filter {
 public:
     using TaskFilter::Filter::Filter;
 
@@ -43,16 +44,16 @@ public:
         }
     }
 
-    bool integer_passes(unsigned int val) const
+    bool integer_passes(T val) const
     {
         return m_input.empty() || (!m_input.error() && m_input.contains(val));
     }
 
 private:
-    widgets::IntegerRangeInput m_input;
+    widgets::UnsignedIntegerRangeInput<T> m_input;
 };
 
-struct TaskEventCountFilter : public IntegerFilter {
+struct TaskEventCountFilter : public IntegerFilter<std::size_t> {
     using IntegerFilter::IntegerFilter;
 
     bool passes(
@@ -65,7 +66,7 @@ struct TaskEventCountFilter : public IntegerFilter {
 };
 
 template <unsigned int models::SwallowTaskInfo::*IntMember>
-struct TaskIntegerFilter : public IntegerFilter {
+struct TaskIntegerFilter : public IntegerFilter<unsigned int> {
     using IntegerFilter::IntegerFilter;
 
     bool passes(
