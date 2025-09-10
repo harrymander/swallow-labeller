@@ -91,7 +91,7 @@ std::size_t draw_in_window(
 
     std::size_t num_filtered = 0;
     std::size_t num_annotated = 0;
-    if (ImGui::BeginListBox("##task-list", {-1, -1})) {
+    if (ImGui::BeginListBox("##task-list", {-FLT_MIN, -FLT_MIN})) {
         for (std::size_t i = 0; i < tasks.size(); i++) {
             const auto& task = tasks[i];
             const auto *annotation = annotation_store.get_annotation(task.get_id());

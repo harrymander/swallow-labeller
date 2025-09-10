@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <array>
 #include <concepts>
+#include <limits>
 #include <optional>
 #include <regex>
 #include <string_view>
@@ -27,6 +28,13 @@ namespace recap::labeller::gui {
 
 namespace {
 
+constexpr float FillSize = -std::numeric_limits<float>::min();
+
+float text_width(const char *text)
+{
+    return ImGui::CalcTextSize(text).x + ImGui::GetStyle().ItemSpacing.x;
+}
+
 template <std::unsigned_integral T> class IntegerFilter : public TaskFilter::Filter {
 public:
     using TaskFilter::Filter::Filter;
@@ -34,9 +42,8 @@ public:
     void draw() final
     {
         const bool error = m_input.error();
-        m_input.draw(
-            "##input", error ? -ImGui::GetFontSize() - ImGui::GetStyle().ItemSpacing.x : -1
-        );
+        float width = error ? -text_width(ERR_ICON) : FillSize;
+        m_input.draw("##input", width);
         if (error) {
             ImGui::SameLine();
             ImGui::TextUnformatted(ERR_ICON);
@@ -91,7 +98,7 @@ public:
             labels[Cued] = "Cued";
             return labels;
         }();
-        ImGui::SetNextItemWidth(-1);
+        ImGui::SetNextItemWidth(-FLT_MIN);
         widgets::enum_combo("##swallow-test-type", Labels, m_value);
     }
 
@@ -143,9 +150,7 @@ public:
 
         ImGui::SameLine();
         const bool regex_error = m_use_regex && !m_regex.has_value();
-        ImGui::SetNextItemWidth(
-            regex_error ? -ImGui::GetFontSize() - ImGui::GetStyle().ItemSpacing.x : -1
-        );
+        ImGui::SetNextItemWidth(regex_error ? -text_width(ERR_ICON) : FillSize);
         if (ImGui::InputText("##text-filter-input", &m_search)) {
             update_input();
         }
@@ -388,13 +393,13 @@ void TaskFilter::draw_filters()
 void TaskFilter::draw_new_filter_control()
 {
     if (!m_filters.empty()) {
-        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 3.5F);
+        ImGui::SetNextItemWidth(text_width("AND") + ImGui::GetFrameHeight());
         bool_combo("##and_or_combo", m_and, "AND", "OR");
         ImGui::SameLine();
     }
 
     const FilterChoice *new_filter = nullptr;
-    ImGui::SetNextItemWidth(-1);
+    ImGui::SetNextItemWidth(FillSize);
     if (ImGui::BeginCombo(
             "##new_filter_combo",
             FILTER_ICON ICON_TEXT_SPACE "Add task filter...",
