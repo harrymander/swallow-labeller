@@ -3,7 +3,7 @@ fetchcontent_declare(
     imgui
     # v1.90.9 docking branch with BeginCombo assertion fix
     GIT_REPOSITORY https://github.com/harrymander/imgui
-    GIT_TAG 75ebdb12f29c08b03c3b2f2adb75fc7601dda299
+    GIT_TAG 6db8c4a85e997ac7381e7113f83e55fb9f27a51c
 )
 fetchcontent_makeavailable(imgui)
 
