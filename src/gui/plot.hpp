@@ -29,8 +29,9 @@ public:
         m_cursor_format(cursor_format)
     {}
 
-    // Must be called inside PlotBegin/PlotEnd
-    void draw();
+    // Must be called inside PlotBegin/PlotEnd.
+    // Returns number of points plotted.
+    std::size_t draw();
 
 private:
     widgets::PlotRangeSelector m_delta_selector;

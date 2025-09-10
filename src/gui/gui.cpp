@@ -267,7 +267,7 @@ class Gui::Impl {
         }
     }
 
-    static void draw_status_bar()
+    void draw_status_bar() const
     {
         constexpr float FramePadding = 5;
         widgets::ScopedImStyle style_scope = {
@@ -293,11 +293,12 @@ class Gui::Impl {
         const ImGuiIO& io = ImGui::GetIO();
         ImGui::Text(
             DEBUG_INFO_ICON ICON_TEXT_SPACE
-            "Mouse Position: [%.0f,%.0f]. Application average: %.3f ms/frame (%.1f FPS).",
+            "Mouse Position: [%.0f,%.0f]. Application average: %.3f ms/frame (%.1f FPS). %s",
             io.MousePos.x,
             io.MousePos.y,
             1000.0f / io.Framerate,
-            io.Framerate
+            io.Framerate,
+            m_task_view ? m_task_view->debug_info().c_str() : ""
         );
 
         ImGui::End();

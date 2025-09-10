@@ -22,6 +22,8 @@ public:
     virtual bool can_save_annotation() const { return false; };
 
     virtual void save_annotation() const {}
+
+    virtual std::string debug_info() const { return ""; }
 };
 
 std::unique_ptr<TaskView> load_task_view(

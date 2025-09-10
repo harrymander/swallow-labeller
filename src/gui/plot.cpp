@@ -166,9 +166,8 @@ void draw_delta_selector(widgets::PlotRangeSelector& selector)
     };
 }
 
-void plot_autostrided_line(
-    const char *id, const std::vector<double>& x, const std::vector<double>& y
-)
+std::size_t
+plot_autostrided_line(const char *id, const std::vector<double>& x, const std::vector<double>& y)
 {
     constexpr ImPlotLineFlags Flags = 0;
     constexpr int Offset = 0;
@@ -181,20 +180,22 @@ void plot_autostrided_line(
 
     int max_num_points = app::get_global_app_config().max_num_plot_points;
     int stride_points = std::max(num_points / max_num_points, 1);
+    num_points /= stride_points;
     ImPlot::PlotLine(
         id,
         x.data() + offset,
         y.data() + offset,
-        num_points / stride_points,
+        num_points,
         Flags,
         Offset,
-        sizeof(double) * stride_points
+        static_cast<int>(sizeof(double)) * stride_points
     );
+    return static_cast<std::size_t>(num_points);
 }
 
 }; // namespace
 
-void Plot::draw()
+std::size_t Plot::draw()
 {
     setup_axis_links(ImAxis_X1, m_xrange.start, m_xrange.end);
     ImPlot::SetupAxis(
@@ -202,11 +203,12 @@ void Plot::draw()
     );
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, m_xdata[0], m_xdata.back());
 
-    plot_autostrided_line("##line", m_xdata, m_ydata);
+    std::size_t num_points = plot_autostrided_line("##line", m_xdata, m_ydata);
     if (is_mouse_inside_plot()) {
         draw_plot_hovered(m_xdata.data(), m_xdata.size(), m_ydata.data(), m_cursor_format);
     }
     draw_delta_selector(m_delta_selector);
+    return num_points;
 }
 
 }; // namespace recap::labeller::gui

@@ -904,6 +904,7 @@ public:
 
     void draw() override
     {
+        m_num_plot_points = 0;
         if (ImGui::Begin(TaskViewDataPlotsWindowId)) {
             draw_plots();
         }
@@ -926,6 +927,11 @@ public:
         } else {
             spdlog::error("Cannot save annotation");
         }
+    }
+
+    std::string debug_info() const override
+    {
+        return fmt::format("Plotting {} points.", m_num_plot_points);
     }
 
 private:
@@ -1033,16 +1039,17 @@ private:
             - ImGui::GetStyle().ItemSpacing.y;
 
         if (ImPlot::BeginAlignedPlots("##aligned_plots")) {
-            draw_plot("##flow_plot", m_flow_plot, data_plot_height, [this]() {
+            m_num_plot_points += draw_plot("##flow_plot", m_flow_plot, data_plot_height, [this]() {
                 m_flow_annotator.edit("##flow_annotator_edit");
                 m_audio_annotator.draw_plot_ranges(LabelSummaryHeight);
                 m_flow_annotator.draw_plot_ranges();
             });
-            draw_plot("##audio_plot", m_audio_plot, data_plot_height, [this]() {
-                m_flow_annotator.draw_plot_ranges(LabelSummaryHeight);
-                m_audio_annotator.draw_plot_ranges();
-                m_audio_annotator.edit("##audio_annotator_edit");
-            });
+            m_num_plot_points +=
+                draw_plot("##audio_plot", m_audio_plot, data_plot_height, [this]() {
+                    m_flow_annotator.draw_plot_ranges(LabelSummaryHeight);
+                    m_audio_annotator.draw_plot_ranges();
+                    m_audio_annotator.edit("##audio_annotator_edit");
+                });
             ImPlot::EndAlignedPlots();
         }
 
@@ -1056,17 +1063,19 @@ private:
 
     template <typename Func>
         requires std::invocable<Func>
-    void draw_plot(const char *id, Plot& plot, float height, const Func& extra_draw) const
+    std::size_t draw_plot(const char *id, Plot& plot, float height, const Func& extra_draw) const
     {
         constexpr ImPlotFlags Flags =
             ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus;
         widgets::ScopedImID scoped_id(id);
+        std::size_t num_points = 0;
         if (ImPlot::BeginPlot("##plot", {-1, height}, Flags)) {
-            plot.draw();
+            num_points = plot.draw();
             draw_event_labels();
             extra_draw();
             ImPlot::EndPlot();
         }
+        return num_points;
     }
 
     void draw_event_labels() const
@@ -1090,15 +1099,17 @@ private:
         auto size = static_cast<int>(m_data.flow_time.size());
         int max_points = app::get_global_app_config().max_num_plot_points;
         int stride = std::max(size / max_points, 1);
+        size /= stride;
         ImPlot::PlotLine(
             "##summary_flow_plot_line",
             m_data.flow_time.data(),
             m_data.flow.data(),
-            size / stride,
+            size,
             LineFlags,
             PlotOffset,
-            stride * sizeof(decltype(m_data.flow_time)::value_type)
+            stride * static_cast<int>(sizeof(decltype(m_data.flow_time)::value_type))
         );
+        m_num_plot_points += static_cast<std::size_t>(size);
 
         m_plot_summary_selector.update("##plot_summary_selector");
         const widgets::PlotRange *new_range = m_plot_summary_selector.range();
@@ -1110,6 +1121,7 @@ private:
         widgets::draw_plot_range(m_plot_x_range, SummaryColor);
     }
 
+    std::size_t m_num_plot_points = 0;
     widgets::PlotRangeDragger m_plot_summary_dragger;
     widgets::PlotRangeSelector m_plot_summary_selector;
     std::string m_note;
