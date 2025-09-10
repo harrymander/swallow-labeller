@@ -30,6 +30,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <iterator>
+#include <limits>
 #include <list>
 #include <memory>
 #include <optional>
@@ -41,6 +42,9 @@
 namespace recap::labeller::gui {
 
 namespace {
+
+// Pass ImGui size arguments to fill remaining X/Y space
+constexpr float SizeFill = -std::numeric_limits<float>::min();
 
 template <std::ranges::range R, typename Op> auto transform_to_vector(const R& range, const Op& op)
 {
@@ -591,8 +595,7 @@ private:
 
     template <typename CenterRange> void draw_list_box(const CenterRange& center_range)
     {
-        const float height = 4 * ImGui::GetTextLineHeightWithSpacing();
-        if (ImGui::BeginListBox("##labels_list_box", {-1, height})) {
+        if (ImGui::BeginListBox("##labels_list_box", {SizeFill, SizeFill})) {
             m_ranges_editor.draw_list_box_items(
                 ear_clicks(),
                 [](const auto& r) {
@@ -666,12 +669,13 @@ public:
 
         auto num_annotations = flow_annotations().size();
         ImGui::SeparatorText(fmt::format("Flow labels [{}]", num_annotations).c_str());
+        draw_annotation_editor();
+
         if (num_annotations == 0) {
             ImGui::TextWrapped("No flow labels: Ctrl + click and drag on flow plot to add one");
         } else {
             draw_list_box(center_range);
         }
-        draw_annotation_editor();
     }
 
 private:
@@ -741,8 +745,7 @@ private:
 
     template <typename CenterRange> void draw_list_box(const CenterRange& center_range)
     {
-        const float list_height = 4 * ImGui::GetTextLineHeightWithSpacing();
-        if (ImGui::BeginListBox("##flow-labels-list-box", {-1, list_height})) {
+        if (ImGui::BeginListBox("##flow-labels-list-box", {SizeFill, SizeFill})) {
             m_ranges_editor.draw_list_box_items(
                 flow_annotations(),
                 annotation_description,
@@ -935,21 +938,42 @@ public:
     }
 
 private:
+    template <typename Function>
+    void child_window(const char *name, float num_lines, const Function& draw)
+    {
+        constexpr ImGuiChildFlags ChildFlags = ImGuiChildFlags_ResizeY;
+        float line_height = ImGui::GetTextLineHeightWithSpacing();
+        if (ImGui::BeginChild(name, {SizeFill, num_lines * line_height}, ChildFlags)) {
+            draw();
+        }
+        ImGui::EndChild();
+    }
+
     void draw_labels_editor()
     {
         draw_save_button();
         draw_undo_redo();
 
-        ImGui::SeparatorText("Events");
-        draw_event_list();
+        child_window("##event_child_window", 6, [this]() {
+            ImGui::SeparatorText("Events");
+            draw_event_list();
+        });
 
-        m_flow_annotator.draw_labels_editor("##flow_labels_editor", [this](const auto& annotation) {
-            center_plots_on_range(annotation.plot_range);
+        child_window("##flow_label_editor_child", 12, [this]() {
+            m_flow_annotator.draw_labels_editor("##flow_labels_editor", [this](const auto& ann) {
+                center_plots_on_range(ann.plot_range);
+            });
         });
-        m_audio_annotator.draw_labels_editor("##audio_labels_editor", [this](const auto& range) {
-            center_plots_on_range(range);
+
+        child_window("##audio_label_editor_child", 8, [this]() {
+            m_audio_annotator.draw_labels_editor("##audio_labels_editor", [this](const auto& r) {
+                center_plots_on_range(r);
+            });
         });
-        m_notes_editor.draw("##notes_editor");
+
+        child_window("##notes_editor_child", 8, [this]() {
+            m_notes_editor.draw("##notes_editor");
+        });
     }
 
     void draw_undo_redo()
@@ -973,7 +997,7 @@ private:
         constexpr ImGuiKeyChord Shortcut = ImGuiMod_Ctrl | ImGuiKey_S;
         const bool can_save = m_annotator.modified_since_last_save() && can_save_annotation();
         ImGui::BeginDisabled(!can_save);
-        if (ImGui::Button("Submit [Ctrl+S]", {-1, height})
+        if (ImGui::Button("Submit [Ctrl+S]", {SizeFill, height})
             || (can_save && widgets::global_shortcut(Shortcut)))
         {
             spdlog::info("Saving annotation");
@@ -1002,8 +1026,7 @@ private:
         }
 
         ImGui::TextWrapped(HINT_ICON ICON_TEXT_SPACE "Click on event to centre it in plot");
-        const float list_height = ImGui::GetTextLineHeightWithSpacing() * 4;
-        if (!ImGui::BeginListBox("##events_listbox", {-1, list_height})) {
+        if (!ImGui::BeginListBox("##events_listbox", {SizeFill, SizeFill})) {
             return;
         }
 
@@ -1040,7 +1063,10 @@ private:
             ImPlot::EndAlignedPlots();
         }
 
-        if (ImPlot::BeginPlot("##summary_plot", {-1, SummaryPlotHeight}, ImPlotFlags_CanvasOnly)) {
+        if (ImPlot::BeginPlot(
+                "##summary_plot", {SizeFill, SummaryPlotHeight}, ImPlotFlags_CanvasOnly
+            ))
+        {
             draw_plot_summary_selector();
             draw_event_labels();
             m_flow_annotator.draw_plot_ranges(LabelSummaryHeight);
@@ -1056,7 +1082,7 @@ private:
             ImPlotFlags_NoMouseText | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus;
         widgets::ScopedImID scoped_id(id);
         std::size_t num_points = 0;
-        if (ImPlot::BeginPlot("##plot", {-1, height}, Flags)) {
+        if (ImPlot::BeginPlot("##plot", {SizeFill, height}, Flags)) {
             num_points = plot.draw();
             draw_event_labels();
             extra_draw();
