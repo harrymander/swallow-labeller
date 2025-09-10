@@ -3,6 +3,7 @@
 #include "models/task-info.hpp"
 #include "options.h"
 #include "platform/platform.hpp"
+#include "spdlog/common.h"
 #include "util/os.hpp"
 
 #include <argparse/argparse.hpp>
@@ -28,10 +29,27 @@ namespace {
 
 using namespace recap::labeller;
 
+bool envvar_non_empty(const char *name)
+{
+    auto var = os::getenv(name);
+    return var.has_value() && !var->empty();
+}
+
 void setup_console_logging()
 {
     spdlog::set_level(spdlog::level::debug);
-    spdlog::default_logger()->sinks() = {std::make_shared<spdlog::sinks::stderr_color_sink_mt>()};
+    auto color_sink = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
+
+    // See https://force-color.org/ and https://no-color.org/ for an informal standard
+    // Variable just needs to be non-empty to be considered enabled
+    if (envvar_non_empty("NO_COLOR")) {
+        color_sink->set_color_mode(spdlog::color_mode::never);
+    }
+    if (envvar_non_empty("FORCE_COLOR")) {
+        color_sink->set_color_mode(spdlog::color_mode::always);
+    }
+
+    spdlog::default_logger()->sinks() = {color_sink};
 }
 
 void setup_file_logging(const std::filesystem::path& path)
