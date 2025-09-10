@@ -1,8 +1,9 @@
 include(FetchContent)
 fetchcontent_declare(
     imgui
-    GIT_REPOSITORY https://github.com/ocornut/imgui
-    GIT_TAG 527b2c45af2f8964f95826bd16ab7c7ed372ae41  # v1.90.9 docking branch
+    # v1.90.9 docking branch with BeginCombo assertion fix
+    GIT_REPOSITORY https://github.com/harrymander/imgui
+    GIT_TAG 75ebdb12f29c08b03c3b2f2adb75fc7601dda299
 )
 fetchcontent_makeavailable(imgui)
 
