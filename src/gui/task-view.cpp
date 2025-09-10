@@ -1017,19 +1017,6 @@ private:
         ImGui::EndListBox();
     }
 
-    void draw_note_input()
-    {
-        constexpr float HeightNumLines = 3;
-
-        const float height = (HeightNumLines - 1) * ImGui::GetTextLineHeightWithSpacing()
-            + ImGui::GetTextLineHeight();
-
-        ImGui::InputTextMultiline("##annotation_note_input", &m_note, {-1, height});
-        if (ImGui::SmallButton("Clear##clear_note_text")) {
-            m_note.clear();
-        }
-    }
-
     void draw_plots()
     {
         constexpr float SummaryPlotHeight = 75;
@@ -1124,7 +1111,6 @@ private:
     std::size_t m_num_plot_points = 0;
     widgets::PlotRangeDragger m_plot_summary_dragger;
     widgets::PlotRangeSelector m_plot_summary_selector;
-    std::string m_note;
 
     models::SwallowTaskData m_data;
     models::SwallowTaskInfo m_task_info;
