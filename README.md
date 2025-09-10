@@ -94,6 +94,11 @@ multi-config generator. It enables all the above options by default except for
 cmake --preset linux-gcc-ninja-multi-dev
 ```
 
+If the frame rate is too low, try reducing the number of plot points, either by
+setting `max_num_plot_points` in the config JSON file (and passing path to the
+config file via `--config` CLI command), or setting
+`RECAP_LABELLER_MAX_NUM_PLOT_POINTS` env var when running app.
+
 ### Demo
 
 The GUI can be run with some randomly-generated demo data by running the

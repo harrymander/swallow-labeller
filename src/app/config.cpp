@@ -1,10 +1,14 @@
 #include "config.hpp"
 
+#include "util/os.hpp"
+
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 
 #include <fstream>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 
 namespace recap::labeller::app {
@@ -41,7 +45,7 @@ namespace {
     throw std::invalid_argument(fmt::format("invalid config: {}", err.what()));
 }
 
-AppConfig load_raw_config(const std::filesystem::path& path)
+AppConfig load_raw_config_from_json(const std::filesystem::path& path)
 {
     std::ifstream stream(path);
     nlohmann::json json;
@@ -75,11 +79,30 @@ void validate_config(const AppConfig& config)
     }
 }
 
+void override_config_vals_from_env(AppConfig& config)
+{
+    static const char *MaxPlotPointsEnvVarName = "RECAP_LABELLER_MAX_NUM_PLOT_POINTS";
+    auto max_plot_points_envvar = os::getenv(MaxPlotPointsEnvVarName);
+    if (max_plot_points_envvar.has_value()) {
+        spdlog::debug(
+            "config: max_num_plot_points overridden by env var {:?}", *max_plot_points_envvar
+        );
+        try {
+            config.max_num_plot_points = std::stoi(*max_plot_points_envvar);
+        } catch (const std::out_of_range&) {
+            invalid_field(MaxPlotPointsEnvVarName, "value of of range");
+        } catch (const std::invalid_argument&) {
+            invalid_field(MaxPlotPointsEnvVarName, "invalid integer value");
+        }
+    }
+}
+
 }; // namespace
 
-void load_config(const std::filesystem::path& path)
+void load_config(const std::filesystem::path *path)
 {
-    auto config = load_raw_config(path);
+    AppConfig config = path ? load_raw_config_from_json(*path) : AppConfig{};
+    override_config_vals_from_env(config);
     validate_config(config);
     GlobalAppConfig = config;
 }

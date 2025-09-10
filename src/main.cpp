@@ -400,17 +400,15 @@ int run_main(int argc, const char *argv[])
     spdlog::debug("Command line arguments:\n  {}", fmt::join(argv, argv + argc, "\n  "));
 
     if (options.config_file) {
-        try {
-            app::load_config(*options.config_file);
-        } catch (const std::invalid_argument& err) {
-            spdlog::critical(
-                "Error parsing config file from {}: {}", *options.config_file, err.what()
-            );
-            return 1;
-        }
-        spdlog::info("Loaded config from {}:", *options.config_file);
+        spdlog::info("Loading config from {}", *options.config_file);
     } else {
-        spdlog::info("No config file, using default settings:");
+        spdlog::info("No config file, using default settings.");
+    }
+    try {
+        app::load_config(options.config_file ? &(*options.config_file) : nullptr);
+    } catch (const std::invalid_argument& err) {
+        spdlog::critical("Invalid config: {}", err.what());
+        return 1;
     }
     app::log_config(app::get_global_app_config(), spdlog::level::info);
 
