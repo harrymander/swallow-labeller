@@ -39,21 +39,23 @@
 
 namespace recap::labeller::platform {
 
-static void glfw_error_callback(int error, const char *description)
+namespace {
+
+void glfw_error_callback(int error, const char *description)
 {
     spdlog::error("GLFW error {}: {}\n", error, description);
 }
 
-static volatile std::sig_atomic_t signal_stop = 0;
+volatile std::sig_atomic_t signal_stop = 0;
 
-static void signal_handler(int sig)
+void signal_handler(int sig)
 {
     if (sig == SIGINT || sig == SIGTERM) {
         signal_stop = 1;
     }
 }
 
-static int setup_stop_signal_handler()
+int setup_stop_signal_handler()
 {
     static struct ::sigaction sigaction{};
 
@@ -71,26 +73,18 @@ static int setup_stop_signal_handler()
     return 0;
 }
 
-static bool should_stop(GLFWwindow *window)
+void run_gui(gui::Gui& gui, const char *glsl_version, GLFWwindow *window)
 {
-    if (signal_stop) {
-        spdlog::info("Received stop signal...");
-        return true;
-    }
-    if (glfwWindowShouldClose(window)) {
-        spdlog::info("Window close requested...");
-        return true;
-    }
-    return false;
-}
+    // If time between two consecutive stop/interrupt signals signals (e.g. from Ctrl-C) is less
+    // than this value, force quit (regardless of whether GUI is ready).
+    constexpr double ForceQuitIntervalSeconds = 1;
 
-static void run_gui(gui::Gui& gui, const char *glsl_version, GLFWwindow *window)
-{
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
     // Main loop
+    double last_stop_signal_time = -1;
     bool running = true;
     spdlog::debug("Running main loop...");
     while (running) {
@@ -110,15 +104,32 @@ static void run_gui(gui::Gui& gui, const char *glsl_version, GLFWwindow *window)
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        const bool stopping = should_stop(window);
-        if (stopping) {
-            gui.stop();
-            glfwSetWindowShouldClose(window, 0);
-            signal_stop = 0;
-        }
         gui.draw();
+
+        bool request_stop = true;
+        if (signal_stop) {
+            signal_stop = 0;
+            spdlog::info("Received stop/interrupt signal");
+            double current_time = glfwGetTime();
+            if (last_stop_signal_time >= 0
+                && current_time - last_stop_signal_time < ForceQuitIntervalSeconds)
+            {
+                spdlog::warn("Two stop signals received. Force exiting!");
+                break;
+            }
+            last_stop_signal_time = current_time;
+        } else if (glfwWindowShouldClose(window)) {
+            glfwSetWindowShouldClose(window, 0);
+            spdlog::info("Window close requested");
+        } else {
+            request_stop = false;
+        }
+
+        if (request_stop) {
+            gui.stop();
+        }
         running = !gui.ready_to_stop();
-        if (stopping && running) {
+        if (request_stop && running) {
             spdlog::warn("Exit request received, but GUI is blocking exit");
         }
 
@@ -144,6 +155,8 @@ static void run_gui(gui::Gui& gui, const char *glsl_version, GLFWwindow *window)
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
 }
+
+}; // namespace
 
 int run(
     const std::vector<models::SwallowTaskInfo>& tasks,
