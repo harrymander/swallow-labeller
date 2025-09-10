@@ -71,19 +71,29 @@ public:
         constexpr ImVec2 CentrePos = {0.5F, 0.5F};
 
         if (!m_opened) {
+            spdlog::debug("Opening modal {:?}", name);
             m_opened = true;
             ImGui::OpenPopup(name);
             ImGui::SetNextWindowPos(
                 ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, CentrePos
             );
+
+            // ConfigDebugBeginReturnValueOnce calls all Begin() functions to return false on first
+            // call. So just open and close here so that it actually returns true below.
+            if constexpr (ConfigDebugBeginReturnValueOnce) {
+                if (ImGui::BeginPopupModal(name, nullptr, flags)) {
+                    ImGui::EndPopup();
+                }
+            }
         }
 
         bool open = ImGui::BeginPopupModal(name, nullptr, flags);
         if (open) {
             open = draw();
-            m_opened = false;
             if (!open) {
+                spdlog::debug("Closing modal {:?}", name);
                 ImGui::CloseCurrentPopup();
+                m_opened = false;
             }
             ImGui::EndPopup();
         }
@@ -128,6 +138,7 @@ public:
             [this]() { return draw_modal_contents(); }
         );
         if (!status) {
+            spdlog::debug("Unsaved annotation modal closed");
             m_actions = std::nullopt;
         }
     }
@@ -503,6 +514,11 @@ public:
             })
         )
     {
+#define LOG_CONFIG(item) spdlog::debug("Gui: " #item " = {}", (item))
+
+        LOG_CONFIG(ConfigDebugBeginReturnValueOnce);
+        LOG_CONFIG(DefaultShowDebugInfo);
+
         if (NFD::Init() != NFD_OKAY) {
             spdlog::error("Error initialising NFD: {}", NFD::GetError());
         } else {
