@@ -997,7 +997,7 @@ private:
         constexpr ImGuiKeyChord Shortcut = ImGuiMod_Ctrl | ImGuiKey_S;
         const bool can_save = m_annotator.modified_since_last_save() && can_save_annotation();
         ImGui::BeginDisabled(!can_save);
-        if (ImGui::Button("Save [Ctrl+S]", {SizeFill, height})
+        if (ImGui::Button(ICON_FA_FLOPPY_DISK ICON_TEXT_SPACE "Save [Ctrl+S]", {SizeFill, height})
             || (can_save && widgets::global_shortcut(Shortcut)))
         {
             spdlog::info("Saving annotation");
