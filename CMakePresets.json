@@ -32,6 +32,26 @@
             "name": "windows-static-ninja-multi",
             "inherits": ["windows-static"],
             "generator": "Ninja Multi-Config"
+        },
+        {
+            "name": "linux-gcc-ninja-multi-dev",
+            "generator": "Ninja Multi-Config",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_DEFAULT_BUILD_TYPE": "RelWithDebInfo",
+                "DEFAULT_SHOW_DEBUG_INFO": "ON",
+                "IMGUI_DEBUG_WINDOW_BEGIN_ONCE": "ON",
+                "IMGUI_ALWAYS_ASSERT": "ON",
+                "ENABLE_TEST_SANITIZERS": "ON",
+                "CMAKE_C_FLAGS_INIT": "-fdiagnostics-color=always",
+                "CMAKE_CXX_FLAGS_INIT": "-fdiagnostics-color=always"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
         }
     ],
     "buildPresets": [

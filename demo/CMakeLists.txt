@@ -48,6 +48,7 @@ add_custom_target(
         --annotations ${DEMO_ANNOTATIONS_JSON}
         --log ${DEMO_LOG_FILE}
         --no-app-data-dir
+    USES_TERMINAL
     WORKING_DIRECTORY ${DEMO_DIR}
     COMMENT
 "\nRunning demo:
