@@ -4,10 +4,13 @@
 namespace {
 
 #cmakedefine01 DEFAULT_SHOW_DEBUG_INFO
+#cmakedefine01 IMGUI_DEBUG_WINDOW_BEGIN_ONCE
 
 constexpr inline bool DefaultShowDebugInfo = DEFAULT_SHOW_DEBUG_INFO;
+constexpr inline bool ConfigDebugBeginReturnValueOnce = IMGUI_DEBUG_WINDOW_BEGIN_ONCE;
 
 #undef DEFAULT_SHOW_DEBUG_INFO
+#undef IMGUI_DEBUG_WINDOW_BEGIN_ONCE
 
 }; // namespace recap::labeller::gui
 

@@ -516,6 +516,7 @@ public:
 
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_DockingEnable;
+        io.ConfigDebugBeginReturnValueOnce = ConfigDebugBeginReturnValueOnce;
         setup_imgui_ini();
         setup_fonts();
 

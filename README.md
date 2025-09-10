@@ -68,9 +68,14 @@ cmake -DIMGUI_ALWAYS_ASSERT=on build
 
 (or pass `-DIMGUI_ALWAYS_ASSERT=on` during configuration.)
 
-I recommend enabling these ImGui assertions during development as they can
-help you spot invalid ImGui usage such as mismatched window `Begin()/End()`
-calls and don't slow down the GUI that much.
+I recommend enabling these ImGui assertions during development as they can help
+you spot invalid ImGui usage such as mismatched window `Begin()/End()` calls and
+don't slow down the GUI that much. The `IMGUI_DEBUG_WINDOW_BEGIN_ONCE` will
+cause ImGui to validate that window `Begin()/End()` calls are matched the first
+time they are made. ImGui can be configured to validate this every frame by
+enabling
+`Tools > ImGui Metrics/Debugger > Tools > Debug Begin/BeginChild return value`
+in the GUI, but this will cause the application to flicker.
 
 Some basic debug metrics (frame rate, mouse position, etc.) can be displayed on
 the bottom status by of the GUI by toggling `Tools > Show debug info` in the

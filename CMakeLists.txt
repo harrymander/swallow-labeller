@@ -91,6 +91,11 @@ option(
     "Enable Dear ImGui assertions, even when not in debug build"
     OFF
 )
+option(
+    IMGUI_DEBUG_WINDOW_BEGIN_ONCE
+    "Debug ImGui window Begin return values when they are created"
+    OFF
+)
 
 set(OPTIONS_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/gen/include)
 configure_file(src/options.h.in ${OPTIONS_INCLUDE_DIR}/options.h)
