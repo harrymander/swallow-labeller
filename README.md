@@ -53,3 +53,41 @@ the CMake Tools extension and a multi-config generator. For a single-config
 generator, you can just change the `CMAKE_BUILD_TYPE` cache variable in VS Code
 or add the `-DCMAKE_BUILD_TYPE=` flag to the `cmake.configureArgs` property
 in your workspace `settings.json`.
+
+### Development build settings
+
+The GUI will run at a very low frame rate if built in `Debug` mode, so I
+recommend building in `RelWithDebInfo` for development. This will disable Dear
+ImGui's assertions (`IM_ASSERT`), which by default use the stdlib `assert`
+function that is disabled in non-debug builds. To re-enable `IM_ASSERT` under
+non-debug builds:
+
+```
+cmake -DIMGUI_ALWAYS_ASSERT=on build
+```
+
+(or pass `-DIMGUI_ALWAYS_ASSERT=on` during configuration.)
+
+I recommend enabling these ImGui assertions during development as they can
+help you spot invalid ImGui usage such as mismatched window `Begin()/End()`
+calls and don't slow down the GUI that much.
+
+Some basic debug metrics (frame rate, mouse position, etc.) can be displayed on
+the bottom status by of the GUI by toggling `Tools > Show debug info` in the
+GUI. This can be enabled by default by setting the `DEFAULT_SHOW_DEBUG_INFO`
+option in CMake.
+
+Sanitizers can be enabled for the GUI via the `ENABLE_LABELLER_SANITIZERS`
+CMake option (will reduce frame rate and make compilation MUCH slower).
+Can be enabled just for tests via `ENABLE_TEST_SANITIZERS`.
+
+### Demo
+
+The GUI can be run with some randomly-generated demo data by running the
+`run-demo` build target.
+
+```
+cmake --build build --target run-demo
+```
+
+This requires Python and the NumPy library. See `demo` subdir.
