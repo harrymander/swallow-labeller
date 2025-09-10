@@ -547,36 +547,35 @@ private:
     static void draw_status_bar()
     {
         constexpr float FramePadding = 5;
+        constexpr ImGuiWindowFlags WindowFlags = ImGuiWindowFlags_NoScrollbar
+            | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar;
+
         widgets::ScopedImStyle style_scope = {
             {ImGuiStyleVar_WindowBorderSize, 0.0F},
             {ImGuiStyleVar_WindowPadding, ImVec2{ImGui::GetStyle().WindowPadding.x, 0}},
             {ImGuiStyleVar_FramePadding, ImVec2{FramePadding, FramePadding}},
         };
-
-        constexpr ImGuiWindowFlags WindowFlags = ImGuiWindowFlags_NoScrollbar
-            | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar;
-        if (!ImGui::BeginViewportSideBar(
-                "##viewport_status_bar",
-                ImGui::GetMainViewport(),
-                ImGuiDir_Down,
-                ImGui::GetFrameHeight(),
-                WindowFlags
-            ))
-        {
-            return;
+        bool open = ImGui::BeginViewportSideBar(
+            "##viewport_status_bar",
+            ImGui::GetMainViewport(),
+            ImGuiDir_Down,
+            ImGui::GetFrameHeight(),
+            WindowFlags
+        );
+        if (open) {
+            ImGui::AlignTextToFramePadding();
+            const ImGuiIO& io = ImGui::GetIO();
+            ImGui::Text(
+                DEBUG_INFO_ICON ICON_TEXT_SPACE
+                "Mouse Position: [%.0f,%.0f]. Application average: %.3f ms/frame (%.1f FPS).",
+                io.MousePos.x,
+                io.MousePos.y,
+                1000.0f / io.Framerate,
+                io.Framerate
+            );
         }
 
-        ImGui::AlignTextToFramePadding();
-        const ImGuiIO& io = ImGui::GetIO();
-        ImGui::Text(
-            DEBUG_INFO_ICON ICON_TEXT_SPACE
-            "Mouse Position: [%.0f,%.0f]. Application average: %.3f ms/frame (%.1f FPS).",
-            io.MousePos.x,
-            io.MousePos.y,
-            1000.0f / io.Framerate,
-            io.Framerate
-        );
-
+        // BeginViewportSideBar calls Begin() so need to call End regardless of return val
         ImGui::End();
     }
 
