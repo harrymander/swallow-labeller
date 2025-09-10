@@ -35,9 +35,37 @@ bool envvar_non_empty(const char *name)
     return var.has_value() && !var->empty();
 }
 
+void setup_logging_level_from_env()
+{
+    auto envvar = os::getenv("RECAP_LABELLER_LOG_LEVEL");
+    auto level = spdlog::level::debug;
+    if (envvar.has_value()) {
+        const auto& level_str = *envvar;
+        if (level_str == "trace") {
+            level = spdlog::level::trace;
+        } else if (level_str == "debug") {
+            level = spdlog::level::debug;
+        } else if (level_str == "info") {
+            level = spdlog::level::info;
+        } else if (level_str == "warn") {
+            level = spdlog::level::warn;
+        } else if (level_str == "err") {
+            level = spdlog::level::err;
+        } else if (level_str == "critical") {
+            level = spdlog::level::critical;
+        } else if (level_str == "off") {
+            level = spdlog::level::off;
+        } else {
+            level = spdlog::level::debug;
+            spdlog::error("Unknown log level {:?}: defaulting to debug", level_str);
+        }
+    }
+
+    spdlog::set_level(level);
+}
+
 void setup_console_logging()
 {
-    spdlog::set_level(spdlog::level::debug);
     auto color_sink = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
 
     // See https://force-color.org/ and https://no-color.org/ for an informal standard
@@ -50,6 +78,8 @@ void setup_console_logging()
     }
 
     spdlog::default_logger()->sinks() = {color_sink};
+
+    setup_logging_level_from_env();
 }
 
 void setup_file_logging(const std::filesystem::path& path)
