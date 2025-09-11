@@ -61,7 +61,7 @@ jobs:
 
       - name: Rename executable for artifact upload
         run: |
-          version=$(cmake -N --system-information | grep "^CMAKE_PROJECT_VERSION:STATIC=")
+          version=$(cd build && cmake -N --system-information | grep "^CMAKE_PROJECT_VERSION:STATIC=")
           version=$(echo "$version" | cut -d= -f2)
           sha=$(git rev-parse --short HEAD)
           artifact_filename=recap-labeller-${version}-complete-data-${sha}-win64.exe
