@@ -976,19 +976,44 @@ private:
         });
     }
 
+    static bool draw_button_with_shortcut(
+        const char *label, bool enabled, const char *tooltip, ImGuiKeyChord shortcut_chord
+    )
+    {
+        ImGui::BeginDisabled(!enabled);
+        bool clicked = ImGui::Button(label);
+        if (enabled) {
+            ImGui::SetItemTooltip("%s", tooltip);
+            if (widgets::global_shortcut(shortcut_chord)) {
+                clicked = true;
+            }
+        }
+        ImGui::EndDisabled();
+        return clicked;
+    }
+
     void draw_undo_redo()
     {
-        ImGui::BeginDisabled(!m_annotator.can_undo_last_command());
-        if (ImGui::Button(ICON_FA_ARROW_ROTATE_LEFT ICON_TEXT_SPACE "Undo")) {
+        bool undo = draw_button_with_shortcut(
+            ICON_FA_ARROW_ROTATE_LEFT ICON_TEXT_SPACE "Undo",
+            m_annotator.can_undo_last_command(),
+            "Ctrl+Z",
+            ImGuiMod_Ctrl | ImGuiKey_Z
+        );
+        if (undo) {
             m_annotator.undo_last_command();
         }
-        ImGui::EndDisabled();
+
         ImGui::SameLine();
-        ImGui::BeginDisabled(!m_annotator.can_redo_last_undone_command());
-        if (ImGui::Button("Redo" ICON_TEXT_SPACE ICON_FA_ARROW_ROTATE_RIGHT)) {
+        bool redo = draw_button_with_shortcut(
+            ICON_FA_ARROW_ROTATE_RIGHT ICON_TEXT_SPACE "Redo",
+            m_annotator.can_redo_last_undone_command(),
+            "Ctrl+Y",
+            ImGuiMod_Ctrl | ImGuiKey_Y
+        );
+        if (redo) {
             m_annotator.redo_last_undone_command();
         }
-        ImGui::EndDisabled();
     }
 
     void draw_save_button()
