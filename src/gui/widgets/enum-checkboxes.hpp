@@ -5,8 +5,8 @@
 #include "gui/widgets/util.hpp"
 
 #include <imgui.h>
-#include <magic_enum.hpp>
-#include <magic_enum_containers.hpp>
+#include <magic_enum/magic_enum.hpp>
+#include <magic_enum/magic_enum_containers.hpp>
 
 namespace recap::labeller::gui::widgets {
 

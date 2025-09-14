@@ -4,7 +4,7 @@
 #include "gui/widgets/enum-utils.hpp"
 
 #include <imgui.h>
-#include <magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 
 #include <cstddef>
 

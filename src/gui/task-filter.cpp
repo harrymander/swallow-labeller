@@ -13,7 +13,7 @@
 #include <IconsFontAwesome6.h>
 #include <imgui.h>
 #include <imgui_stdlib.h>
-#include <magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
