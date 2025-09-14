@@ -1,15 +1,18 @@
-#include "app/config.hpp"
 #define IMGUI_DEFINE_MATH_OPERATORS
 
 #include "gui/plot.hpp"
+
+#include "app/config.hpp"
 #include "gui/widgets/plot-range-selector.hpp"
 #include "gui/widgets/util.hpp"
 #include "util/util.hpp"
 #include "widgets/plot-range.hpp"
 
+#include <fmt/format.h>
 #include <imgui.h>
 #include <implot.h>
 
+#include <string>
 #include <vector>
 
 namespace recap::labeller::gui {
