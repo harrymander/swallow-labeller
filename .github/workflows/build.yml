@@ -48,7 +48,7 @@ jobs:
 
       - name: Bootstrap vcpkg
         shell: pwsh
-        run: vcpkg/boostrap-vcpkg.bat
+        run: vcpkg/bootstrap-vcpkg.bat
       - name: Configure vcpkg NuGet sources
         shell: pwsh
         env:
