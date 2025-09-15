@@ -21,6 +21,9 @@ cmake -B build --toolchain vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_
 cmake --build build --parallel
 ```
 
+(Alternatively, for development, use the `linux-gcc-ninja-multi-dev` preset. See
+[Development build settings](#development-build-settings) below.)
+
 Requires `glfw3` and `opengl3` to be installed (other dependencies are installed
 via vcpkg or FetchContent).
 
