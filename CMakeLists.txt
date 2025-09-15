@@ -6,6 +6,7 @@ cmake_policy(SET CMP0091 NEW)
 project(recap-labeller LANGUAGES CXX VERSION 0.4.0)
 
 find_package(argparse CONFIG REQUIRED)
+find_package(cnpy CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(magic_enum CONFIG REQUIRED)
 find_package(nfd CONFIG REQUIRED)

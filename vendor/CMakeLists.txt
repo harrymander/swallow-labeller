@@ -45,13 +45,6 @@ else()
     message("Using stdlib chrono utils")
 endif()
 
-fetchcontent_declare(
-    cnpy
-    GIT_REPOSITORY https://github.com/harrymander/cnpy
-    GIT_TAG 171dc9e20966e78f132d0b1b6f3c72c3f8dfa2fb
-)
-fetchcontent_makeavailable(cnpy)
-
 include(imgui.cmake)
 include(implot.cmake)
 include(source_sans.cmake)

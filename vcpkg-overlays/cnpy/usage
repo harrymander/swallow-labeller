@@ -1,0 +1,4 @@
+cnpy provides CMake targets:
+
+find_package(cnpy CONFIG REQUIRED)
+target_link_libraries(main PRIVATE cnpy::cnpy)
