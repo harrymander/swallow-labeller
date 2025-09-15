@@ -5,6 +5,13 @@ cmake_policy(SET CMP0091 NEW)
 
 project(recap-labeller LANGUAGES CXX VERSION 0.4.0)
 
+find_package(argparse CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
+find_package(magic_enum CONFIG REQUIRED)
+find_package(nfd CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
+find_package(spdlog CONFIG REQUIRED)
+
 # Program options
 option(RECAP_LABELLER_LOG_TO_APP_DATA_DIR "Log to app data directory" OFF)
 
@@ -47,16 +54,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
             link_libraries(debug ${backtrace_lib})
         endif()
     endif()
-endif()
-
-if(VCPKG_TOOLCHAIN)
-    set(DEFAULT_FETCH_VENDORED OFF)
-else()
-    set(DEFAULT_FETCH_VENDORED ON)
-endif()
-option(FETCH_VENDORED "Fetch vendored dependencies" ${DEFAULT_FETCH_VENDORED})
-if(FETCH_VENDORED)
-    message(STATUS "Fetching vendored dependencies")
 endif()
 
 add_subdirectory(vendor)

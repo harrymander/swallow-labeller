@@ -16,29 +16,7 @@ if(ENABLE_TEST_SANITIZERS)
     endif()
 endif()
 
-if(FETCH_VENDORED)
-    include(FetchContent)
-    fetchcontent_declare(
-        googletest
-        GIT_REPOSITORY https://github.com/google/googletest.git
-        GIT_TAG b796f7d44681514f58a683a3a71ff17c94edb0c1
-    )
-    if(WIN32)
-        # Prevent overriding the parent project's compiler/linker settings
-        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-    endif()
-    fetchcontent_getproperties(googletest)
-    if(NOT googletest_POPULATED)
-        fetchcontent_populate(googletest)
-        add_subdirectory(
-            ${googletest_SOURCE_DIR} ${googletest_BINARY_DIR}
-            EXCLUDE_FROM_ALL
-        )
-    endif()
-else()
-    find_package(GTest CONFIG REQUIRED)
-endif()
-
+find_package(GTest CONFIG REQUIRED)
 include(GoogleTest)
 
 set(Python3_FIND_UNVERSIONED_NAMES FIRST)
