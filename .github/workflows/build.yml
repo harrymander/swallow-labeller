@@ -16,7 +16,6 @@ jobs:
     needs: [pre-commit]
     env:
       BUILD_TYPE: Release
-      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
       VCPKG_DISABLE_METRICS: 1
     runs-on: windows-2022
     defaults:
@@ -51,6 +50,8 @@ jobs:
       - name: Bootstrap vcpkg
         shell: pwsh
         run: vcpkg/bootstrap-vcpkg.bat
+      - name: Set vcpkg root directory # as it is overridden in MSVC configuration action
+        run: echo 'VCPKG_ROOT=${{ github.workspace }}/vcpkg' >> "$GITHUB_ENV"
       - name: Configure vcpkg NuGet sources
         shell: pwsh
         env:
