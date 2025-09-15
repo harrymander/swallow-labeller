@@ -64,7 +64,7 @@ jobs:
           version=$(cd build && cmake -N --system-information | grep "^CMAKE_PROJECT_VERSION:STATIC=")
           version=$(echo "$version" | cut -d= -f2)
           sha=$(git rev-parse --short HEAD)
-          artifact_basename=recap-labeller-${version}-complete-data-${sha}-win64.exe
+          artifact_basename=recap-labeller-${version}-complete-data-${sha}-win64
           mv build/${{ env.BUILD_TYPE }}/recap-labeller.exe "${artifact_basename}.exe"
           echo "ARTIFACT_BASENAME=${artifact_basename}" >> "$GITHUB_ENV"
 
