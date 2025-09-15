@@ -16,6 +16,7 @@ jobs:
     needs: [pre-commit]
     env:
       BUILD_TYPE: Release
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
     runs-on: windows-2022
     defaults:
       run:
