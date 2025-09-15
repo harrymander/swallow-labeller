@@ -12,6 +12,8 @@ jobs:
         shell: bash
     permissions:
       packages: write
+      contents: read
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
