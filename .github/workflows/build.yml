@@ -65,7 +65,7 @@ jobs:
             setapikey "${{ secrets.GITHUB_TOKEN }}" `
             -Source "${{ env.FEED_URL }}"
       - name: Configure vcpkg binary cache directory
-        run: echo 'clear;nuget,https://nuget.pkg.github.com/harrymander/index.json,readwrite' >> "$GITHUB_ENV"
+        run: echo 'VCPKG_BINARY_SOURCES=clear;nuget,https://nuget.pkg.github.com/harrymander/index.json,readwrite' >> "$GITHUB_ENV"
 
       - name: Configure
         run: |
