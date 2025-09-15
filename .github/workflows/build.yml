@@ -17,6 +17,7 @@ jobs:
     env:
       BUILD_TYPE: Release
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+      VCPKG_DISABLE_METRICS: 1
     runs-on: windows-2022
     defaults:
       run:
