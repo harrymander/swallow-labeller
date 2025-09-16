@@ -1,5 +1,3 @@
-include(FetchContent)
-
 # C++20 provides std::chrono::parse, but full support is not available on some
 # compilers that mostly support C++20 (e.g. GCC 13). By default use Howard
 # Hinnant's date library with compilers that don't support the stdlib version.
@@ -26,19 +24,7 @@ option(
 )
 if(USE_HOWARDHINNANT_DATE)
     message("Using Howard Hinnant date library for chrono utils")
-    fetchcontent_declare(howardhinnant_date
-      GIT_REPOSITORY https://github.com/HowardHinnant/date.git
-      GIT_TAG f94b8f36c6180be0021876c4a397a054fe50c6f2 # v3.0.4
-    )
-    if(NOT howardhinnant_date_POPULATED)
-        fetchcontent_populate(howardhinnant_date)
-        add_subdirectory(
-            ${howardhinnant_date_SOURCE_DIR}
-            ${howardhinnant_date_BINARY_DIR}
-            EXCLUDE_FROM_ALL
-        )
-    endif()
-
+    find_package(date CONFIG REQUIRED)
     target_link_libraries(chrono_util INTERFACE date::date)
     target_compile_definitions(chrono_util INTERFACE USE_HOWARDHINNANT_DATE)
 else()
