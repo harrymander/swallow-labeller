@@ -13,8 +13,8 @@ vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_PATH}"
 )
 vcpkg_cmake_install()
+vcpkg_cmake_config_fixup(CONFIG_PATH share/cnpy/cmake)
 file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include")
-file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/share")
 
 file(
     INSTALL "${CMAKE_CURRENT_LIST_DIR}/usage"
