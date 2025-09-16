@@ -1,3 +1,4 @@
+set(VCPKG_BUILD_TYPE release)
 vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
 
 vcpkg_from_github(
