@@ -16,6 +16,14 @@ Requires `cmake` and the `vcpkg` submodule to be cloned.
 
 ### Linux
 
+To install dependencies on Ubuntu/Debian:
+
+```
+apt-get install libdbus-1-dev libglfw3-dev libgtk-4-dev libopengl-dev
+```
+
+(Other dependencies should be installed via vcpkg and FetchContent.)
+
 ```
 cmake -B build --toolchain vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release .
 cmake --build build --parallel
@@ -23,9 +31,6 @@ cmake --build build --parallel
 
 (Alternatively, for development, use the `linux-gcc-ninja-multi-dev` preset. See
 [Development build settings](#development-build-settings) below.)
-
-Requires `glfw3` and `opengl3` to be installed (other dependencies are installed
-via vcpkg or FetchContent).
 
 ### Windows (MSVC)
 
