@@ -10,6 +10,7 @@
             "name": "windows-static",
             "inherits": ["vcpkg"],
             "cacheVariables": {
+                "CMAKE_GENERATOR_PLATFORM": "x64",
                 "VCPKG_TARGET_TRIPLET": "x64-windows-static",
                 "BUILD_SHARED_LIBS": "OFF",
                 "ZLIB_USE_STATIC_LIBS": "ON",
