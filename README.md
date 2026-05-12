@@ -109,6 +109,18 @@ setting `max_num_plot_points` in the config JSON file (and passing path to the
 config file via `--config` CLI command), or setting
 `RECAP_LABELLER_MAX_NUM_PLOT_POINTS` env var when running app.
 
+### Linting and formatting
+
+There are three build targets for formatting and linting the code:
+
+* `lint`: check formatting with `clang-format`
+* `format`: format code automatically with `clang-format`
+* `check`: check code with `cppcheck`
+
+The `cppcheck` and `clang-format` executable are automatically installed from
+their PyPI packages using [uv](https://docs.astral.sh/uv/), which must be
+installed. To disable these targets, set `ENABLE_LINTING=off` at configure time.
+
 ### Demo
 
 The GUI can be run with some randomly-generated demo data by running the
