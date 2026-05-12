@@ -2,15 +2,15 @@ find_package(GTest CONFIG REQUIRED)
 
 include(GoogleTest)
 
-set(Python3_FIND_UNVERSIONED_NAMES FIRST)
-find_package(Python3 COMPONENTS Interpreter REQUIRED)
+find_program(UV uv REQUIRED)
+
 set(DATA_TEST_FILE_DIR ${CMAKE_CURRENT_BINARY_DIR}/data_test_files)
 set(DATA_TEST_FILE_HEADER ${DATA_TEST_FILE_DIR}/test-data-paths.h)
 file(MAKE_DIRECTORY ${DATA_TEST_FILE_DIR})
 add_custom_command(
     OUTPUT ${DATA_TEST_FILE_HEADER}
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/generate_test_npy.py
-    COMMAND ${Python3_EXECUTABLE}
+    COMMAND ${UV} run --group test
             ${CMAKE_CURRENT_SOURCE_DIR}/generate_test_npy.py
             --header ${DATA_TEST_FILE_HEADER}
             ${DATA_TEST_FILE_DIR}

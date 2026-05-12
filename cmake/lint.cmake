@@ -1,13 +1,14 @@
 find_program(UV uv REQUIRED)
+set(UV_RUN ${UV} run --group lint)
 
 execute_process(
-    COMMAND ${UV} run clang-format --version
+    COMMAND ${UV_RUN} clang-format --version
     OUTPUT_VARIABLE CLANG_FORMAT_VERSION
 )
 message(STATUS "Using clang-format: ${CLANG_FORMAT_VERSION}")
 
 execute_process(
-    COMMAND ${UV} run cppcheck --version
+    COMMAND ${UV_RUN} cppcheck --version
     OUTPUT_VARIABLE CPPCHECK_VERSION
 )
 message(STATUS "Using cppcheck: ${CPPCHECK_VERSION}")
@@ -17,7 +18,7 @@ add_custom_target(
     COMMENT "Checking source code with cppcheck"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     COMMAND
-        ${UV} run cppcheck
+        ${UV_RUN} cppcheck
         --error-exitcode=1 --quiet --force --language=c++ --std=c++20
         --enable=style
         --check-level=exhaustive
@@ -36,7 +37,7 @@ endif()
 
 set(
     CLANG_FORMAT_CMD
-    ${UV} run ${CMAKE_SOURCE_DIR}/scripts/run-clang-format.py
+    ${UV_RUN} ${CMAKE_SOURCE_DIR}/scripts/run-clang-format.py
     --clang-format-executable ${CLANG_FORMAT_EXE}
     --recursive
     ${CMAKE_SOURCE_DIR}/src

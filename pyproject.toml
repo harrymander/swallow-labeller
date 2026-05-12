@@ -2,7 +2,13 @@
 name = "labeller"
 version = "0.1.0"
 requires-python = ">=3.10"
-dependencies = [
+dependencies = []
+
+[dependency-groups]
+lint = [
     "clang-format==21.1.0",
     "cppcheck==1.4.7",
+]
+test = [
+    "numpy>=2.2.6",
 ]

@@ -59,3 +59,20 @@ There are three build targets for formatting and linting the code:
 The `cppcheck` and `clang-format` executable are automatically installed from
 their PyPI packages using [uv](https://docs.astral.sh/uv/), which must be
 installed. To disable these targets, set `ENABLE_LINTING=off` at configure time.
+
+### Testing
+
+Requires Python and [uv](https://docs.astral.sh/uv/) to generate test data.
+
+After building the project, run `ctest` in the build directory to run tests.
+
+### Demo
+
+The GUI can be run with some randomly-generated demo data by running the
+`run-demo` build target.
+
+```
+cmake --build build --target run-demo
+```
+
+This requires Python and [uv](https://docs.astral.sh/uv/) to generate demo data.
