@@ -1,8 +1,7 @@
 # Generates a small amount of demo data, including corrupted and missing data
 # files
 
-set(Python3_FIND_UNVERSIONED_NAMES FIRST)
-find_package(Python3 COMPONENTS Interpreter REQUIRED)
+find_program(UV uv REQUIRED)
 
 set(DEMO_GEN_PY ${CMAKE_CURRENT_SOURCE_DIR}/gen-demo.py)
 
@@ -30,7 +29,7 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E rm -rf ${DEMO_DATA_DIR}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${DEMO_DIR} ${DEMO_DATA_DIR}
     COMMAND
-        ${Python3_EXECUTABLE} ${DEMO_GEN_PY}
+        ${UV} run --group test ${DEMO_GEN_PY}
         --tasks-json ${DEMO_TASKS_JSON}
         --data-dir ${DEMO_DATA_DIR}
         --existing-annotations ${DEMO_ANNOTATIONS_JSON}

@@ -121,6 +121,15 @@ The `cppcheck` and `clang-format` executable are automatically installed from
 their PyPI packages using [uv](https://docs.astral.sh/uv/), which must be
 installed. To disable these targets, set `ENABLE_LINTING=off` at configure time.
 
+### Testing
+
+Requires Python and [uv](https://docs.astral.sh/uv/) to generate test data.
+
+Sanitizers can be enabled by setting `ENABLE_TEST_SANITIZERS=on` during
+configuration.
+
+After building the project, run `ctest` in the build directory to run tests.
+
 ### Demo
 
 The GUI can be run with some randomly-generated demo data by running the
@@ -130,4 +139,4 @@ The GUI can be run with some randomly-generated demo data by running the
 cmake --build build --target run-demo
 ```
 
-This requires Python and the NumPy library. See `demo` subdir.
+This requires Python and [uv](https://docs.astral.sh/uv/) to generate demo data.
