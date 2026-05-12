@@ -35,15 +35,24 @@ cmake --build build --parallel
 ### Windows (MSVC)
 
 ```
-cmake --preset windows-static-{msbuild,ninja,ninja-multi} [-DCMAKE_BUILD_TYPE=<build type>]
+cmake --preset <preset> [-DCMAKE_BUILD_TYPE=<build type>]
 cmake --build build [--config <build type>] --parallel
 ```
 
+Where `<preset>` is one of the presets listed in `CMakePresets.json`:
+
+* `windows-static` (default *multi-config* Visual Studio build generator, run
+  `cmake -G` to see the default)
+* `windows-static-ninja` (Ninja *single-config* build generator)
+* `windows-static-ninja-multi` (Ninja *multi-config* build generator)
+* `windows-static-ninja-multi-dev` (Ninja *multi-config* build generator with
+  some additional settings enabled for development)
+
 The `<build-type>` can be `Release`, `Debug`, `RelWithDebInfo`, etc. When using
-a single-config generator (`ninja`), you need to specify the build type at
-configure time (via the `-DCMAKE_BUILD_TYPE` flag in the first command). When
-using a multi-config generator (`msbuild` or `ninja-multi`), you need to specify
-the build type in the build command (`--config` flag, second line).
+a single-config generator, you need to specify the build type at configure time
+(via the `-DCMAKE_BUILD_TYPE` flag in the first command). When using a
+multi-config generator, you need to specify the build type in the build command
+(`--config` flag, second line).
 
 I recommend using one of the Ninja generators for local development on Windows,
 as Ninja can *significantly* decrease build times on multi-core machines and
