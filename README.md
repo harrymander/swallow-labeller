@@ -47,3 +47,15 @@ the CMake Tools extension and a multi-config generator. For a single-config
 generator, you can just change the `CMAKE_BUILD_TYPE` cache variable in VS Code
 or add the `-DCMAKE_BUILD_TYPE=` flag to the `cmake.configureArgs` property
 in your workspace `settings.json`.
+
+### Linting and formatting
+
+There are three build targets for formatting and linting the code:
+
+* `lint`: check formatting with `clang-format`
+* `format`: format code automatically with `clang-format`
+* `check`: check code with `cppcheck`
+
+The `cppcheck` and `clang-format` executable are automatically installed from
+their PyPI packages using [uv](https://docs.astral.sh/uv/), which must be
+installed. To disable these targets, set `ENABLE_LINTING=off` at configure time.
