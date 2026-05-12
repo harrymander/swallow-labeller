@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """A wrapper script around clang-format, suitable for linting multiple files
 and to use for continuous integration.
 
