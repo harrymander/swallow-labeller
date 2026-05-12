@@ -33,12 +33,6 @@ jobs:
         with:
           submodules: true
 
-      # Need to configure before Python otherwise it will override the PATH set by the virtualenv
-      - name: Configure MSVC
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-
       - name: Create requirements.txt
         run: echo "numpy==1.26.0" > requirements.txt
       - name: Setup Python
