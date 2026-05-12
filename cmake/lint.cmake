@@ -1,5 +1,17 @@
 find_program(UV uv REQUIRED)
 
+execute_process(
+    COMMAND ${UV} run clang-format --version
+    OUTPUT_VARIABLE CLANG_FORMAT_VERSION
+)
+message(STATUS "Using clang-format: ${CLANG_FORMAT_VERSION}")
+
+execute_process(
+    COMMAND ${UV} run cppcheck --version
+    OUTPUT_VARIABLE CPPCHECK_VERSION
+)
+message(STATUS "Using cppcheck: ${CPPCHECK_VERSION}")
+
 add_custom_target(
     check
     COMMENT "Checking source code with cppcheck"
