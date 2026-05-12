@@ -18,7 +18,7 @@ jobs:
       BUILD_TYPE: Release
       VCPKG_DISABLE_METRICS: 1
       NUGET_FEED_URL: https://nuget.pkg.github.com/harrymander/index.json
-    runs-on: windows-2022
+    runs-on: windows-2025-vs2026
     defaults:
       run:
         shell: bash
