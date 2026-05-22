@@ -39,6 +39,7 @@ bool UnsignedIntegerRangeInput<T>::parse_range(std::string_view str, Range& rang
             return false;
         }
         range.second = range.first;
+        return true;
     }
 
     // "-second": rejected since it could be confused for a negative number
