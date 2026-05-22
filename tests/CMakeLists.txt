@@ -84,3 +84,8 @@ add_executable(test-view-list test-view-list.cpp)
 target_include_directories(test-view-list PRIVATE ../src/app)
 target_link_libraries(test-view-list PRIVATE GTest::gtest_main)
 gtest_discover_tests(test-view-list)
+
+add_executable(test-integer-range test-integer-range.cpp)
+target_include_directories(test-integer-range PRIVATE ../src)
+target_link_libraries(test-integer-range PRIVATE GTest::gtest_main)
+gtest_discover_tests(test-integer-range)

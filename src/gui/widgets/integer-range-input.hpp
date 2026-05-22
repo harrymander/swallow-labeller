@@ -1,10 +1,10 @@
 #ifndef INCLUDE_RECAP_LABELLER_GUI_WIDGETS_INTEGER_RANGE_INPUT
 #define INCLUDE_RECAP_LABELLER_GUI_WIDGETS_INTEGER_RANGE_INPUT
 
+#include "integer-range.hpp"
+
 #include <concepts>
 #include <string>
-#include <string_view>
-#include <utility>
 #include <vector>
 
 namespace recap::labeller::gui::widgets {
@@ -22,13 +22,10 @@ public:
     void clear() { m_items.clear(); }
 
 private:
-    using Range = std::pair<T, T>;
-
     void update();
-    static bool parse_range(std::string_view str, Range& range);
 
     bool m_error = false;
-    std::vector<Range> m_items;
+    std::vector<IntegerRange<T>> m_items;
     std::string m_input;
 };
 
