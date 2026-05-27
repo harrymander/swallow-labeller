@@ -96,12 +96,12 @@ Sanitizers can be enabled for the GUI via the `ENABLE_LABELLER_SANITIZERS`
 CMake option (will reduce frame rate and make compilation MUCH slower).
 Can be enabled just for tests via `ENABLE_TEST_SANITIZERS`.
 
-A configure preset is provided for Linux development with GCC using the Ninja
-multi-config generator. It enables all the above options by default except for
+Configure presets are provided for Linux development using Makefiles or Ninja
+multi-config. It enables all the above options by default except for
 `ENABLE_LABELLER_SANITIZERS`. To use:
 
 ```
-cmake --preset linux-gcc-ninja-multi-dev
+cmake --preset [linux-ninja-multi-dev | linux-make-dev]
 ```
 
 If the frame rate is too low, try reducing the number of plot points, either by
