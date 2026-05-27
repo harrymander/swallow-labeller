@@ -7,6 +7,16 @@
             "toolchainFile": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake"
         },
         {
+            "name": "dev",
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "DEFAULT_SHOW_DEBUG_INFO": "ON",
+                "IMGUI_DEBUG_WINDOW_BEGIN_ONCE": "ON",
+                "IMGUI_ALWAYS_ASSERT": "ON",
+                "ENABLE_TEST_SANITIZERS": "ON"
+            }
+        },
+        {
             "name": "windows-static",
             "inherits": ["vcpkg"],
             "cacheVariables": {
@@ -33,24 +43,38 @@
             "generator": "Ninja Multi-Config"
         },
         {
-            "name": "linux-gcc-ninja-multi-dev",
+            "name": "windows-static-ninja-dev",
+            "inherits": ["windows-static-ninja", "dev"]
+        },
+        {
+            "name": "windows-static-ninja-multi-dev",
+            "inherits": ["windows-static-ninja-multi", "dev"]
+        },
+        {
+            "name": "linux",
             "inherits": ["vcpkg"],
-            "generator": "Ninja Multi-Config",
-            "binaryDir": "${sourceDir}/build",
-            "cacheVariables": {
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-                "CMAKE_DEFAULT_BUILD_TYPE": "RelWithDebInfo",
-                "DEFAULT_SHOW_DEBUG_INFO": "ON",
-                "IMGUI_DEBUG_WINDOW_BEGIN_ONCE": "ON",
-                "IMGUI_ALWAYS_ASSERT": "ON",
-                "ENABLE_TEST_SANITIZERS": "ON",
-                "CMAKE_C_FLAGS_INIT": "-fdiagnostics-color=always",
-                "CMAKE_CXX_FLAGS_INIT": "-fdiagnostics-color=always"
-            },
             "condition": {
                 "type": "equals",
                 "lhs": "${hostSystemName}",
                 "rhs": "Linux"
+            }
+        },
+        {
+            "name": "linux-make-dev",
+            "inherits": ["linux", "dev"],
+            "generator": "Unix Makefiles",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "name": "linux-ninja-multi-dev",
+            "inherits": ["linux", "dev"],
+            "generator": "Ninja Multi-Config",
+            "cacheVariables": {
+                "CMAKE_DEFAULT_BUILD_TYPE": "RelWithDebInfo",
+                "CMAKE_C_FLAGS_INIT": "-fdiagnostics-color=always",
+                "CMAKE_CXX_FLAGS_INIT": "-fdiagnostics-color=always"
             }
         }
     ]
