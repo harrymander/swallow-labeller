@@ -1129,23 +1129,21 @@ private:
     {
         constexpr ImPlotAxisFlags AxFlags = ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_AutoFit;
         constexpr ImColor SummaryColor = {.5F, .5F, .5F, .6F};
-        constexpr ImPlotLineFlags LineFlags = 0;
-        constexpr int PlotOffset = 0;
-
-        ImPlot::SetupAxes(nullptr, nullptr, AxFlags, AxFlags);
 
         auto size = static_cast<int>(m_data.flow_time.size());
         int max_points = app::get_global_app_config().max_num_plot_points;
-        int stride = std::max(size / max_points, 1);
-        size /= stride;
+        int stride_points = std::max(size / max_points, 1);
+        size /= stride_points;
+        int stride_bytes =
+            stride_points * static_cast<int>(sizeof(decltype(m_data.flow_time)::value_type));
+
+        ImPlot::SetupAxes(nullptr, nullptr, AxFlags, AxFlags);
         ImPlot::PlotLine(
             "##summary_flow_plot_line",
             m_data.flow_time.data(),
             m_data.flow.data(),
             size,
-            LineFlags,
-            PlotOffset,
-            stride * static_cast<int>(sizeof(decltype(m_data.flow_time)::value_type))
+            {ImPlotProp_Stride, stride_bytes}
         );
         m_num_plot_points += static_cast<std::size_t>(size);
 

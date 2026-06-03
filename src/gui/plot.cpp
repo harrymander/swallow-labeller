@@ -172,9 +172,6 @@ void draw_delta_selector(widgets::PlotRangeSelector& selector)
 std::size_t
 plot_autostrided_line(const char *id, const std::vector<double>& x, const std::vector<double>& y)
 {
-    constexpr ImPlotLineFlags Flags = 0;
-    constexpr int Offset = 0;
-
     auto xlim = ImPlot::GetPlotLimits().X;
     auto start = binary_search_closest(x.begin(), x.end(), xlim.Min);
     auto end = binary_search_closest(x.begin(), x.end(), xlim.Max);
@@ -184,15 +181,9 @@ plot_autostrided_line(const char *id, const std::vector<double>& x, const std::v
     int max_num_points = app::get_global_app_config().max_num_plot_points;
     int stride_points = std::max(num_points / max_num_points, 1);
     num_points /= stride_points;
-    ImPlot::PlotLine(
-        id,
-        x.data() + offset,
-        y.data() + offset,
-        num_points,
-        Flags,
-        Offset,
-        static_cast<int>(sizeof(double)) * stride_points
-    );
+    int stride_bytes = static_cast<int>(sizeof(double)) * stride_points;
+    ImPlotSpec spec = {ImPlotProp_Stride, stride_bytes};
+    ImPlot::PlotLine(id, x.data() + offset, y.data() + offset, num_points, spec);
     return static_cast<std::size_t>(num_points);
 }
 

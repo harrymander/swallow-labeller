@@ -1,8 +1,9 @@
 include(FetchContent)
 fetchcontent_declare(
     implot
+    # v1.0 with my fix for infinite loop on small plot ranges
     GIT_REPOSITORY https://github.com/harrymander/implot
-    GIT_TAG 15d73277b9f227a57ac2bcfb41311c37677fb0ad
+    GIT_TAG ccb09987a565812a8f64c4ad0f29eb755f23d3f6
 )
 fetchcontent_makeavailable(implot)
 
