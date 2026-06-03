@@ -36,19 +36,23 @@ void merge_icon_font()
     font_cfg.MergeMode = true;
     static const ImWchar glyph_ranges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
     auto& font_atlas = ImGui::GetIO().Fonts;
-    const float font_size = .75F * font_atlas->ConfigData.back().SizePixels;
-    if (font_atlas->AddFontFromMemoryCompressedTTF(
+    const auto& fonts = font_atlas->Sources;
+    if (fonts.empty()) {
+        spdlog::error("No existing fonts in atlas - icons won't be displayed!");
+    } else {
+        const float font_size = .75F * fonts.back().SizePixels;
+        const auto *new_font = font_atlas->AddFontFromMemoryCompressedTTF(
             static_cast<const void *>(fontawesome_free_solid_compressed_data),
             static_cast<int>(fontawesome_free_solid_compressed_size),
             font_size,
             &font_cfg,
             glyph_ranges
-        )
-        == nullptr)
-    {
-        spdlog::error("Error loading embedded FontAwesome font - icons won't be displayed!");
-    } else {
-        spdlog::debug("Loaded embedded FontAwesome font, size {} px", font_size);
+        );
+        if (new_font == nullptr) {
+            spdlog::error("Error loading embedded FontAwesome font - icons won't be displayed!");
+        } else {
+            spdlog::debug("Loaded embedded FontAwesome font, size {} px", font_size);
+        }
     }
 }
 
