@@ -1,7 +1,7 @@
 #ifndef INCLUDE_RECAP_LABELLER_GUI_WIDGETS_ENUM_UTILS_HPP
 #define INCLUDE_RECAP_LABELLER_GUI_WIDGETS_ENUM_UTILS_HPP
 
-#include <magic_enum_containers.hpp>
+#include <magic_enum/magic_enum_containers.hpp>
 
 namespace recap::labeller::gui::widgets {
 

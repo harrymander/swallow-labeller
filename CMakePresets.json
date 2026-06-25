@@ -2,14 +2,17 @@
     "version": 5,
     "configurePresets": [
         {
+            "name": "vcpkg",
+            "toolchainFile": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        },
+        {
             "name": "windows-static",
+            "inherits": ["vcpkg"],
             "binaryDir": "${sourceDir}/build",
-            "toolchainFile": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
             "cacheVariables": {
                 "VCPKG_TARGET_TRIPLET": "x64-windows-static",
                 "BUILD_SHARED_LIBS": "OFF",
                 "ZLIB_USE_STATIC_LIBS": "ON",
-                "FETCH_VENDORED": "OFF",
                 "BUILD_TESTS": "ON"
             },
             "condition": {

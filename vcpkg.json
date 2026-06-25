@@ -1,12 +1,13 @@
 {
   "dependencies": [
     "argparse",
+    "cnpy",
+    "date",
     "fmt",
     "gtest",
     "magic-enum",
     "nativefiledialog-extended",
     "nlohmann-json",
-    "spdlog",
-    "zlib"
+    "spdlog"
   ]
 }
