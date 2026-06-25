@@ -340,13 +340,15 @@ private:
         Annotator() = default;
 
         explicit Annotator(const app::ActiveSwallowLabellingTaskView& task_view) :
-            apnea_temp_range(optutil::map_or(
-                task_view.swallow_anpea_range(),
-                [](const models::TimeRange& range) {
-                    return widgets::PlotRange{range.start, range.end};
-                },
-                widgets::PlotRange{NAN, NAN}
-            )),
+            apnea_temp_range(
+                optutil::map_or(
+                    task_view.swallow_anpea_range(),
+                    [](const models::TimeRange& range) {
+                        return widgets::PlotRange{range.start, range.end};
+                    },
+                    widgets::PlotRange{NAN, NAN}
+                )
+            ),
             note(task_view.note())
         {
             {
@@ -822,8 +824,10 @@ private:
         draw_flow_label_regions(task_view, LabelSummaryHeight, true);
 
         if (task_view.can_add_new_ear_click_range()) {
-            add_plot_text(HINT_ICON ICON_TEXT_SPACE
-                          "Hold Ctrl and left click and drag to add ear click label(s)");
+            add_plot_text(
+                HINT_ICON ICON_TEXT_SPACE
+                "Hold Ctrl and left click and drag to add ear click label(s)"
+            );
             auto new_range = m_annotator.ear_clicks_annotator.range_selector.update(
                 "##earclick_new_range_selector",
                 0,
@@ -1147,8 +1151,10 @@ private:
                     if (err.has_value()) {
                         ImGui::SetItemTooltip(ERR_ICON ICON_TEXT_SPACE "%s", err->c_str());
                     } else if (!has_annotation && has_suggested_annotation) {
-                        ImGui::SetItemTooltip(SUGGESTED_ANNOTATION_TASK_ICON ICON_TEXT_SPACE
-                                              "Task has suggested annotations");
+                        ImGui::SetItemTooltip(
+                            SUGGESTED_ANNOTATION_TASK_ICON ICON_TEXT_SPACE
+                            "Task has suggested annotations"
+                        );
                     }
                 }
 

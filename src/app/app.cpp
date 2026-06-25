@@ -420,33 +420,44 @@ EarClickAnnotationStatus ear_click_status_from_ear_click_model(
 
 }; // namespace
 
-ActiveSwallowLabellingTaskView::Annotation::Annotation(const models::SwallowAnnotation& annotation
+ActiveSwallowLabellingTaskView::Annotation::Annotation(
+    const models::SwallowAnnotation& annotation
 ) :
     swallow_apnea_status(apnea_status_from_swallow_apnea_model(annotation.swallow_apnea)),
 
-    swallow_is_ambiguous(VariantVisitor{
-        [](const models::SwallowApneaAnnotation& annotation) { return annotation.is_ambiguous; },
-        [](auto) { return false; },
-    }(annotation.swallow_apnea)),
+    swallow_is_ambiguous(
+        VariantVisitor{
+            [](const models::SwallowApneaAnnotation& annotation) {
+                return annotation.is_ambiguous;
+            },
+            [](auto) { return false; },
+        }(annotation.swallow_apnea)
+    ),
 
-    swallow_apnea_range(VariantVisitor{
-        [](const models::SwallowApneaAnnotation& annotation) { return annotation.time; },
-        [](auto) { return models::TimeRange{NAN, NAN}; },
-    }(annotation.swallow_apnea)),
+    swallow_apnea_range(
+        VariantVisitor{
+            [](const models::SwallowApneaAnnotation& annotation) { return annotation.time; },
+            [](auto) { return models::TimeRange{NAN, NAN}; },
+        }(annotation.swallow_apnea)
+    ),
 
-    non_resp_flow_labels(VariantVisitor{
-        [](const models::SwallowApneaAnnotation& annotation) {
-            return annotation.non_respiratory_flow;
-        },
-        [](auto) { return std::vector<models::TimeRange>{}; },
-    }(annotation.swallow_apnea)),
+    non_resp_flow_labels(
+        VariantVisitor{
+            [](const models::SwallowApneaAnnotation& annotation) {
+                return annotation.non_respiratory_flow;
+            },
+            [](auto) { return std::vector<models::TimeRange>{}; },
+        }(annotation.swallow_apnea)
+    ),
 
     ear_click_status(ear_click_status_from_ear_click_model(annotation.ear_clicks)),
 
-    ear_click_labels(VariantVisitor{
-        [](const std::vector<models::TimeRange>& ranges) { return ranges; },
-        [](auto) { return std::vector<models::TimeRange>{}; },
-    }(annotation.ear_clicks)),
+    ear_click_labels(
+        VariantVisitor{
+            [](const std::vector<models::TimeRange>& ranges) { return ranges; },
+            [](auto) { return std::vector<models::TimeRange>{}; },
+        }(annotation.ear_clicks)
+    ),
 
     note(optutil::value_or_default(annotation.note))
 {}
@@ -668,8 +679,8 @@ const std::vector<NonRespFlowLabel> *ActiveSwallowLabellingTaskView::non_resp_fl
     return can_add_new_non_resp_flow_label() ? &m_annotation.non_resp_flow_labels.items() : nullptr;
 }
 
-const models::TimeRange *ActiveSwallowLabellingTaskView::non_resp_flow_label(NonRespFlowLabel::ID id
-) const
+const models::TimeRange *
+ActiveSwallowLabellingTaskView::non_resp_flow_label(NonRespFlowLabel::ID id) const
 {
     if (!can_add_new_non_resp_flow_label()) {
         return nullptr;

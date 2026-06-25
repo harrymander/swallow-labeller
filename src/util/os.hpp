@@ -30,8 +30,8 @@ enum class OsOpenStatus {
  * Opens a path in the system file explorer. If possible, will open the folder with file at path
  * selected.
  */
-[[nodiscard]] std::future<OsOpenStatus> open_path_in_file_explorer(const std::filesystem::path& path
-);
+[[nodiscard]] std::future<OsOpenStatus>
+open_path_in_file_explorer(const std::filesystem::path& path);
 
 }; // namespace recap::labeller::os
 
