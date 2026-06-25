@@ -234,7 +234,7 @@ private:
         const ImVec2 plot_size = ImPlot::GetPlotSize();
         const float yp = plot_pos.y + plot_size.y / 2;
         const double xrange = range->range();
-        const std::string text = fmt::format("Δt = {:.g}", xrange);
+        const std::string text = fmt::format("Δt = {:g}", xrange);
         const double xmouse = ImPlot::GetPlotMousePos().x;
         const auto [xmin, xmax] = std::minmax(range->start, range->end);
         const double mid = (xmin + xmax) / 2;
